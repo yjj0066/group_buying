@@ -1,0 +1,38 @@
+# Render.com 배포 예시
+# https://render.com 에서 Blueprint로 import 하거나 수동 설정
+
+services:
+  - type: web
+    name: group-buying-backend
+    runtime: docker
+    dockerfilePath: ./apps/backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: group-buying-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: STORE_CORS
+        sync: false
+      - key: ADMIN_CORS
+        sync: false
+      - key: AUTH_CORS
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: MEDUSA_WORKER_MODE
+        value: shared
+
+databases:
+  - name: group-buying-db
+    plan: starter
+    databaseName: group_buying
+    user: group_buying
