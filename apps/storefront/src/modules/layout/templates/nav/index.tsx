@@ -4,6 +4,7 @@ import type { Dictionary } from "@i18n/types"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
+import CurrencySelectSlot from "@modules/layout/components/currency-select/slot"
 import LanguageSwitcherSlot from "@modules/layout/components/language-switcher/slot"
 import SideMenu from "@modules/layout/components/side-menu"
 
@@ -57,6 +58,7 @@ export default function Nav({
                 {dictionary.nav.account}
               </LocalizedClientLink>
             </div>
+            <CurrencySelectSlot regions={regions ?? []} />
             <LanguageSwitcherSlot currentLocale={safeLocale} />
             <Suspense
               fallback={

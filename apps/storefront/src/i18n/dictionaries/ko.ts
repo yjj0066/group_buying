@@ -7,6 +7,7 @@ const dictionary: Dictionary = {
     account: "계정",
     cart: "장바구니",
     menu: "메뉴",
+    currencyAriaLabel: "통화 변경",
   },
   hero: {
     badge: "한정판 공동구매",

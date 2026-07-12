@@ -7,6 +7,7 @@ const dictionary: Dictionary = {
     account: "アカウント",
     cart: "カート",
     menu: "メニュー",
+    currencyAriaLabel: "通貨を変更",
   },
   hero: {
     badge: "限定共同購入",

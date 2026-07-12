@@ -81,8 +81,12 @@ export default async function initial_data_seed({
           name: "Default Store",
           supported_currencies: [
             {
-              currency_code: "eur",
+              currency_code: "krw",
               is_default: true,
+            },
+            {
+              currency_code: "eur",
+              is_default: false,
             },
             {
               currency_code: "usd",
@@ -100,6 +104,18 @@ export default async function initial_data_seed({
     input: {
       regions: [
         {
+          name: "Korea",
+          currency_code: "krw",
+          countries: ["kr"],
+          payment_providers: ["pp_system_default"],
+        },
+        {
+          name: "America",
+          currency_code: "usd",
+          countries: ["us"],
+          payment_providers: ["pp_system_default"],
+        },
+        {
           name: "Europe",
           currency_code: "eur",
           countries,
@@ -108,15 +124,21 @@ export default async function initial_data_seed({
       ],
     },
   });
-  const region = regionResult[0];
+  const region = regionResult.find((item) => item.name === "Europe")!;
+  const koreaRegion = regionResult.find((item) => item.name === "Korea")!;
+  const americaRegion = regionResult.find((item) => item.name === "America")!;
   logger.info("Finished seeding regions.");
 
   logger.info("Seeding tax regions...");
   await createTaxRegionsWorkflow(container).run({
-    input: countries.map((country_code) => ({
-      country_code,
-      provider_id: "tp_system",
-    })),
+    input: [
+      ...countries.map((country_code) => ({
+        country_code,
+        provider_id: "tp_system",
+      })),
+      { country_code: "kr", provider_id: "tp_system" },
+      { country_code: "us", provider_id: "tp_system" },
+    ],
   });
   logger.info("Finished seeding tax regions.");
 
@@ -191,6 +213,14 @@ export default async function initial_data_seed({
             country_code: "it",
             type: "country",
           },
+          {
+            country_code: "kr",
+            type: "country",
+          },
+          {
+            country_code: "us",
+            type: "country",
+          },
         ],
       },
     ],
@@ -228,7 +258,19 @@ export default async function initial_data_seed({
             amount: 10,
           },
           {
+            currency_code: "krw",
+            amount: 13000,
+          },
+          {
             region_id: region.id,
+            amount: 10,
+          },
+          {
+            region_id: koreaRegion.id,
+            amount: 13000,
+          },
+          {
+            region_id: americaRegion.id,
             amount: 10,
           },
         ],
@@ -266,7 +308,19 @@ export default async function initial_data_seed({
             amount: 10,
           },
           {
+            currency_code: "krw",
+            amount: 13000,
+          },
+          {
             region_id: region.id,
+            amount: 10,
+          },
+          {
+            region_id: koreaRegion.id,
+            amount: 13000,
+          },
+          {
+            region_id: americaRegion.id,
             amount: 10,
           },
         ],
@@ -390,6 +444,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -407,6 +465,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -426,6 +488,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -443,6 +509,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -462,6 +532,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -479,6 +553,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -498,6 +576,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -515,6 +597,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -561,6 +647,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -577,6 +667,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -595,6 +689,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -611,6 +709,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -657,6 +759,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -673,6 +779,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -691,6 +801,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -707,6 +821,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -753,6 +871,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -769,6 +891,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },
@@ -787,6 +913,10 @@ export default async function initial_data_seed({
                   amount: 15,
                   currency_code: "usd",
                 },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
+                },
               ],
             },
             {
@@ -803,6 +933,10 @@ export default async function initial_data_seed({
                 {
                   amount: 15,
                   currency_code: "usd",
+                },
+                {
+                  amount: 13000,
+                  currency_code: "krw",
                 },
               ],
             },

@@ -5,6 +5,7 @@ export type Dictionary = {
     account: string
     cart: string
     menu: string
+    currencyAriaLabel: string
   }
   hero: {
     badge: string

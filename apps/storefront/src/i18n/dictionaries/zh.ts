@@ -7,6 +7,7 @@ const dictionary: Dictionary = {
     account: "账户",
     cart: "购物车",
     menu: "菜单",
+    currencyAriaLabel: "更改货币",
   },
   hero: {
     badge: "限量团购",

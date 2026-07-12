@@ -7,6 +7,7 @@ const dictionary: Dictionary = {
     account: "Account",
     cart: "Cart",
     menu: "Menu",
+    currencyAriaLabel: "Change currency",
   },
   hero: {
     badge: "Limited group deals",
