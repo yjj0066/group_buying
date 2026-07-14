@@ -11,14 +11,40 @@ import {
 import {
   addToCartWorkflow,
   createCartWorkflow,
+  updateCartWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { GROUP_BUYING_MODULE } from "../modules/group-buying"
 import GroupBuyingModuleService from "../modules/group-buying/service"
+import { createGroupDealBillingCaptureService } from "../services/group-deal-billing-capture"
 import {
+  GroupDealJoinSelectionInput,
+  GroupDealOptionType,
   GroupDealParticipantStatus,
+  GroupDealPaymentPhaseMode,
   GroupDealStatus,
 } from "../types/group-buying"
-import { assertDealJoinable, buildParticipantKey } from "../utils/group-deal-rules"
+import {
+  buildParticipantKey,
+} from "../utils/group-deal-rules"
+import { resolveInitialShippingFeeStatus } from "../utils/group-deal-payment-phases"
+import { extractBillingPaymentFromOrder } from "../utils/group-deal-checkout-payment"
+import {
+  resolveGroupDealPaymentProviderId,
+  resolveGroupDealPaymentProviderKind,
+} from "../utils/group-deal-payment-provider"
+import { captureGroupDealPaymentsWorkflow, emitGroupDealUpdated } from "./group-deal-billing"
+
+export type CreateGroupDealOptionInput = {
+  option_type: GroupDealOptionType
+  option_key: string
+  label: string
+  deal_price?: number | null
+  original_price?: number | null
+  max_quantity?: number | null
+  target_quantity?: number | null
+  sort_order?: number
+  metadata?: Record<string, unknown> | null
+}
 
 export type CreateGroupDealStepInput = {
   title: string
@@ -35,6 +61,10 @@ export type CreateGroupDealStepInput = {
   ends_at: string
   status?: GroupDealStatus
   metadata?: Record<string, unknown> | null
+  payment_phase_mode?: GroupDealPaymentPhaseMode
+  estimated_shipping_fee?: number | null
+  shipping_fee_note?: string | null
+  options?: CreateGroupDealOptionInput[]
 }
 
 export const createGroupDealStep = createStep(
@@ -43,6 +73,9 @@ export const createGroupDealStep = createStep(
     const groupBuyingService: GroupBuyingModuleService = container.resolve(
       GROUP_BUYING_MODULE
     )
+
+    const paymentPhaseMode =
+      input.payment_phase_mode ?? GroupDealPaymentPhaseMode.SINGLE
 
     const groupDeal = await groupBuyingService.createGroupDeals({
       title: input.title,
@@ -61,9 +94,37 @@ export const createGroupDealStep = createStep(
       starts_at: new Date(input.starts_at),
       ends_at: new Date(input.ends_at),
       status: input.status ?? GroupDealStatus.DRAFT,
+      payment_phase_mode: paymentPhaseMode,
+      estimated_shipping_fee: input.estimated_shipping_fee ?? null,
+      shipping_fee_note: input.shipping_fee_note ?? null,
+      shipping_fee_status: resolveInitialShippingFeeStatus({
+        payment_phase_mode: paymentPhaseMode,
+        estimated_shipping_fee: input.estimated_shipping_fee ?? null,
+      }),
     })
 
-    return new StepResponse(groupDeal, groupDeal.id)
+    if (input.options?.length) {
+      await groupBuyingService.createGroupDealOptions(
+        input.options.map((option, index) => ({
+          group_deal_id: groupDeal.id,
+          option_type: option.option_type,
+          option_key: option.option_key,
+          label: option.label,
+          deal_price: option.deal_price ?? null,
+          original_price: option.original_price ?? null,
+          max_quantity: option.max_quantity ?? null,
+          target_quantity: option.target_quantity ?? null,
+          sort_order: option.sort_order ?? index,
+          metadata: option.metadata ?? null,
+          current_quantity: 0,
+          is_active: true,
+        }))
+      )
+    }
+
+    const refreshedDeal = await groupBuyingService.retrieveGroupDeal(groupDeal.id)
+
+    return new StepResponse(refreshedDeal, groupDeal.id)
   },
   async (id: string | undefined, { container }) => {
     if (!id) {
@@ -90,7 +151,8 @@ export const createGroupDealWorkflow = createWorkflow(
 export type PrepareGroupDealCheckoutInput = {
   group_deal_id: string
   email: string
-  quantity: number
+  quantity?: number
+  selections?: GroupDealJoinSelectionInput[]
   region_id: string
   customer_id?: string | null
   cart_id?: string | null
@@ -104,11 +166,15 @@ const prepareGroupDealCheckoutStep = createStep(
     )
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
-    const groupDeal = await groupBuyingService.retrieveGroupDeal(
-      input.group_deal_id
-    )
+    const joinValidation = await groupBuyingService.validateJoinSelections({
+      group_deal_id: input.group_deal_id,
+      quantity: input.quantity,
+      selections: input.selections,
+    })
 
-    assertDealJoinable(groupDeal, input.quantity)
+    const groupDeal = joinValidation.deal
+    const totalQuantity = joinValidation.totalQuantity
+    const firstPaymentAmount = joinValidation.firstPaymentAmount
 
     if (!groupDeal.variant_id) {
       throw new MedusaError(
@@ -128,6 +194,21 @@ const prepareGroupDealCheckoutStep = createStep(
       { throwIfKeyNotFound: true }
     )
 
+    const {
+      data: [region],
+    } = await query.graph({
+      entity: "region",
+      fields: ["id", "countries.iso_2"],
+      filters: { id: input.region_id },
+    })
+
+    const regionCountryCode = String(
+      (region?.countries as Array<{ iso_2?: string }> | undefined)?.[0]?.iso_2 ??
+        ""
+    ).toLowerCase()
+    const paymentProviderId = resolveGroupDealPaymentProviderId(regionCountryCode)
+    const paymentProviderKind = resolveGroupDealPaymentProviderKind(regionCountryCode)
+
     let cartId = input.cart_id ?? null
 
     if (!cartId) {
@@ -141,6 +222,11 @@ const prepareGroupDealCheckoutStep = createStep(
 
       cartId = createdCart.id
     }
+
+    const billingCustomerKey = buildParticipantKey({
+      customer_id: input.customer_id,
+      email: input.email,
+    })
 
     const existingParticipant = await groupBuyingService.findParticipantByIdentity(
       {
@@ -159,30 +245,61 @@ const prepareGroupDealCheckoutStep = createStep(
       participant = await groupBuyingService.createGroupDealParticipants({
         group_deal_id: input.group_deal_id,
         email: input.email,
-        quantity: input.quantity,
+        quantity: totalQuantity,
         customer_id: input.customer_id ?? participant.customer_id,
         cart_id: cartId,
         status: GroupDealParticipantStatus.PENDING,
+        first_payment_amount: firstPaymentAmount,
+        second_payment_status: joinValidation.secondPaymentStatus,
+        payment_provider_id: paymentProviderId,
       })
     } else if (participant) {
       participant = await groupBuyingService.updateGroupDealParticipants({
         id: participant.id,
-        quantity: input.quantity,
+        quantity: totalQuantity,
         email: input.email,
         customer_id: input.customer_id ?? participant.customer_id,
         cart_id: cartId,
         status: GroupDealParticipantStatus.PENDING,
+        first_payment_amount: firstPaymentAmount,
+        second_payment_status: joinValidation.secondPaymentStatus,
+        billing_customer_key: billingCustomerKey,
+        payment_provider_id: paymentProviderId,
       })
     } else {
       participant = await groupBuyingService.createGroupDealParticipants({
         group_deal_id: input.group_deal_id,
         email: input.email,
-        quantity: input.quantity,
+        quantity: totalQuantity,
         customer_id: input.customer_id ?? null,
         cart_id: cartId,
         status: GroupDealParticipantStatus.PENDING,
+        first_payment_amount: firstPaymentAmount,
+        second_payment_status: joinValidation.secondPaymentStatus,
+        billing_customer_key: billingCustomerKey,
+        payment_provider_id: paymentProviderId,
       })
     }
+
+    if (joinValidation.selectionSnapshots.length) {
+      await groupBuyingService.replaceParticipantSelections(
+        participant.id,
+        joinValidation.selectionSnapshots
+      )
+    }
+
+    await updateCartWorkflow(container).run({
+      input: {
+        id: cartId,
+        metadata: {
+          group_deal_billing_reservation: true,
+          group_deal_id: groupDeal.id,
+          participant_id: participant.id,
+          billing_customer_key: billingCustomerKey,
+          payment_provider_id: paymentProviderId,
+        },
+      },
+    })
 
     await addToCartWorkflow(container).run({
       input: {
@@ -190,7 +307,7 @@ const prepareGroupDealCheckoutStep = createStep(
         items: [
           {
             variant_id: variant.id,
-            quantity: input.quantity,
+            quantity: totalQuantity,
             unit_price: Number(groupDeal.deal_price),
             metadata: {
               group_deal_id: groupDeal.id,
@@ -208,6 +325,10 @@ const prepareGroupDealCheckoutStep = createStep(
         cart_id: cartId,
         participant,
         group_deal: groupDeal,
+        first_payment_amount: firstPaymentAmount,
+        billing_mode: "reservation" as const,
+        payment_provider_id: paymentProviderId,
+        payment_provider_kind: paymentProviderKind,
       },
       {
         participant_id: participant.id,
@@ -274,6 +395,7 @@ const confirmGroupDealParticipationStep = createStep(
     const groupBuyingService: GroupBuyingModuleService = container.resolve(
       GROUP_BUYING_MODULE
     )
+    const billingCaptureService = createGroupDealBillingCaptureService(container)
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
     const {
@@ -287,6 +409,13 @@ const confirmGroupDealParticipationStep = createStep(
         "items.id",
         "items.quantity",
         "items.metadata",
+        "payment_collections.payment_sessions.id",
+        "payment_collections.payment_sessions.provider_id",
+        "payment_collections.payment_sessions.status",
+        "payment_collections.payment_sessions.data",
+        "payment_collections.payments.id",
+        "payment_collections.payments.provider_id",
+        "payment_collections.payments.data",
       ],
       filters: { id: input.order_id },
     })
@@ -295,12 +424,17 @@ const confirmGroupDealParticipationStep = createStep(
       return new StepResponse({ updated_deals: [] as string[] })
     }
 
+    const billingPayment = extractBillingPaymentFromOrder(order)
     const updatedDealIds = new Set<string>()
+    const dealsToCapture = new Set<string>()
     const compensation: Array<{
       participant_id: string
       previous_status: GroupDealParticipantStatus
       previous_quantity: number
       previous_order_id: string | null
+      previous_billing_customer_key: string | null
+      previous_payment_session_id: string | null
+      had_billing_key: boolean
     }> = []
 
     for (const item of order.items) {
@@ -323,6 +457,13 @@ const confirmGroupDealParticipationStep = createStep(
         continue
       }
 
+      if (
+        participant.status === GroupDealParticipantStatus.RESERVED &&
+        participant.order_id === order.id
+      ) {
+        continue
+      }
+
       const identityParticipant =
         await groupBuyingService.findParticipantByIdentity({
           group_deal_id: groupDealId,
@@ -337,6 +478,9 @@ const confirmGroupDealParticipationStep = createStep(
         previous_status: participant.status,
         previous_quantity: participant.quantity,
         previous_order_id: participant.order_id,
+        previous_billing_customer_key: participant.billing_customer_key,
+        previous_payment_session_id: participant.payment_session_id,
+        had_billing_key: Boolean(participant.billing_key_encrypted),
       })
 
       if (
@@ -353,6 +497,68 @@ const confirmGroupDealParticipationStep = createStep(
         if (participant.status === GroupDealParticipantStatus.PENDING) {
           await groupBuyingService.deleteGroupDealParticipants(participant.id)
         }
+      } else if (
+        billingPayment?.mode === "billing_reservation" &&
+        billingPayment.billingKey &&
+        billingPayment.customerKey
+      ) {
+        /**
+         * v2 체크아웃 + Korean PG 빌링키 예약:
+         * min_participants 달성 전까지 RESERVED(가승인) 상태로 유지하고
+         * minimum_reached/closed 시 일괄 Capture 합니다.
+         */
+        await groupBuyingService.updateGroupDealParticipants({
+          id: participant.id,
+          order_id: order.id,
+          quantity: quantityToAdd,
+          email: order.email ?? participant.email,
+          customer_id: order.customer_id ?? participant.customer_id,
+        })
+
+        const registration =
+          await billingCaptureService.storeBillingKeyForParticipant({
+            participant_id: participant.id,
+            billing_key: billingPayment.billingKey,
+            billing_customer_key: billingPayment.customerKey,
+            payment_session_id:
+              billingPayment.paymentSessionId ?? billingPayment.orderId,
+            payment_provider_id: billingPayment.providerId,
+          })
+
+        if (registration.should_capture) {
+          dealsToCapture.add(groupDealId)
+        }
+      } else if (
+        billingPayment?.mode === "setup_reservation" &&
+        billingPayment.stripePaymentMethodId &&
+        billingPayment.stripeCustomerId
+      ) {
+        /**
+         * v2 체크아웃 + Stripe SetupIntent 예약:
+         * min_participants 달성 전까지 RESERVED 상태로 유지하고
+         * minimum_reached/closed 시 off-session PaymentIntent로 일괄 승인합니다.
+         */
+        await groupBuyingService.updateGroupDealParticipants({
+          id: participant.id,
+          order_id: order.id,
+          quantity: quantityToAdd,
+          email: order.email ?? participant.email,
+          customer_id: order.customer_id ?? participant.customer_id,
+        })
+
+        const registration =
+          await billingCaptureService.storeStripePaymentMethodForParticipant({
+            participant_id: participant.id,
+            stripe_customer_id: billingPayment.stripeCustomerId,
+            stripe_payment_method_id: billingPayment.stripePaymentMethodId,
+            payment_session_id:
+              billingPayment.paymentSessionId ?? billingPayment.orderId,
+            payment_provider_id: billingPayment.providerId,
+          })
+
+        if (registration.should_capture) {
+          dealsToCapture.add(groupDealId)
+        }
       } else {
         await groupBuyingService.updateGroupDealParticipants({
           id: participant.id,
@@ -368,8 +574,24 @@ const confirmGroupDealParticipationStep = createStep(
       updatedDealIds.add(groupDealId)
     }
 
+    for (const groupDealId of dealsToCapture) {
+      await captureGroupDealPaymentsWorkflow(container).run({
+        input: { group_deal_id: groupDealId },
+      })
+    }
+
+    for (const groupDealId of updatedDealIds) {
+      await emitGroupDealUpdated(container, groupDealId)
+    }
+
     return new StepResponse(
-      { updated_deals: Array.from(updatedDealIds) },
+      {
+        updated_deals: Array.from(updatedDealIds),
+        captured_deals: Array.from(dealsToCapture),
+        billing_reservation:
+          billingPayment?.mode === "billing_reservation" ||
+          billingPayment?.mode === "setup_reservation",
+      },
       compensation
     )
   },
@@ -380,6 +602,9 @@ const confirmGroupDealParticipationStep = createStep(
           previous_status: GroupDealParticipantStatus
           previous_quantity: number
           previous_order_id: string | null
+          previous_billing_customer_key: string | null
+          previous_payment_session_id: string | null
+          had_billing_key: boolean
         }>
       | undefined,
     { container }
@@ -403,6 +628,14 @@ const confirmGroupDealParticipationStep = createStep(
         status: item.previous_status,
         quantity: item.previous_quantity,
         order_id: item.previous_order_id,
+        billing_customer_key: item.previous_billing_customer_key,
+        payment_session_id: item.previous_payment_session_id,
+        ...(item.had_billing_key
+          ? {}
+          : {
+              billing_key_encrypted: null,
+              reserved_at: null,
+            }),
       })
 
       await groupBuyingService.recalculateDealMetrics(participant.group_deal_id)
@@ -420,3 +653,242 @@ export const confirmGroupDealParticipationWorkflow = createWorkflow(
 )
 
 export { buildParticipantKey }
+
+export type UpdateGroupDealStepInput = {
+  id: string
+  title?: string
+  description?: string | null
+  min_participants?: number
+  target_quantity?: number
+  max_quantity?: number | null
+  original_price?: number
+  deal_price?: number
+  starts_at?: string
+  ends_at?: string
+  status?: GroupDealStatus
+  metadata?: Record<string, unknown> | null
+}
+
+const updateGroupDealStep = createStep(
+  "update-group-deal",
+  async (input: UpdateGroupDealStepInput, { container }) => {
+    const groupBuyingService: GroupBuyingModuleService = container.resolve(
+      GROUP_BUYING_MODULE
+    )
+
+    const existing = await groupBuyingService.retrieveGroupDeal(input.id)
+
+    const {
+      assertDealUpdatable,
+      assertStatusTransitionAllowed,
+      validateDealSchedule,
+    } = await import("../utils/group-deal-admin-rules")
+
+    assertDealUpdatable(existing)
+    assertStatusTransitionAllowed(existing.status, input.status)
+
+    const nextStartsAt = input.starts_at
+      ? new Date(input.starts_at)
+      : existing.starts_at
+    const nextEndsAt = input.ends_at
+      ? new Date(input.ends_at)
+      : existing.ends_at
+    const nextMinParticipants =
+      input.min_participants ?? existing.min_participants
+
+    validateDealSchedule({
+      starts_at: nextStartsAt,
+      ends_at: nextEndsAt,
+      min_participants: nextMinParticipants,
+      current_participants: existing.current_participants,
+    })
+
+    const previous = { ...existing }
+
+    const updated = await groupBuyingService.updateGroupDeals({
+      id: input.id,
+      ...(input.title != null ? { title: input.title } : {}),
+      ...(input.description !== undefined
+        ? { description: input.description }
+        : {}),
+      ...(input.min_participants != null
+        ? { min_participants: input.min_participants }
+        : {}),
+      ...(input.target_quantity != null
+        ? { target_quantity: input.target_quantity }
+        : {}),
+      ...(input.max_quantity !== undefined
+        ? { max_quantity: input.max_quantity }
+        : {}),
+      ...(input.original_price != null
+        ? { original_price: input.original_price }
+        : {}),
+      ...(input.deal_price != null ? { deal_price: input.deal_price } : {}),
+      ...(input.starts_at != null ? { starts_at: nextStartsAt } : {}),
+      ...(input.ends_at != null ? { ends_at: nextEndsAt } : {}),
+      ...(input.status != null ? { status: input.status } : {}),
+      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+    })
+
+    if (
+      input.min_participants != null ||
+      input.max_quantity !== undefined ||
+      input.target_quantity != null
+    ) {
+      await groupBuyingService.recalculateDealMetrics(input.id)
+    }
+
+    const refreshed = await groupBuyingService.retrieveGroupDeal(input.id)
+
+    return new StepResponse(refreshed, {
+      id: input.id,
+      previous,
+    })
+  },
+  async (
+    compensation:
+      | {
+          id: string
+          previous: Awaited<
+            ReturnType<GroupBuyingModuleService["retrieveGroupDeal"]>
+          >
+        }
+      | undefined,
+    { container }
+  ) => {
+    if (!compensation) {
+      return
+    }
+
+    const groupBuyingService: GroupBuyingModuleService = container.resolve(
+      GROUP_BUYING_MODULE
+    )
+
+    await groupBuyingService.updateGroupDeals({
+      id: compensation.id,
+      title: compensation.previous.title,
+      description: compensation.previous.description,
+      min_participants: compensation.previous.min_participants,
+      target_quantity: compensation.previous.target_quantity,
+      max_quantity: compensation.previous.max_quantity,
+      original_price: compensation.previous.original_price,
+      deal_price: compensation.previous.deal_price,
+      starts_at: compensation.previous.starts_at,
+      ends_at: compensation.previous.ends_at,
+      status: compensation.previous.status,
+      metadata: compensation.previous.metadata,
+      current_participants: compensation.previous.current_participants,
+      current_quantity: compensation.previous.current_quantity,
+    })
+  }
+)
+
+export const updateGroupDealWorkflow = createWorkflow(
+  "update-group-deal",
+  (input: UpdateGroupDealStepInput) => {
+    const groupDeal = updateGroupDealStep(input)
+
+    return new WorkflowResponse(groupDeal)
+  }
+)
+
+export type CancelGroupDealInput = {
+  id: string
+  reason?: string | null
+}
+
+const cancelGroupDealStep = createStep(
+  "cancel-group-deal",
+  async (input: CancelGroupDealInput, { container }) => {
+    const groupBuyingService: GroupBuyingModuleService = container.resolve(
+      GROUP_BUYING_MODULE
+    )
+
+    const existing = await groupBuyingService.retrieveGroupDeal(input.id)
+    const { assertDealCancellable } = await import(
+      "../utils/group-deal-admin-rules"
+    )
+
+    assertDealCancellable(existing)
+
+    const updated = await groupBuyingService.updateGroupDeals({
+      id: input.id,
+      status: GroupDealStatus.CANCELLED,
+      metadata: {
+        ...(existing.metadata ?? {}),
+        cancelled_at: new Date().toISOString(),
+        cancel_reason: input.reason ?? null,
+      },
+    })
+
+    return new StepResponse(updated, {
+      id: input.id,
+      previous_status: existing.status,
+      previous_metadata: existing.metadata,
+    })
+  },
+  async (
+    compensation:
+      | {
+          id: string
+          previous_status: GroupDealStatus | string
+          previous_metadata: Record<string, unknown> | null
+        }
+      | undefined,
+    { container }
+  ) => {
+    if (!compensation) {
+      return
+    }
+
+    const groupBuyingService: GroupBuyingModuleService = container.resolve(
+      GROUP_BUYING_MODULE
+    )
+
+    await groupBuyingService.updateGroupDeals({
+      id: compensation.id,
+      status: compensation.previous_status as GroupDealStatus,
+      metadata: compensation.previous_metadata,
+    })
+  }
+)
+
+export const cancelGroupDealWorkflow = createWorkflow(
+  "cancel-group-deal",
+  (input: CancelGroupDealInput) => {
+    const groupDeal = cancelGroupDealStep(input)
+
+    return new WorkflowResponse(groupDeal)
+  }
+)
+
+export type DeleteGroupDealInput = {
+  id: string
+}
+
+const deleteGroupDealStep = createStep(
+  "delete-group-deal",
+  async (input: DeleteGroupDealInput, { container }) => {
+    const groupBuyingService: GroupBuyingModuleService = container.resolve(
+      GROUP_BUYING_MODULE
+    )
+
+    const existing = await groupBuyingService.retrieveGroupDeal(input.id)
+    const { assertDealDeletable } = await import("../utils/group-deal-admin-rules")
+
+    assertDealDeletable(existing)
+
+    await groupBuyingService.deleteGroupDeals(input.id)
+
+    return new StepResponse({ id: input.id, deleted: true }, existing)
+  }
+)
+
+export const deleteGroupDealWorkflow = createWorkflow(
+  "delete-group-deal",
+  (input: DeleteGroupDealInput) => {
+    const result = deleteGroupDealStep(input)
+
+    return new WorkflowResponse(result)
+  }
+)

@@ -5,15 +5,15 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@modules/common/components/ui"
 import { confirmEmailVerification } from "@lib/data/customer"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { useDictionary } from "@i18n/provider"
 
 type VerificationState = "verifying" | "success" | "error"
 
 const VerifyAccount = () => {
+  const t = useDictionary()
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
   const [state, setState] = useState<VerificationState>("verifying")
-  // Guard against the effect running twice in React Strict Mode, which would
-  // consume the single-use token before the customer sees the result.
   const confirmed = useRef(false)
 
   useEffect(() => {
@@ -37,21 +37,21 @@ const VerifyAccount = () => {
       className="max-w-sm w-full flex flex-col items-center text-center gap-y-4"
       data-testid="verify-account-page"
     >
-      <h1 className="text-large-semi uppercase">Email verification</h1>
+      <h1 className="text-large-semi uppercase">{t.account.verify.title}</h1>
 
       {state === "verifying" && (
         <p className="text-base-regular text-ui-fg-base">
-          Verifying your email...
+          {t.account.verify.verifying}
         </p>
       )}
 
       {state === "success" && (
         <>
           <p className="text-base-regular text-ui-fg-base">
-            Your email is verified. You can now sign in to your account.
+            {t.account.verify.success}
           </p>
           <LocalizedClientLink href="/account">
-            <Button variant="primary">Go to sign in</Button>
+            <Button variant="primary">{t.account.verify.successCta}</Button>
           </LocalizedClientLink>
         </>
       )}
@@ -59,11 +59,10 @@ const VerifyAccount = () => {
       {state === "error" && (
         <>
           <p className="text-base-regular text-ui-fg-base">
-            This verification link is invalid or has expired. Sign in to receive
-            a new verification email.
+            {t.account.verify.error}
           </p>
           <LocalizedClientLink href="/account">
-            <Button variant="secondary">Go to sign in</Button>
+            <Button variant="secondary">{t.account.verify.errorCta}</Button>
           </LocalizedClientLink>
         </>
       )}

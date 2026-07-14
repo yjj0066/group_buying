@@ -16,9 +16,10 @@ export const getLocale = async (): Promise<string | null> => {
 export const setLocaleCookie = async (locale: string) => {
   const cookieStore = await nextCookies()
   cookieStore.set(LOCALE_COOKIE_NAME, locale, {
+    path: "/",
     maxAge: 60 * 60 * 24 * 365,
     httpOnly: false,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   })
 }

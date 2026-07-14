@@ -5,6 +5,7 @@ import useToggleState from "@lib/hooks/use-toggle-state"
 import { ArrowRightMini, XMark } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import ProductSearch from "@modules/layout/components/product-search"
 import { Text, clx } from "@modules/common/components/ui"
 import { useDictionary } from "@i18n/provider"
 import { Fragment } from "react"
@@ -70,6 +71,9 @@ const SideMenu = ({ regions, currentLocale }: SideMenuProps) => {
                         <XMark />
                       </button>
                     </div>
+                    <div className="small:hidden w-full mb-2">
+                      <ProductSearch variant="sidebar" className="w-full" />
+                    </div>
                     <ul className="flex flex-col gap-6 items-start justify-start">
                       {sideMenuItems.map(({ name, href }) => {
                         return (
@@ -110,7 +114,7 @@ const SideMenu = ({ regions, currentLocale }: SideMenuProps) => {
                         />
                       </div>
                       <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store.{" "}
+                        © {new Date().getFullYear()} {t.nav.storeName}.{" "}
                         {t.sideMenu.copyright}
                       </Text>
                     </div>

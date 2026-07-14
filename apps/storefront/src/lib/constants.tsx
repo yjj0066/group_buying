@@ -4,6 +4,22 @@ import Bancontact from "@modules/common/icons/bancontact"
 import Ideal from "@modules/common/icons/ideal"
 import PayPal from "@modules/common/icons/paypal"
 import React from "react"
+import {
+  isStripeCheckout,
+  isStripeGroupDeal,
+  isStripePaymentIntent,
+  isTossPayments,
+  STRIPE_GROUP_DEAL_PROVIDER_ID,
+  TOSS_PAYMENTS_PROVIDER_ID,
+} from "@lib/util/checkout-payment"
+
+export { TOSS_PAYMENTS_PROVIDER_ID, STRIPE_GROUP_DEAL_PROVIDER_ID }
+export {
+  isTossPayments,
+  isStripeGroupDeal,
+  isStripePaymentIntent,
+  isStripeCheckout,
+}
 
 export const getPaymentInfoMap = (
   paymentProviders: Dictionary["checkout"]["paymentProviders"]
@@ -14,6 +30,14 @@ export const getPaymentInfoMap = (
   },
   "pp_medusa-payments_default": {
     title: paymentProviders.creditCard,
+    icon: <CreditCard />,
+  },
+  [STRIPE_GROUP_DEAL_PROVIDER_ID]: {
+    title: paymentProviders.creditCard,
+    icon: <CreditCard />,
+  },
+  [TOSS_PAYMENTS_PROVIDER_ID]: {
+    title: paymentProviders.tossPayments,
     icon: <CreditCard />,
   },
   "pp_stripe-ideal_stripe": {
@@ -44,13 +68,11 @@ export const paymentInfoMap: Record<
   bancontact: "Bancontact",
   paypal: "PayPal",
   manual: "Manual Payment",
+  tossPayments: "Toss Payments",
 })
 
-// This only checks if it is native stripe or medusa payments for card payments, it ignores the other stripe-based providers
 export const isStripeLike = (providerId?: string) => {
-  return (
-    providerId?.startsWith("pp_stripe_") || providerId?.startsWith("pp_medusa-")
-  )
+  return isStripeCheckout(providerId)
 }
 
 export const isPaypal = (providerId?: string) => {

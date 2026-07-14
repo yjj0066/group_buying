@@ -1,5 +1,6 @@
 import {
   calculateParticipationRate,
+  countUniqueCommittedParticipants,
   countUniqueConfirmedParticipants,
   evaluateDealStatus,
   isDealJoinable,
@@ -42,6 +43,31 @@ describe("group-deal-rules", () => {
     })
 
     expect(nextStatus).toBe(GroupDealStatus.CLOSED)
+  })
+
+  it("counts unique committed participants including reserved billing keys", () => {
+    const count = countUniqueCommittedParticipants([
+      {
+        status: GroupDealParticipantStatus.RESERVED,
+        customer_id: "cus_1",
+        email: "a@example.com",
+        quantity: 1,
+      },
+      {
+        status: GroupDealParticipantStatus.CONFIRMED,
+        customer_id: null,
+        email: "b@example.com",
+        quantity: 1,
+      },
+      {
+        status: GroupDealParticipantStatus.PENDING,
+        customer_id: null,
+        email: "c@example.com",
+        quantity: 1,
+      },
+    ])
+
+    expect(count).toBe(2)
   })
 
   it("counts unique confirmed participants by customer or email", () => {

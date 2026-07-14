@@ -26,6 +26,12 @@ export type ConfirmedParticipantLike = {
   quantity: number
 }
 
+/** 빌링키 예약 또는 결제 완료 — 모집 인원/수량 집계에 포함 */
+export const COMMITTED_PARTICIPANT_STATUSES: GroupDealParticipantStatus[] = [
+  GroupDealParticipantStatus.RESERVED,
+  GroupDealParticipantStatus.CONFIRMED,
+]
+
 export const normalizeDealStatus = (
   status: string
 ): GroupDealStatus | string => {
@@ -88,7 +94,7 @@ export const assertDealJoinable = (
 }
 
 /**
- * 참여율 = 결제 완료 고객 수 / 최소 모집 인원 (v1 current_participants / min_participants)
+ * 참여율 = 빌링키 예약 또는 결제 완료 고객 수 / 최소 모집 인원
  */
 export const calculateParticipationRate = (
   currentParticipants: number,
@@ -140,13 +146,14 @@ export const evaluateDealStatus = (
   return status
 }
 
-export const countUniqueConfirmedParticipants = (
-  participants: ConfirmedParticipantLike[]
+const countUniqueParticipantsByStatuses = (
+  participants: ConfirmedParticipantLike[],
+  statuses: Set<GroupDealParticipantStatus | string>
 ): number => {
   const uniqueKeys = new Set<string>()
 
   for (const participant of participants) {
-    if (participant.status !== GroupDealParticipantStatus.CONFIRMED) {
+    if (!statuses.has(participant.status)) {
       continue
     }
 
@@ -162,15 +169,49 @@ export const countUniqueConfirmedParticipants = (
   return uniqueKeys.size
 }
 
+const sumQuantityByStatuses = (
+  participants: ConfirmedParticipantLike[],
+  statuses: Set<GroupDealParticipantStatus | string>
+): number => {
+  return participants
+    .filter((participant) => statuses.has(participant.status))
+    .reduce((total, participant) => total + participant.quantity, 0)
+}
+
+export const countUniqueCommittedParticipants = (
+  participants: ConfirmedParticipantLike[]
+): number => {
+  return countUniqueParticipantsByStatuses(
+    participants,
+    new Set(COMMITTED_PARTICIPANT_STATUSES)
+  )
+}
+
+export const sumCommittedQuantity = (
+  participants: ConfirmedParticipantLike[]
+): number => {
+  return sumQuantityByStatuses(
+    participants,
+    new Set(COMMITTED_PARTICIPANT_STATUSES)
+  )
+}
+
+export const countUniqueConfirmedParticipants = (
+  participants: ConfirmedParticipantLike[]
+): number => {
+  return countUniqueParticipantsByStatuses(
+    participants,
+    new Set([GroupDealParticipantStatus.CONFIRMED])
+  )
+}
+
 export const sumConfirmedQuantity = (
   participants: ConfirmedParticipantLike[]
 ): number => {
-  return participants
-    .filter(
-      (participant) =>
-        participant.status === GroupDealParticipantStatus.CONFIRMED
-    )
-    .reduce((total, participant) => total + participant.quantity, 0)
+  return sumQuantityByStatuses(
+    participants,
+    new Set([GroupDealParticipantStatus.CONFIRMED])
+  )
 }
 
 export const buildParticipantKey = (input: {

@@ -1,5 +1,21 @@
 import { z } from "@medusajs/framework/zod"
-import { GroupDealStatus } from "../../../types/group-buying"
+import {
+  GroupDealOptionType,
+  GroupDealPaymentPhaseMode,
+  GroupDealStatus,
+} from "../../../types/group-buying"
+
+export const AdminGroupDealOptionSchema = z.object({
+  option_type: z.nativeEnum(GroupDealOptionType).default(GroupDealOptionType.MEMBER),
+  option_key: z.string().min(1),
+  label: z.string().min(1),
+  deal_price: z.number().positive().optional().nullable(),
+  original_price: z.number().positive().optional().nullable(),
+  max_quantity: z.number().int().positive().optional().nullable(),
+  target_quantity: z.number().int().positive().optional().nullable(),
+  sort_order: z.number().int().nonnegative().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
 
 export const PostAdminCreateGroupDeal = z.object({
   title: z.string().min(1),
@@ -16,6 +32,13 @@ export const PostAdminCreateGroupDeal = z.object({
   ends_at: z.string().datetime(),
   status: z.nativeEnum(GroupDealStatus).optional(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+  payment_phase_mode: z
+    .nativeEnum(GroupDealPaymentPhaseMode)
+    .optional()
+    .default(GroupDealPaymentPhaseMode.SINGLE),
+  estimated_shipping_fee: z.number().positive().optional().nullable(),
+  shipping_fee_note: z.string().optional().nullable(),
+  options: z.array(AdminGroupDealOptionSchema).optional(),
 })
 
 export const PostAdminUpdateGroupDeal = z.object({
@@ -30,6 +53,13 @@ export const PostAdminUpdateGroupDeal = z.object({
   ends_at: z.string().datetime().optional(),
   status: z.nativeEnum(GroupDealStatus).optional(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+  estimated_shipping_fee: z.number().positive().optional().nullable(),
+  shipping_fee_note: z.string().optional().nullable(),
+})
+
+export const PostAdminQuoteGroupDealShipping = z.object({
+  estimated_shipping_fee: z.number().positive(),
+  shipping_fee_note: z.string().optional().nullable(),
 })
 
 export type PostAdminCreateGroupDealType = z.infer<
@@ -38,4 +68,16 @@ export type PostAdminCreateGroupDealType = z.infer<
 
 export type PostAdminUpdateGroupDealType = z.infer<
   typeof PostAdminUpdateGroupDeal
+>
+
+export type PostAdminQuoteGroupDealShippingType = z.infer<
+  typeof PostAdminQuoteGroupDealShipping
+>
+
+export const PostAdminCancelGroupDeal = z.object({
+  reason: z.string().optional().nullable(),
+})
+
+export type PostAdminCancelGroupDealType = z.infer<
+  typeof PostAdminCancelGroupDeal
 >

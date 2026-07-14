@@ -4,45 +4,23 @@ import * as Accordion from "@radix-ui/react-accordion"
 import { useEffect, useState } from "react"
 
 import { ChevronDownMini } from "@medusajs/icons"
-import { sdk } from "@lib/config"
+import { useDictionary } from "@i18n/provider"
 import { HttpTypes } from "@medusajs/types"
 import clsx from "clsx"
 
 type OptionsPickerProps = {
+  options: HttpTypes.StoreProductOption[]
   selectedValueIds: string[]
   setOptionValueIds: (valueIds: string[]) => void
 }
 
 const OptionsPicker = ({
+  options,
   selectedValueIds,
   setOptionValueIds,
 }: OptionsPickerProps) => {
-  const [options, setOptions] = useState<HttpTypes.StoreProductOption[]>([])
+  const t = useDictionary()
   const [openItems, setOpenItems] = useState<string[]>([])
-
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const response = await sdk.client.fetch<{
-          product_options?: HttpTypes.StoreProductOption[]
-        }>("/store/product-options", {
-          method: "GET",
-          query: {
-            is_exclusive: false,
-            fields: "*values",
-          },
-        })
-
-        if (response?.product_options) {
-          setOptions(response.product_options)
-        }
-      } catch (error) {
-        console.error("Failed to fetch product options", error)
-      }
-    }
-
-    fetchOptions()
-  }, [])
 
   useEffect(() => {
     if (options.length) {
@@ -58,7 +36,7 @@ const OptionsPicker = ({
     <div className="flex flex-col gap-y-4">
       <div className="flex items-center justify-between px-1">
         <span className="txt-compact-small-plus text-ui-fg-subtle">
-          Options
+          {t.products.optionsFilter}
         </span>
       </div>
       <Accordion.Root
@@ -107,7 +85,7 @@ const OptionsPicker = ({
                 <Accordion.Trigger className="flex w-full items-center justify-between py-3 text-left">
                   <div className="flex items-center gap-2">
                     <span className="txt-compact-small-plus text-ui-fg-base">
-                      {option.title || "Option"}
+                      {option.title || t.products.optionsFilter}
                     </span>
                     <span className="txt-compact-small-plus text-ui-fg-muted">
                       ({selectedCount})

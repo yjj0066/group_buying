@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 
 import { getCategoryByHandle, listCategories } from "@lib/data/categories"
 import { listRegions } from "@lib/data/regions"
+import { translateCategory } from "@lib/util/translate-content"
+import { getMedusaLocaleCode, getServerDictionary } from "@i18n/server"
 import { HttpTypes, StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -49,14 +51,19 @@ export async function generateStaticParams() {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params
   try {
-    const productCategory = await getCategoryByHandle(params.category)
+    const localeCode = await getMedusaLocaleCode()
+    const dictionary = await getServerDictionary()
+    const productCategory = await translateCategory(
+      await getCategoryByHandle(params.category),
+      localeCode
+    )
 
-    const title = productCategory.name + " | Medusa Store"
+    const title = `${productCategory.name} | ${dictionary.nav.storeName}`
 
     const description = productCategory.description ?? `${title} category.`
 
     return {
-      title: `${title} | Medusa Store`,
+      title,
       description,
       alternates: {
         canonical: `${params.category.join("/")}`,
@@ -73,7 +80,10 @@ export default async function CategoryPage(props: Props) {
   const { sortBy, page } = searchParams
   const optionValueIds = parseOptionValueIds(searchParams)
 
-  const productCategory = await getCategoryByHandle(params.category)
+  const productCategory = await translateCategory(
+    await getCategoryByHandle(params.category),
+    await getMedusaLocaleCode()
+  )
 
   if (!productCategory) {
     notFound()

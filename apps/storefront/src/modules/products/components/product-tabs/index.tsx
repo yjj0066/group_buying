@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
+import { useDictionary, formatMessage } from "@i18n/provider"
 import Back from "@modules/common/icons/back"
 import FastDelivery from "@modules/common/icons/fast-delivery"
 import Refresh from "@modules/common/icons/refresh"
@@ -15,22 +16,26 @@ type ProductTabsProps = {
 }
 
 const ProductTabs = ({ product }: ProductTabsProps) => {
+  const t = useDictionary()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const tabs = [
-    {
-      label: "Product Information",
-      component: <ProductInfoTab product={product} />,
-    },
-    {
-      label: "Shipping & Returns",
-      component: <ShippingInfoTab />,
-    },
-  ]
+  const tabs = useMemo(
+    () => [
+      {
+        label: t.products.tabs.productInformation,
+        component: <ProductInfoTab product={product} />,
+      },
+      {
+        label: t.products.tabs.shippingAndReturns,
+        component: <ShippingInfoTab />,
+      },
+    ],
+    [product, t]
+  )
 
   if (!mounted) {
     return (
@@ -66,35 +71,51 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
 }
 
 const ProductInfoTab = ({ product }: ProductTabsProps) => {
+  const t = useDictionary()
+  const unavailable = t.products.tabs.notAvailable
+
+  const weightLabel = product.weight
+    ? formatMessage(t.products.tabs.weightValue, {
+        weight: String(product.weight),
+      })
+    : unavailable
+
+  const dimensionsLabel =
+    product.length && product.width && product.height
+      ? formatMessage(t.products.tabs.dimensionsValue, {
+          length: String(product.length),
+          width: String(product.width),
+          height: String(product.height),
+        })
+      : unavailable
+
   return (
     <div className="text-small-regular py-8">
       <div className="grid grid-cols-2 gap-x-8">
         <div className="flex flex-col gap-y-4">
           <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
+            <span className="font-semibold">{t.products.tabs.material}</span>
+            <p>{product.material ? product.material : unavailable}</p>
           </div>
           <div>
-            <span className="font-semibold">Country of origin</span>
-            <p>{product.origin_country ? product.origin_country : "-"}</p>
+            <span className="font-semibold">
+              {t.products.tabs.countryOfOrigin}
+            </span>
+            <p>{product.origin_country ? product.origin_country : unavailable}</p>
           </div>
           <div>
-            <span className="font-semibold">Type</span>
-            <p>{product.type ? product.type.value : "-"}</p>
+            <span className="font-semibold">{t.products.tabs.type}</span>
+            <p>{product.type ? product.type.value : unavailable}</p>
           </div>
         </div>
         <div className="flex flex-col gap-y-4">
           <div>
-            <span className="font-semibold">Weight</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
+            <span className="font-semibold">{t.products.tabs.weight}</span>
+            <p>{weightLabel}</p>
           </div>
           <div>
-            <span className="font-semibold">Dimensions</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
-                : "-"}
-            </p>
+            <span className="font-semibold">{t.products.tabs.dimensions}</span>
+            <p>{dimensionsLabel}</p>
           </div>
         </div>
       </div>
@@ -103,37 +124,39 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
 }
 
 const ShippingInfoTab = () => {
+  const t = useDictionary()
+
   return (
     <div className="text-small-regular py-8">
       <div className="grid grid-cols-1 gap-y-8">
         <div className="flex items-start gap-x-2">
           <FastDelivery />
           <div>
-            <span className="font-semibold">Fast delivery</span>
+            <span className="font-semibold">
+              {t.products.tabs.fastDelivery}
+            </span>
             <p className="max-w-sm">
-              Your package will arrive in 3-5 business days at your pick up
-              location or in the comfort of your home.
+              {t.products.tabs.fastDeliveryDescription}
             </p>
           </div>
         </div>
         <div className="flex items-start gap-x-2">
           <Refresh />
           <div>
-            <span className="font-semibold">Simple exchanges</span>
+            <span className="font-semibold">
+              {t.products.tabs.simpleExchanges}
+            </span>
             <p className="max-w-sm">
-              Is the fit not quite right? No worries - we&apos;ll exchange your
-              product for a new one.
+              {t.products.tabs.simpleExchangesDescription}
             </p>
           </div>
         </div>
         <div className="flex items-start gap-x-2">
           <Back />
           <div>
-            <span className="font-semibold">Easy returns</span>
+            <span className="font-semibold">{t.products.tabs.easyReturns}</span>
             <p className="max-w-sm">
-              Just return your product and we&apos;ll refund your money. No
-              questions asked – we&apos;ll do our best to make sure your return
-              is hassle-free.
+              {t.products.tabs.easyReturnsDescription}
             </p>
           </div>
         </div>

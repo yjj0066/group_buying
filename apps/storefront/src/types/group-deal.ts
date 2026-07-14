@@ -61,6 +61,13 @@ export type JoinGroupDealResponse = {
   participant: GroupDealParticipant
   group_deal: GroupDeal
   checkout_path: string
+  first_payment_amount?: number
+  payment_hints?: {
+    provider_id: string
+    provider_kind: "toss" | "stripe"
+    billing_mode: "reservation"
+    auto_billing_context: boolean
+  }
 }
 
 export const isJoinableGroupDealStatus = (status: GroupDealStatus): boolean => {

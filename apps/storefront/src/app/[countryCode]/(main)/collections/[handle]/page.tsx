@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 
 import { getCollectionByHandle, listCollections } from "@lib/data/collections"
 import { listRegions } from "@lib/data/regions"
+import { getServerDictionary } from "@i18n/server"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -62,8 +63,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
 
+  const dictionary = await getServerDictionary()
+
   const metadata = {
-    title: `${collection.title} | Medusa Store`,
+    title: `${collection.title} | ${dictionary.nav.storeName}`,
     description: `${collection.title} collection`,
   } as Metadata
 

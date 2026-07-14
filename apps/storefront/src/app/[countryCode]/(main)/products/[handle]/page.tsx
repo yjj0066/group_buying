@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
 import { getRegion, listRegions } from "@lib/data/regions"
 import { translateProductFields } from "@lib/util/translate-content"
-import { getMedusaLocaleCode } from "@i18n/server"
+import { getMedusaLocaleCode, getServerDictionary } from "@i18n/server"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
 
@@ -94,11 +94,15 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
 
+  const dictionary = await getServerDictionary()
+  const siteName = dictionary.nav.storeName
+  const pageTitle = `${product.title} | ${siteName}`
+
   return {
-    title: `${product.title} | Medusa Store`,
+    title: pageTitle,
     description: `${product.title}`,
     openGraph: {
-      title: `${product.title} | Medusa Store`,
+      title: pageTitle,
       description: `${product.title}`,
       images: product.thumbnail ? [product.thumbnail] : [],
     },
@@ -136,6 +140,13 @@ export default async function ProductPage(props: Props) {
   const localizedProduct = {
     ...pricedProduct,
     description: translatedFields.description ?? pricedProduct.description,
+    material: translatedFields.material ?? pricedProduct.material,
+    type: pricedProduct.type
+      ? {
+          ...pricedProduct.type,
+          value: translatedFields.typeValue ?? pricedProduct.type.value,
+        }
+      : pricedProduct.type,
   }
 
   const images = getImagesForVariant(localizedProduct, selectedVariantId)

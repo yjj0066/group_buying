@@ -1,5 +1,6 @@
 import { listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { getServerDictionary } from "@i18n/server"
 import { OptionValueIds } from "@lib/util/product-option-filters"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
@@ -13,6 +14,7 @@ type PaginatedProductsParams = {
   category_id?: string[]
   id?: string[]
   order?: string
+  q?: string
 }
 
 export default async function PaginatedProducts({
@@ -23,6 +25,7 @@ export default async function PaginatedProducts({
   productsIds,
   countryCode,
   optionValueIds,
+  query,
 }: {
   sortBy?: SortOptions
   page: number
@@ -31,7 +34,9 @@ export default async function PaginatedProducts({
   productsIds?: string[]
   countryCode: string
   optionValueIds?: OptionValueIds
+  query?: string
 }) {
+  const dictionary = await getServerDictionary()
   const queryParams: PaginatedProductsParams = {
     limit: 12,
   }
@@ -46,6 +51,10 @@ export default async function PaginatedProducts({
 
   if (productsIds) {
     queryParams["id"] = productsIds
+  }
+
+  if (query) {
+    queryParams.q = query
   }
 
   if (sortBy === "created_at") {
@@ -69,6 +78,17 @@ export default async function PaginatedProducts({
   })
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
+
+  if (products.length === 0) {
+    return (
+      <p
+        className="txt-medium text-ui-fg-subtle py-12"
+        data-testid="products-empty-message"
+      >
+        {dictionary.products.noSearchResults}
+      </p>
+    )
+  }
 
   return (
     <>

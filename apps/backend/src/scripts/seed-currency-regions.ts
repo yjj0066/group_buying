@@ -94,7 +94,7 @@ export default async function seedCurrencyRegions({ container }: ExecArgs) {
       name: "Korea",
       currency_code: "krw",
       countries: ["kr"],
-      payment_providers: ["pp_system_default"],
+      payment_providers: ["pp_toss-payments_toss-payments"],
     })
   }
 
@@ -103,7 +103,7 @@ export default async function seedCurrencyRegions({ container }: ExecArgs) {
       name: "America",
       currency_code: "usd",
       countries: ["us"],
-      payment_providers: ["pp_system_default"],
+      payment_providers: ["pp_stripe-group-deal_stripe-group-deal"],
     })
   }
 

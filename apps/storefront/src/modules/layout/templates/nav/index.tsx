@@ -6,6 +6,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CartButton from "@modules/layout/components/cart-button"
 import CurrencySelectSlot from "@modules/layout/components/currency-select/slot"
 import LanguageSwitcherSlot from "@modules/layout/components/language-switcher/slot"
+import ProductSearch from "@modules/layout/components/product-search"
 import SideMenu from "@modules/layout/components/side-menu"
 
 type NavProps = {
@@ -39,6 +40,12 @@ export default function Nav({
             >
               {dictionary.nav.storeName}
             </LocalizedClientLink>
+          </div>
+
+          <div className="hidden small:flex flex-1 justify-center px-4 max-w-sm">
+            <Suspense fallback={null}>
+              <ProductSearch />
+            </Suspense>
           </div>
 
           <div className="flex items-center gap-x-4 small:gap-x-6 h-full flex-1 basis-0 justify-end">

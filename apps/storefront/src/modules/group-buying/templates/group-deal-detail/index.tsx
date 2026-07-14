@@ -52,14 +52,9 @@ const GroupDealDetailTemplate = async ({
 
 
   const [dictionary, localeCode] = await Promise.all([
-
     getServerDictionary(),
-
     getMedusaLocaleCode(),
-
   ])
-
-
 
   const [translatedTitle, translatedDescription] = await Promise.all([
     translateContent(groupDeal.title, localeCode),

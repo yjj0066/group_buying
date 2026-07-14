@@ -29,6 +29,37 @@ export type Dictionary = {
     selectOptions: string
     priceFrom: string
     originalPriceLabel: string
+    searchPlaceholder: string
+    searchAriaLabel: string
+    searchLabel: string
+    searchSubmit: string
+    searchResultsFor: string
+    noSearchResults: string
+    categoryFilter: string
+    allCategories: string
+    sortBy: string
+    sortLatest: string
+    sortPriceAsc: string
+    sortPriceDesc: string
+    optionsFilter: string
+    tabs: {
+      productInformation: string
+      shippingAndReturns: string
+      material: string
+      countryOfOrigin: string
+      type: string
+      weight: string
+      dimensions: string
+      weightValue: string
+      dimensionsValue: string
+      notAvailable: string
+      fastDelivery: string
+      fastDeliveryDescription: string
+      simpleExchanges: string
+      simpleExchangesDescription: string
+      easyReturns: string
+      easyReturnsDescription: string
+    }
   }
   groupBuying: {
     title: string
@@ -126,12 +157,20 @@ export type Dictionary = {
     email: string
     phone: string
     emailValidationTitle: string
+    groupDealReservationTitle: string
+    groupDealReservationDescription: string
+    tossPaymentDescription: string
+    tossClientKeyMissing: string
+    saveCardDetails: string
+    saveCardAndJoin: string
+    cardSavedForLater: string
     paymentProviders: {
       creditCard: string
       ideal: string
       bancontact: string
       paypal: string
       manual: string
+      tossPayments: string
     }
   }
   sideMenu: {
@@ -140,6 +179,74 @@ export type Dictionary = {
     account: string
     cart: string
     copyright: string
+  }
+  footer: {
+    categories: string
+    collections: string
+    support: string
+    customerService: string
+    privacyPolicy: string
+    termsOfUse: string
+    copyright: string
+  }
+  account: {
+    login: {
+      title: string
+      subtitle: string
+      verificationIntro: string
+      verificationOutro: string
+      notMember: string
+      joinUs: string
+      submit: string
+    }
+    register: {
+      title: string
+      subtitle: string
+      verificationIntro: string
+      verificationOutro: string
+      firstName: string
+      lastName: string
+      email: string
+      phone: string
+      password: string
+      agreementPrefix: string
+      privacyPolicy: string
+      agreementMiddle: string
+      termsOfUse: string
+      agreementSuffix: string
+      submit: string
+      alreadyMember: string
+      signIn: string
+      successRedirecting: string
+    }
+    verify: {
+      title: string
+      verifying: string
+      success: string
+      successCta: string
+      error: string
+      errorCta: string
+    }
+    layout: {
+      helpTitle: string
+      helpDescription: string
+      customerService: string
+    }
+    nav: {
+      account: string
+      overview: string
+      profile: string
+      addresses: string
+      orders: string
+      logout: string
+      hello: string
+    }
+    meta: {
+      loginTitle: string
+      loginDescription: string
+      verifyTitle: string
+      verifyDescription: string
+    }
   }
   idol: {
     productionStatus: string

@@ -1,8 +1,37 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
+import medusaError from "@lib/util/medusa-error"
+import { getAuthHeaders, getCacheOptions, getCacheTag } from "./cookies"
 import { HttpTypes } from "@medusajs/types"
+import { revalidateTag } from "next/cache"
+
+export const confirmPaymentSessionData = async (input: {
+  paymentCollectionId: string
+  paymentSessionId: string
+  data: Record<string, unknown>
+}) => {
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  return sdk.client
+    .fetch<{ payment_session: HttpTypes.StorePaymentSession }>(
+      `/store/payment-collections/${input.paymentCollectionId}/payment-sessions/${input.paymentSessionId}`,
+      {
+        method: "POST",
+        headers,
+        body: {
+          data: input.data,
+        },
+      }
+    )
+    .then(async () => {
+      const cartCacheTag = await getCacheTag("carts")
+      revalidateTag(cartCacheTag)
+    })
+    .catch(medusaError)
+}
 
 export const listCartPaymentMethods = async (regionId: string) => {
   const headers = {
