@@ -1,22 +1,39 @@
 import { Metadata } from "next"
 
-import Overview from "@modules/account/components/overview"
+import { getServerDictionary } from "@i18n/server"
+import AccountOverview from "@modules/account/components/account-overview"
 import { notFound } from "next/navigation"
 import { retrieveCustomer } from "@lib/data/customer"
-import { listOrders } from "@lib/data/orders"
 
-export const metadata: Metadata = {
-  title: "Account",
-  description: "Overview of your account activity.",
+export async function generateMetadata(): Promise<Metadata> {
+  const dictionary = await getServerDictionary()
+
+  return {
+    title: dictionary.account.dashboard.title,
+    description: dictionary.account.dashboard.description,
+  }
 }
 
 export default async function OverviewTemplate() {
   const customer = await retrieveCustomer().catch(() => null)
-  const orders = (await listOrders().catch(() => null)) || null
 
   if (!customer) {
     notFound()
   }
 
-  return <Overview customer={customer} orders={orders} />
+  const dictionary = await getServerDictionary()
+
+  return (
+    <AccountOverview
+      labels={{
+        title: dictionary.account.dashboard.title,
+        description: dictionary.account.dashboard.description,
+        paymentMethods: dictionary.account.nav.paymentMethods,
+        hostedDeals: dictionary.account.nav.hostedDeals,
+        participations: dictionary.account.nav.participations,
+        settlements: dictionary.account.nav.settlements,
+        preferences: dictionary.account.nav.preferences,
+      }}
+    />
+  )
 }

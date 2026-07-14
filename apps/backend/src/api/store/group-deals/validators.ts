@@ -25,3 +25,14 @@ export const PostStoreRegisterGroupDealBillingKey = z.object({
 export type PostStoreRegisterGroupDealBillingKeyType = z.infer<
   typeof PostStoreRegisterGroupDealBillingKey
 >
+
+export const PostStoreJoinGroupDealWaitlist = z.object({
+  email: z.string().email(),
+  quantity: z.number().int().positive().optional(),
+  selections: z.array(selectionSchema).optional(),
+  priority: z.number().int().nonnegative().optional(),
+})
+
+export type PostStoreJoinGroupDealWaitlistType = z.infer<
+  typeof PostStoreJoinGroupDealWaitlist
+>

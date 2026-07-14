@@ -30,9 +30,18 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     isStoreVisibleGroupDealStatus(String(deal.status))
   )
 
+  const serialized = await Promise.all(
+    visibleDeals.map(async (deal) => {
+      const options = await groupBuyingService.listDealOptions(String(deal.id))
+
+      return serializeStoreGroupDeal(
+        deal as unknown as Record<string, unknown>,
+        options as unknown as Record<string, unknown>[]
+      )
+    })
+  )
+
   res.json({
-    group_deals: visibleDeals.map((deal) =>
-      serializeStoreGroupDeal(deal as unknown as Record<string, unknown>)
-    ),
+    group_deals: serialized,
   })
 }

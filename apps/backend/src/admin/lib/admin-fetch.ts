@@ -35,3 +35,33 @@ export const adminFetch = async <T>(
 
   return response.json() as Promise<T>
 }
+
+export const adminDownload = async (path: string, filename: string) => {
+  const response = await fetch(path, {
+    method: "GET",
+    credentials: "include",
+  })
+
+  if (!response.ok) {
+    throw new Error(`Download failed (${response.status})`)
+  }
+
+  const blob = await response.blob()
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  window.URL.revokeObjectURL(url)
+}
+
+const readFileAsDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result ?? ""))
+    reader.onerror = () => reject(new Error("Failed to read file"))
+    reader.readAsDataURL(file)
+  })
+}
+
+export const fileToBase64DataUrl = readFileAsDataUrl

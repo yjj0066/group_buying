@@ -8,8 +8,35 @@ export type GroupDealStatus =
   | "active"
   | "success"
 
+export type GroupDealDepositStatus = "pending" | "deposited" | "refunded"
+
+export type GroupDealReceiptStatus =
+  | "pending"
+  | "uploaded"
+  | "verified"
+  | "rejected"
+
+export type GroupDealOptionType = "member" | "version" | "custom"
+
+export type GroupDealOption = {
+  id: string
+  group_deal_id: string
+  option_type: GroupDealOptionType
+  option_key: string
+  label: string
+  deal_price: number | null
+  original_price: number | null
+  max_quantity: number | null
+  target_quantity: number | null
+  current_quantity: number
+  sort_order: number
+  is_active: boolean
+  metadata: Record<string, unknown> | null
+}
+
 export type GroupDealParticipantStatus =
   | "pending"
+  | "reserved"
   | "confirmed"
   | "cancelled"
 
@@ -43,6 +70,11 @@ export type GroupDeal = {
   starts_at: string
   ends_at: string
   metadata: Record<string, unknown> | null
+  leader_customer_id: string | null
+  deposit_status: GroupDealDepositStatus
+  deposit_amount: number | null
+  purchase_receipt_status: GroupDealReceiptStatus
+  options?: GroupDealOption[]
   participants?: GroupDealParticipant[]
   created_at: string
   updated_at: string
@@ -70,8 +102,22 @@ export type JoinGroupDealResponse = {
   }
 }
 
+export type JoinWaitlistResponse = {
+  waitlist_entry: {
+    id: string
+    email: string
+    status: string
+    queue_position: number
+  }
+  group_deal: GroupDeal
+}
+
 export const isJoinableGroupDealStatus = (status: GroupDealStatus): boolean => {
   return status === "open" || status === "minimum_reached" || status === "active"
+}
+
+export const isDealSoldOut = (deal: GroupDeal): boolean => {
+  return deal.max_quantity != null && deal.current_quantity >= deal.max_quantity
 }
 
 export const getParticipationRate = (deal: GroupDeal): number => {
@@ -100,4 +146,39 @@ export const getDealStatusLabelKey = (
     default:
       return "draft"
   }
+}
+
+export const getOptionRemainingQuantity = (
+  option: GroupDealOption
+): number | null => {
+  if (option.max_quantity == null) {
+    return null
+  }
+
+  return Math.max(0, option.max_quantity - option.current_quantity)
+}
+
+export const hasMemberVacancy = (
+  deal: GroupDeal,
+  memberKey: string
+): boolean => {
+  const memberOptions = (deal.options ?? []).filter(
+    (option) =>
+      option.option_type === "member" &&
+      (option.option_key === memberKey || option.label === memberKey)
+  )
+
+  if (!memberOptions.length) {
+    return false
+  }
+
+  return memberOptions.some((option) => {
+    const remaining = getOptionRemainingQuantity(option)
+
+    return remaining == null || remaining > 0
+  })
+}
+
+export const isDepositSecured = (deal: GroupDeal): boolean => {
+  return deal.deposit_status === "deposited"
 }

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { adminFetch } from "../lib/admin-fetch"
+import { adminFetch, adminDownload, fileToBase64DataUrl } from "../lib/admin-fetch"
 import type { AdminGroupDeal, AdminProductOption } from "../lib/group-deal"
+import { GroupDealReceiptStatus } from "../../../types/group-buying"
 
 export const groupDealKeys = {
   all: ["admin", "group-deals"] as const,
@@ -104,4 +105,72 @@ export const useDeleteGroupDeal = () => {
       queryClient.invalidateQueries({ queryKey: groupDealKeys.all })
     },
   })
+}
+
+export const useUploadGroupDealReceipt = (id: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: {
+      image_base64?: string
+      image_url?: string
+      filename?: string
+      status?: GroupDealReceiptStatus
+      note?: string | null
+    }) =>
+      adminFetch<{ group_deal: AdminGroupDeal }>(
+        `/admin/group-deals/${id}/receipt`,
+        {
+          method: "POST",
+          body: payload,
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: groupDealKeys.detail(id) })
+    },
+  })
+}
+
+export const useUpdateGroupDealTracking = (id: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: {
+      entries: Array<{
+        participant_id: string
+        tracking_number: string
+        carrier?: string | null
+      }>
+    }) =>
+      adminFetch<{ group_deal: AdminGroupDeal }>(
+        `/admin/group-deals/${id}/tracking`,
+        {
+          method: "POST",
+          body: payload,
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: groupDealKeys.detail(id) })
+    },
+  })
+}
+
+export const downloadGroupDealPackingSlip = async (
+  id: string,
+  format: "csv" | "json" = "csv"
+) => {
+  if (format === "json") {
+    return adminFetch<{ packing_slip: unknown }>(
+      `/admin/group-deals/${id}/packing-slip?format=json`
+    )
+  }
+
+  await adminDownload(
+    `/admin/group-deals/${id}/packing-slip?format=csv`,
+    `packing-slip-${id}.csv`
+  )
+}
+
+export const uploadReceiptFile = async (file: File) => {
+  return fileToBase64DataUrl(file)
 }

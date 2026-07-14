@@ -7,6 +7,7 @@ import {
   GroupDealResponse,
   GroupDealsResponse,
   JoinGroupDealResponse,
+  JoinWaitlistResponse,
 } from "types/group-deal"
 
 export async function listGroupDeals() {
@@ -63,4 +64,30 @@ export async function startGroupDealCheckout(
   }
 
   return response
+}
+
+export async function joinGroupDealWaitlist(
+  id: string,
+  data: {
+    email: string
+    quantity?: number
+    selections?: Array<{ option_id: string; quantity: number }>
+  }
+) {
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  return sdk.client.fetch<JoinWaitlistResponse>(
+    `/store/group-deals/${id}/waitlist`,
+    {
+      method: "POST",
+      body: {
+        email: data.email,
+        quantity: data.quantity,
+        selections: data.selections,
+      },
+      headers,
+    }
+  )
 }

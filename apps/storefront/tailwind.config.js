@@ -20,6 +20,10 @@ module.exports = {
         padding: "padding-top padding-right padding-bottom padding-left",
       },
       colors: {
+        brand: {
+          pink: "#FF5C8D",
+          purple: "#8B5CF6",
+        },
         grey: {
           0: "#FFFFFF",
           5: "#F9FAFB",

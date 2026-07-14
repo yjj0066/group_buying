@@ -6,8 +6,10 @@ import { useParams, useRouter } from "next/navigation"
 import { startGroupDealCheckout } from "@lib/data/group-deals"
 import { useDictionary } from "@i18n/provider"
 import { Button, Input, Label, Text } from "@modules/common/components/ui"
+import WaitlistForm from "@modules/group-buying/components/waitlist-form"
 import {
   GroupDeal,
+  isDealSoldOut,
   isJoinableGroupDealStatus,
 } from "types/group-deal"
 
@@ -29,8 +31,7 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
   const [error, setError] = useState<string | null>(null)
 
   const isJoinable = isJoinableGroupDealStatus(deal.status)
-  const isSoldOut =
-    deal.max_quantity != null && deal.current_quantity >= deal.max_quantity
+  const isSoldOut = isDealSoldOut(deal)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,13 +56,24 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
     }
   }
 
-  if (!isJoinable || isSoldOut) {
+  if (isSoldOut) {
     return (
-      <div className="p-6 border border-ui-border-base bg-ui-bg-subtle rounded-lg">
+      <div className="flex flex-col gap-y-4">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <Text className="text-sm font-medium text-amber-900">
+            {t.groupBuying.joinClosedFull}
+          </Text>
+        </div>
+        <WaitlistForm deal={deal} />
+      </div>
+    )
+  }
+
+  if (!isJoinable) {
+    return (
+      <div className="rounded-lg border border-ui-border-base bg-ui-bg-subtle p-6">
         <Text className="text-ui-fg-subtle">
-          {isSoldOut
-            ? t.groupBuying.joinClosedFull
-            : t.groupBuying.joinClosedInactive}
+          {t.groupBuying.joinClosedInactive}
         </Text>
       </div>
     )

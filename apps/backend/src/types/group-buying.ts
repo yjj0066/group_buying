@@ -5,6 +5,31 @@ export enum GroupDealStatus {
   CLOSED = "closed",
   FAILED = "failed",
   CANCELLED = "cancelled",
+  /** 모든 참여자 수령 확인 후 최종 정산 완료 */
+  SETTLED = "settled",
+}
+
+/** 총대 1차 구매 영수증 인증 상태 */
+export enum GroupDealReceiptStatus {
+  PENDING = "pending",
+  UPLOADED = "uploaded",
+  VERIFIED = "verified",
+  REJECTED = "rejected",
+}
+
+/** 총대(리더) 보증금 예치 상태 */
+export enum GroupDealDepositStatus {
+  PENDING = "pending",
+  DEPOSITED = "deposited",
+  REFUNDED = "refunded",
+}
+
+/** 공석 대기(waitlist) 상태 */
+export enum GroupDealWaitlistStatus {
+  WAITING = "waiting",
+  MATCHED = "matched",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
 }
 
 export enum GroupDealParticipantStatus {
@@ -103,11 +128,40 @@ export type GroupDealDTO = {
   shipping_fee_status: GroupDealShippingFeeStatus
   estimated_shipping_fee: number | null
   shipping_fee_note: string | null
+  /** 총대(리더) customer id */
+  leader_customer_id: string | null
+  /** 총대 보증금 예치 상태 */
+  deposit_status: GroupDealDepositStatus
+  /** 총대 보증금 금액 */
+  deposit_amount: number | null
+  /** 총대 1차 구매 영수증 URL */
+  purchase_receipt_url: string | null
+  /** 총대 1차 구매 영수증 인증 상태 */
+  purchase_receipt_status: GroupDealReceiptStatus
+  purchase_receipt_verified_at: Date | null
   status: GroupDealStatus
   starts_at: Date
   ends_at: Date
   metadata: Record<string, unknown> | null
   options?: GroupDealOptionDTO[]
+  created_at: Date
+  updated_at: Date
+}
+
+export type GroupDealWaitlistEntryDTO = {
+  id: string
+  group_deal_id: string
+  customer_id: string | null
+  email: string
+  quantity: number
+  queue_position: number
+  priority: number
+  status: GroupDealWaitlistStatus
+  payment_deadline: Date | null
+  matched_participant_id: string | null
+  matched_at: Date | null
+  selections_snapshot: GroupDealJoinSelectionInput[] | null
+  metadata: Record<string, unknown> | null
   created_at: Date
   updated_at: Date
 }
@@ -138,6 +192,17 @@ export type GroupDealParticipantDTO = {
   last_capture_error: string | null
   reserved_at: Date | null
   captured_at: Date | null
+  /** 입금/결제 기한 (미결제 시 공석 처리) */
+  payment_deadline: Date | null
+  /** 수령 확인 시각 (정산 조건) */
+  delivery_confirmed_at: Date | null
+  /** 대기자 매칭으로 생성된 경우 원 waitlist entry id */
+  waitlist_entry_id: string | null
+  /** 송장 번호 */
+  tracking_number: string | null
+  /** 택배사 */
+  carrier: string | null
+  tracking_updated_at: Date | null
   selections?: GroupDealParticipantSelectionDTO[]
   created_at: Date
   updated_at: Date
@@ -189,4 +254,62 @@ export type GroupDealSecondPaymentInput = {
   participant_ids?: string[]
   /** 관리자가 확정한 개별 배송비. 미지정 시 deal.estimated_shipping_fee 사용 */
   shipping_fee_override?: number | null
+}
+
+export type GroupDealEscrowReleaseResult = {
+  participant_id: string
+  previous_status: GroupDealParticipantStatus
+  action: "reservation_released" | "payment_refunded" | "skipped"
+  success: boolean
+  error?: string
+}
+
+export type GroupDealDepositRefundResult = {
+  group_deal_id: string
+  deposit_status: GroupDealDepositStatus
+  refunded: boolean
+  error?: string
+}
+
+export type GroupDealWaitlistMatchResult = {
+  matched: boolean
+  waitlist_entry_id?: string
+  participant_id?: string
+  email?: string
+  payment_deadline?: Date
+}
+
+export type GroupDealSettlementResult = {
+  group_deal_id: string
+  capture_result: GroupDealBatchCaptureResult | null
+  deposit_refund: GroupDealDepositRefundResult
+  status: GroupDealStatus
+}
+
+export type GroupDealPackingSlipRow = {
+  participant_id: string
+  email: string
+  customer_id: string | null
+  quantity: number
+  status: GroupDealParticipantStatus
+  order_id: string | null
+  recipient_name: string | null
+  phone: string | null
+  address_line_1: string | null
+  address_line_2: string | null
+  city: string | null
+  province: string | null
+  postal_code: string | null
+  country_code: string | null
+  tracking_number: string | null
+  carrier: string | null
+  option_summary: string | null
+}
+
+export type GroupDealPackingSlip = {
+  group_deal_id: string
+  title: string
+  generated_at: string
+  total_rows: number
+  rows: GroupDealPackingSlipRow[]
 }

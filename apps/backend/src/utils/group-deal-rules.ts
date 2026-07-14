@@ -1,5 +1,6 @@
 import { MedusaError } from "@medusajs/framework/utils"
 import {
+  GroupDealDepositStatus,
   GroupDealParticipantStatus,
   GroupDealStatus,
 } from "../types/group-buying"
@@ -17,6 +18,7 @@ export type GroupDealLike = {
   current_participants: number
   current_quantity: number
   max_quantity?: number | null
+  deposit_status?: GroupDealDepositStatus | string
 }
 
 export type ConfirmedParticipantLike = {
@@ -46,6 +48,10 @@ export const normalizeDealStatus = (
   return status
 }
 
+export const isDealDepositSecured = (deal: GroupDealLike): boolean => {
+  return deal.deposit_status === GroupDealDepositStatus.DEPOSITED
+}
+
 export const isDealJoinable = (
   deal: GroupDealLike,
   now: Date = new Date()
@@ -53,6 +59,10 @@ export const isDealJoinable = (
   const status = normalizeDealStatus(deal.status)
 
   if (!JOINABLE_DEAL_STATUSES.includes(status as GroupDealStatus)) {
+    return false
+  }
+
+  if (!isDealDepositSecured(deal)) {
     return false
   }
 
@@ -67,6 +77,13 @@ export const assertDealJoinable = (
   quantity: number,
   now: Date = new Date()
 ): void => {
+  if (!isDealDepositSecured(deal)) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "This group deal is not active until the leader deposit is paid"
+    )
+  }
+
   if (!isDealJoinable(deal, now)) {
     throw new MedusaError(
       MedusaError.Types.NOT_ALLOWED,
@@ -124,6 +141,7 @@ export const evaluateDealStatus = (
     status === GroupDealStatus.CANCELLED ||
     status === GroupDealStatus.FAILED ||
     status === GroupDealStatus.CLOSED ||
+    status === GroupDealStatus.SETTLED ||
     status === GroupDealStatus.DRAFT
   ) {
     return status

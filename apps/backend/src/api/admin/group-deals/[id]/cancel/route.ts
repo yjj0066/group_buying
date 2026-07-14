@@ -22,7 +22,7 @@ export const POST = async (
     },
   })
 
-  const groupDeal = await queryGroupDeal(req.scope, result.id, {
+  const groupDeal = await queryGroupDeal(req.scope, result.group_deal.id, {
     withParticipants: true,
   })
 

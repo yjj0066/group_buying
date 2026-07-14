@@ -22,13 +22,16 @@ import {
   useUpdateGroupDeal,
 } from "../../../hooks/use-group-deals"
 import {
+  DEPOSIT_STATUS_LABELS,
   formatDealDate,
   fromDateTimeLocalValue,
+  getDepositBadgeColor,
   getParticipationRate,
   GROUP_DEAL_STATUS_LABELS,
   toDateTimeLocalValue,
 } from "../../../lib/group-deal"
 import { GroupDealStatus } from "../../../../types/group-buying"
+import LeaderManagementPanel from "./components/leader-management-panel"
 
 const GroupDealDetailPage = () => {
   const { id = "" } = useParams()
@@ -182,6 +185,9 @@ const GroupDealDetailPage = () => {
             <Heading level="h1">{deal.title}</Heading>
             <Badge size="small">
               {GROUP_DEAL_STATUS_LABELS[deal.status] ?? deal.status}
+            </Badge>
+            <Badge size="small" color={getDepositBadgeColor(deal.deposit_status)}>
+              {DEPOSIT_STATUS_LABELS[deal.deposit_status] ?? deal.deposit_status}
             </Badge>
           </div>
           <Text size="small" className="text-ui-fg-subtle mt-1">
@@ -362,7 +368,14 @@ const GroupDealDetailPage = () => {
         </div>
       </div>
 
-      <div className="px-6 py-6">
+      <div className="px-6 py-6 border-t">
+        <Heading level="h2" className="mb-4">
+          Leader Management
+        </Heading>
+        <LeaderManagementPanel deal={deal} />
+      </div>
+
+      <div className="px-6 py-6 border-t">
         <Heading level="h2" className="mb-4">
           Participants
         </Heading>

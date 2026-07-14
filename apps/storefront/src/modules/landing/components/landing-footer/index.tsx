@@ -1,0 +1,64 @@
+"use client"
+
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { useDictionary } from "@i18n/provider"
+
+const LandingFooter = () => {
+  const t = useDictionary()
+
+  return (
+    <footer className="border-t border-neutral-100 bg-white">
+      <div className="mx-auto max-w-7xl px-4 py-16 small:px-6">
+        <div className="grid gap-10 medium:grid-cols-4">
+          <div className="medium:col-span-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-pink to-brand-purple text-sm font-black text-white">
+                GB
+              </span>
+              <span className="text-lg font-bold text-neutral-900">
+                {t.landing.brandName}
+              </span>
+            </div>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-500">
+              {t.landing.footer.tagline}
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold text-neutral-900">
+              {t.landing.footer.explore}
+            </h4>
+            <ul className="mt-4 space-y-2 text-sm text-neutral-500">
+              <li>
+                <LocalizedClientLink href="/group-buying" className="hover:text-brand-pink">
+                  {t.landing.nav.groupBuys}
+                </LocalizedClientLink>
+              </li>
+              <li>
+                <LocalizedClientLink href="/account" className="hover:text-brand-pink">
+                  {t.landing.nav.signIn}
+                </LocalizedClientLink>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-bold text-neutral-900">
+              {t.landing.footer.support}
+            </h4>
+            <ul className="mt-4 space-y-2 text-sm text-neutral-500">
+              <li>{t.landing.footer.securePayment}</li>
+              <li>{t.landing.footer.authenticGoods}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 border-t border-neutral-100 pt-8 text-center text-xs text-neutral-400">
+          {t.landing.footer.copyright}
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+export default LandingFooter

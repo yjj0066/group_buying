@@ -13,6 +13,87 @@ export type Dictionary = {
     subtitle: string
     cta: string
   }
+  albumShowcase: {
+    title: string
+    subtitle: string
+    dDay: string
+    dDayToday: string
+    participants: string
+    viewDeal: string
+  }
+  landing: {
+    metaTitle: string
+    metaDescription: string
+    brandName: string
+    groupBuyLabel: string
+    joinButton: string
+    newBadge: string
+    spotsLeft: string
+    participants: string
+    daysLeft: string
+    endingInHours: string
+    priceDropTitle: string
+    targetPrice: string
+    currentPrice: string
+    stickyCta: string
+    nav: {
+      groupBuys: string
+      categories: string
+      whyUs: string
+      signIn: string
+      startGroupBuy: string
+    }
+    hero: {
+      eyebrow: string
+      headline: string
+      subheadline: string
+      cta: string
+      featuredCta: string
+      liveParticipants: string
+    }
+    ticker: {
+      joined: string
+      waitlist: string
+    }
+    popular: { title: string; subtitle: string }
+    categories: {
+      title: string
+      all: string
+      albums: string
+      lightsticks: string
+      photocards: string
+      dolls: string
+      clothing: string
+      accessories: string
+    }
+    grid: { title: string; subtitle: string }
+    endingSoon: { title: string; subtitle: string }
+    trending: { title: string }
+    newlyOpened: { title: string }
+    fanFavorites: { title: string }
+    why: {
+      title: string
+      authentic: { title: string; description: string }
+      lowerPrices: { title: string; description: string }
+      secure: { title: string; description: string }
+      shipping: { title: string; description: string }
+    }
+    reviews: {
+      title: string
+      review1: { quote: string; author: string; group: string }
+      review2: { quote: string; author: string; group: string }
+      review3: { quote: string; author: string; group: string }
+    }
+    floating: { live: string; joiningNow: string }
+    footer: {
+      tagline: string
+      explore: string
+      support: string
+      securePayment: string
+      authenticGoods: string
+      copyright: string
+    }
+  }
   products: {
     allProducts: string
     products: string
@@ -81,6 +162,44 @@ export type Dictionary = {
     joining: string
     joinError: string
     timeRemaining: string
+    listDescription: string
+    filtersTitle: string
+    searchPlaceholder: string
+    filterIdolGroup: string
+    filterMember: string
+    filterGoodsType: string
+    filterPriceRange: string
+    filterAll: string
+    favoriteMember: string
+    favoriteMemberPlaceholder: string
+    vacantOnlyToggle: string
+    resetFilters: string
+    resultsCount: string
+    emptyFiltered: string
+    leaderTrustTitle: string
+    leaderTrustLabels: {
+      excellent: string
+      good: string
+      fair: string
+      caution: string
+    }
+    depositSecuredBadge: string
+    depositStatusDeposited: string
+    depositStatusPending: string
+    receiptVerified: string
+    receiptPending: string
+    waitlistButton: string
+    waitlistDescription: string
+    waitlistSuccess: string
+    waitlistSuccessNote: string
+    waitlistError: string
+    waitlistHint: string
+    cardMemberVacancy: string
+    cardMemberWaitlist: string
+    cardMemberFull: string
+    cardWaitlistLabel: string
+    cardDaysLeft: string
+    cardEndsToday: string
   }
   cart: {
     title: string
@@ -238,14 +357,137 @@ export type Dictionary = {
       profile: string
       addresses: string
       orders: string
+      paymentMethods: string
+      hostedDeals: string
+      participations: string
+      settlements: string
+      preferences: string
       logout: string
       hello: string
+    }
+    dashboard: {
+      title: string
+      description: string
+    }
+    paymentMethods: {
+      title: string
+      description: string
+      empty: string
+      defaultBadge: string
+      stripeLabel: string
+      tossLabel: string
+      deleteButton: string
+      deleting: string
+      deleteError: string
+      addTitle: string
+      addDescription: string
+      cardLabel: string
+      cardLabelPlaceholder: string
+      last4Label: string
+      addStripe: string
+      addToss: string
+      addStripeSecure: string
+      saveStripeCard: string
+      stripeNotConfigured: string
+      adding: string
+      addError: string
+      labelRequired: string
+    }
+    hostedDeals: {
+      title: string
+      description: string
+      empty: string
+      depositSecured: string
+      depositPending: string
+      adminLink: string
+      participants: string
+      viewDeal: string
+      leaderStage: string
+    }
+    participations: {
+      title: string
+      description: string
+      empty: string
+      quantity: string
+      viewDeal: string
+      tracking: string
+      confirmDelivery: string
+      confirmingDelivery: string
+      deliveryConfirmed: string
+      confirmDeliveryError: string
+    }
+    settlements: {
+      title: string
+      description: string
+      empty: string
+      typeDepositRefund: string
+      typeEscrowRelease: string
+      typeParticipantRefund: string
+      statusCompleted: string
+      statusPending: string
+      statusFailed: string
+      columns: {
+        date: string
+        deal: string
+        type: string
+        amount: string
+        status: string
+      }
+    }
+    preferences: {
+      title: string
+      description: string
+      favoriteTitle: string
+      favoriteDescription: string
+      idolGroupLabel: string
+      idolGroupPlaceholder: string
+      memberLabel: string
+      memberPlaceholder: string
+      notificationsTitle: string
+      notificationsDescription: string
+      notifyVacancyLabel: string
+      notifyVacancyDescription: string
+      notifyProgressLabel: string
+      notifyProgressDescription: string
+      saveButton: string
+      saving: string
+      saveSuccess: string
+      saveError: string
+    }
+    groupBuying: {
+      stages: {
+        recruiting: string
+        payment_complete: string
+        purchasing: string
+        shipping: string
+        delivery_confirmed: string
+      }
+      leaderStages: {
+        created: string
+        deposit_pending: string
+        recruiting: string
+        verify_and_order: string
+        receive_inspect: string
+        shipping: string
+        closing: string
+        settled: string
+      }
     }
     meta: {
       loginTitle: string
       loginDescription: string
       verifyTitle: string
       verifyDescription: string
+      paymentMethodsTitle: string
+      paymentMethodsDescription: string
+      hostedDealsTitle: string
+      hostedDealsDescription: string
+      participationsTitle: string
+      participationsDescription: string
+      settlementsTitle: string
+      settlementsDescription: string
+      preferencesTitle: string
+      preferencesDescription: string
     }
   }
   idol: {

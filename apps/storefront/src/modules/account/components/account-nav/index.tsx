@@ -13,6 +13,22 @@ import Package from "@modules/common/icons/package"
 import User from "@modules/common/icons/user"
 import { formatMessage, useDictionary } from "@i18n/provider"
 
+const accountLinks = [
+  { href: "/account", key: "overview" as const, testId: "overview-link" },
+  { href: "/account/payment-methods", key: "paymentMethods" as const, testId: "payment-methods-link" },
+  { href: "/account/group-deals/hosted", key: "hostedDeals" as const, testId: "hosted-deals-link" },
+  {
+    href: "/account/group-deals/participations",
+    key: "participations" as const,
+    testId: "participations-link",
+  },
+  { href: "/account/settlements", key: "settlements" as const, testId: "settlements-link" },
+  { href: "/account/preferences", key: "preferences" as const, testId: "preferences-link" },
+  { href: "/account/profile", key: "profile" as const, testId: "profile-link" },
+  { href: "/account/addresses", key: "addresses" as const, testId: "addresses-link" },
+  { href: "/account/orders", key: "orders" as const, testId: "orders-link" },
+]
+
 const AccountNav = ({
   customer,
 }: {
@@ -49,49 +65,20 @@ const AccountNav = ({
             </div>
             <div className="text-base-regular">
               <ul>
-                <li>
-                  <LocalizedClientLink
-                    href="/account/profile"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
-                    data-testid="profile-link"
-                  >
-                    <>
-                      <div className="flex items-center gap-x-2">
-                        <User size={20} />
-                        <span>{t.account.nav.profile}</span>
-                      </div>
-                      <ChevronDown className="transform -rotate-90" />
-                    </>
-                  </LocalizedClientLink>
-                </li>
-                <li>
-                  <LocalizedClientLink
-                    href="/account/addresses"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
-                    data-testid="addresses-link"
-                  >
-                    <>
-                      <div className="flex items-center gap-x-2">
-                        <MapPin size={20} />
-                        <span>{t.account.nav.addresses}</span>
-                      </div>
-                      <ChevronDown className="transform -rotate-90" />
-                    </>
-                  </LocalizedClientLink>
-                </li>
-                <li>
-                  <LocalizedClientLink
-                    href="/account/orders"
-                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
-                    data-testid="orders-link"
-                  >
-                    <div className="flex items-center gap-x-2">
-                      <Package size={20} />
-                      <span>{t.account.nav.orders}</span>
-                    </div>
-                    <ChevronDown className="transform -rotate-90" />
-                  </LocalizedClientLink>
-                </li>
+                {accountLinks.map((link) => (
+                  <li key={link.href}>
+                    <LocalizedClientLink
+                      href={link.href}
+                      className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                      data-testid={link.testId}
+                    >
+                      <>
+                        <span>{t.account.nav[link.key]}</span>
+                        <ChevronDown className="transform -rotate-90" />
+                      </>
+                    </LocalizedClientLink>
+                  </li>
+                ))}
                 <li>
                   <button
                     type="button"
@@ -118,42 +105,17 @@ const AccountNav = ({
           </div>
           <div className="text-base-regular">
             <ul className="flex mb-0 justify-start items-start flex-col gap-y-4">
-              <li>
-                <AccountNavLink
-                  href="/account"
-                  route={route!}
-                  data-testid="overview-link"
-                >
-                  {t.account.nav.overview}
-                </AccountNavLink>
-              </li>
-              <li>
-                <AccountNavLink
-                  href="/account/profile"
-                  route={route!}
-                  data-testid="profile-link"
-                >
-                  {t.account.nav.profile}
-                </AccountNavLink>
-              </li>
-              <li>
-                <AccountNavLink
-                  href="/account/addresses"
-                  route={route!}
-                  data-testid="addresses-link"
-                >
-                  {t.account.nav.addresses}
-                </AccountNavLink>
-              </li>
-              <li>
-                <AccountNavLink
-                  href="/account/orders"
-                  route={route!}
-                  data-testid="orders-link"
-                >
-                  {t.account.nav.orders}
-                </AccountNavLink>
-              </li>
+              {accountLinks.map((link) => (
+                <li key={link.href}>
+                  <AccountNavLink
+                    href={link.href}
+                    route={route!}
+                    data-testid={link.testId}
+                  >
+                    {t.account.nav[link.key]}
+                  </AccountNavLink>
+                </li>
+              ))}
               <li className="text-grey-700">
                 <button
                   type="button"

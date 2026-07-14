@@ -1,4 +1,4 @@
-import { GroupDealStatus } from "../../types/group-buying"
+import { GroupDealDepositStatus, GroupDealReceiptStatus, GroupDealStatus } from "../../types/group-buying"
 import type { SerializedGroupDeal } from "../../utils/query-group-deals"
 
 export type AdminGroupDeal = SerializedGroupDeal
@@ -23,6 +23,53 @@ export const GROUP_DEAL_STATUS_LABELS: Record<string, string> = {
   [GroupDealStatus.CLOSED]: "Closed",
   [GroupDealStatus.FAILED]: "Failed",
   [GroupDealStatus.CANCELLED]: "Cancelled",
+  [GroupDealStatus.SETTLED]: "Settled",
+}
+
+export const DEPOSIT_STATUS_LABELS: Record<string, string> = {
+  [GroupDealDepositStatus.PENDING]: "Deposit Pending",
+  [GroupDealDepositStatus.DEPOSITED]: "Deposit Paid",
+  [GroupDealDepositStatus.REFUNDED]: "Deposit Refunded",
+}
+
+export const RECEIPT_STATUS_LABELS: Record<string, string> = {
+  [GroupDealReceiptStatus.PENDING]: "Receipt Pending",
+  [GroupDealReceiptStatus.UPLOADED]: "Receipt Uploaded",
+  [GroupDealReceiptStatus.VERIFIED]: "Receipt Verified",
+  [GroupDealReceiptStatus.REJECTED]: "Receipt Rejected",
+}
+
+export const getDepositBadgeColor = (
+  status: string
+): "grey" | "green" | "orange" | "blue" => {
+  switch (status) {
+    case GroupDealDepositStatus.DEPOSITED:
+      return "green"
+    case GroupDealDepositStatus.REFUNDED:
+      return "blue"
+    case GroupDealDepositStatus.PENDING:
+    default:
+      return "orange"
+  }
+}
+
+export const getReceiptBadgeColor = (
+  status: string
+): "grey" | "green" | "orange" | "red" => {
+  switch (status) {
+    case GroupDealReceiptStatus.VERIFIED:
+      return "green"
+    case GroupDealReceiptStatus.UPLOADED:
+      return "orange"
+    case GroupDealReceiptStatus.REJECTED:
+      return "red"
+    default:
+      return "grey"
+  }
+}
+
+export const isParticipantPaid = (status: string): boolean => {
+  return status === "confirmed" || status === "reserved"
 }
 
 export const formatDealDate = (value: string): string => {

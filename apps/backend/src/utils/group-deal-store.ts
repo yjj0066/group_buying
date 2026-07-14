@@ -68,6 +68,12 @@ export const serializeStoreGroupDeal = (
   starts_at: toIsoString(deal.starts_at),
   ends_at: toIsoString(deal.ends_at),
   metadata: (deal.metadata as Record<string, unknown> | null) ?? null,
+  leader_customer_id:
+    deal.leader_customer_id != null ? String(deal.leader_customer_id) : null,
+  deposit_status: String(deal.deposit_status ?? "pending"),
+  deposit_amount:
+    deal.deposit_amount != null ? toNumber(deal.deposit_amount) : null,
+  purchase_receipt_status: String(deal.purchase_receipt_status ?? "pending"),
   options: options.map(serializeStoreGroupDealOption),
   created_at: toIsoString(deal.created_at),
   updated_at: toIsoString(deal.updated_at),

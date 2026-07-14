@@ -12,7 +12,9 @@ import { Link } from "react-router-dom"
 
 import { useAdminGroupDeals } from "../../hooks/use-group-deals"
 import {
+  DEPOSIT_STATUS_LABELS,
   formatDealDate,
+  getDepositBadgeColor,
   getParticipationRate,
   GROUP_DEAL_STATUS_LABELS,
 } from "../../lib/group-deal"
@@ -49,6 +51,7 @@ const GroupDealsPage = () => {
               <Table.Row>
                 <Table.HeaderCell>Title</Table.HeaderCell>
                 <Table.HeaderCell>Status</Table.HeaderCell>
+                <Table.HeaderCell>Deposit</Table.HeaderCell>
                 <Table.HeaderCell>Participants</Table.HeaderCell>
                 <Table.HeaderCell>Deal Price</Table.HeaderCell>
                 <Table.HeaderCell>Schedule</Table.HeaderCell>
@@ -58,7 +61,7 @@ const GroupDealsPage = () => {
             <Table.Body>
               {groupDeals.length === 0 && (
                 <Table.Row>
-                  <Table.Cell colSpan={6}>
+                  <Table.Cell colSpan={7}>
                     <Text className="text-ui-fg-subtle">
                       No group deals yet. Create your first campaign.
                     </Text>
@@ -79,6 +82,11 @@ const GroupDealsPage = () => {
                   <Table.Cell>
                     <Badge size="small">
                       {GROUP_DEAL_STATUS_LABELS[deal.status] ?? deal.status}
+                    </Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Badge size="small" color={getDepositBadgeColor(deal.deposit_status)}>
+                      {DEPOSIT_STATUS_LABELS[deal.deposit_status] ?? deal.deposit_status}
                     </Badge>
                   </Table.Cell>
                   <Table.Cell>

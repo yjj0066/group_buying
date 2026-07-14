@@ -259,6 +259,85 @@ export class StripeGroupDealClient {
     }
   }
 
+  /**
+   * SetupIntent 예약 해지 (캡처 전 에스크로 해제)
+   */
+  async cancelSetupReservation(input: {
+    setupIntentId: string
+  }): Promise<{ setupIntentId: string; status: string }> {
+    if (
+      this.options.testMode &&
+      input.setupIntentId.startsWith("seti_test_") &&
+      !this.stripe_
+    ) {
+      return {
+        setupIntentId: input.setupIntentId,
+        status: "canceled",
+      }
+    }
+
+    if (!this.stripe_) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Stripe API key is required"
+      )
+    }
+
+    const setupIntent = await this.stripe_.setupIntents.cancel(
+      input.setupIntentId
+    )
+
+    return {
+      setupIntentId: setupIntent.id,
+      status: setupIntent.status,
+    }
+  }
+
+  /**
+   * 캡처된 PaymentIntent 환불
+   */
+  async refundCapturedPayment(input: {
+    paymentIntentId: string
+    amount?: number
+    currencyCode: string
+    reason?: string
+  }): Promise<{ refundId: string; status: string }> {
+    if (
+      this.options.testMode &&
+      input.paymentIntentId.startsWith("pi_test_") &&
+      !this.stripe_
+    ) {
+      return {
+        refundId: `re_test_${input.paymentIntentId}`,
+        status: "succeeded",
+      }
+    }
+
+    if (!this.stripe_) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Stripe API key is required"
+      )
+    }
+
+    const refund = await this.stripe_.refunds.create({
+      payment_intent: input.paymentIntentId,
+      ...(input.amount != null
+        ? {
+            amount: getSmallestUnit(input.amount, input.currencyCode),
+          }
+        : {}),
+      metadata: {
+        reason: input.reason ?? "group_deal_refund",
+      },
+    })
+
+    return {
+      refundId: refund.id,
+      status: refund.status ?? "succeeded",
+    }
+  }
+
   protected assertNonKrwCurrency(currencyCode: string): void {
     if (currencyCode.toLowerCase() === "krw") {
       throw new MedusaError(

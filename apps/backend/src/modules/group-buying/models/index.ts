@@ -1,11 +1,14 @@
 import { model } from "@medusajs/framework/utils"
 import {
+  GroupDealDepositStatus,
   GroupDealOptionType,
   GroupDealParticipantStatus,
   GroupDealPaymentPhaseMode,
+  GroupDealReceiptStatus,
   GroupDealSecondPaymentStatus,
   GroupDealShippingFeeStatus,
   GroupDealStatus,
+  GroupDealWaitlistStatus,
 } from "../../../types/group-buying"
 
 export const GroupDeal = model.define(
@@ -39,6 +42,23 @@ export const GroupDeal = model.define(
     /** 예상 1인당 배송비 (2차금 견적) */
     estimated_shipping_fee: model.bigNumber().nullable(),
     shipping_fee_note: model.text().nullable(),
+    /** 총대(리더) customer id */
+    leader_customer_id: model.text().nullable(),
+    /** 총대 보증금 예치 상태 */
+    deposit_status: model
+      .enum(GroupDealDepositStatus)
+      .default(GroupDealDepositStatus.PENDING),
+    /** 총대 보증금 금액 */
+    deposit_amount: model.bigNumber().nullable(),
+    /** 보증금 결제 키 (환불용) */
+    deposit_payment_key: model.text().nullable(),
+    deposit_paid_at: model.dateTime().nullable(),
+    /** 총대 1차 구매 영수증 */
+    purchase_receipt_url: model.text().nullable(),
+    purchase_receipt_status: model
+      .enum(GroupDealReceiptStatus)
+      .default(GroupDealReceiptStatus.PENDING),
+    purchase_receipt_verified_at: model.dateTime().nullable(),
     status: model.enum(GroupDealStatus).default(GroupDealStatus.DRAFT),
     starts_at: model.dateTime(),
     ends_at: model.dateTime(),
@@ -47,6 +67,9 @@ export const GroupDeal = model.define(
       mappedBy: "group_deal",
     }),
     participants: model.hasMany(() => GroupDealParticipant, {
+      mappedBy: "group_deal",
+    }),
+    waitlist_entries: model.hasMany(() => GroupDealWaitlistEntry, {
       mappedBy: "group_deal",
     }),
   }
@@ -116,6 +139,19 @@ export const GroupDealParticipant = model.define(
     last_capture_error: model.text().nullable(),
     reserved_at: model.dateTime().nullable(),
     captured_at: model.dateTime().nullable(),
+    /** 입금/결제 기한 */
+    payment_deadline: model.dateTime().nullable(),
+    /** 수령 확인 시각 */
+    delivery_confirmed_at: model.dateTime().nullable(),
+    /** 대기자 매칭 출처 */
+    waitlist_entry_id: model.text().nullable(),
+    /** 캡처된 결제 키 (환불용) */
+    capture_payment_key: model.text().nullable(),
+    /** 송장 번호 */
+    tracking_number: model.text().nullable(),
+    /** 택배사 */
+    carrier: model.text().nullable(),
+    tracking_updated_at: model.dateTime().nullable(),
     group_deal: model.belongsTo(() => GroupDeal, {
       mappedBy: "participants",
     }),
@@ -144,6 +180,38 @@ export const GroupDealParticipantSelection = model.define(
     }),
     option: model.belongsTo(() => GroupDealOption, {
       mappedBy: "selections",
+    }),
+  }
+)
+
+/**
+ * 공석 발생 시 자동 매칭을 위한 대기자(waitlist) 큐
+ */
+export const GroupDealWaitlistEntry = model.define(
+  {
+    tableName: "group_deal_waitlist_entry",
+    name: "GroupDealWaitlistEntry",
+  },
+  {
+    id: model.id({ prefix: "gwlist" }).primaryKey(),
+    customer_id: model.text().nullable(),
+    email: model.text(),
+    quantity: model.number().default(1),
+    /** 큐 내 순번 (낮을수록 우선) */
+    queue_position: model.number().default(0),
+    /** 우선순위 (높을수록 먼저 매칭, 동일 시 queue_position·created_at 순) */
+    priority: model.number().default(0),
+    status: model
+      .enum(GroupDealWaitlistStatus)
+      .default(GroupDealWaitlistStatus.WAITING),
+    payment_deadline: model.dateTime().nullable(),
+    matched_participant_id: model.text().nullable(),
+    matched_at: model.dateTime().nullable(),
+    /** 매칭 시 participant selections 복원용 스냅샷 */
+    selections_snapshot: model.json().nullable(),
+    metadata: model.json().nullable(),
+    group_deal: model.belongsTo(() => GroupDeal, {
+      mappedBy: "waitlist_entries",
     }),
   }
 )

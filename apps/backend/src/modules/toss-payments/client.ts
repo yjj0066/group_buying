@@ -284,6 +284,47 @@ export class TossPaymentsClient {
     }
   }
 
+  /**
+   * 결제 환불 (캡처 완료 건)
+   */
+  async refundPayment(input: {
+    orderId: string
+    paymentKey: string
+    amount?: number
+    reason?: string
+  }): Promise<TossPaymentSessionData> {
+    if (this.options.testMode && input.paymentKey.startsWith("pay_test_")) {
+      return {
+        id: input.orderId,
+        orderId: input.orderId,
+        amount: input.amount ?? 0,
+        currency_code: "krw",
+        status: "canceled",
+        paymentKey: input.paymentKey,
+      }
+    }
+
+    await this.request(
+      `/v1/payments/${encodeURIComponent(input.paymentKey)}/cancel`,
+      {
+        method: "POST",
+        body: {
+          cancelReason: input.reason ?? "group_deal_refund",
+          ...(input.amount != null ? { cancelAmount: input.amount } : {}),
+        },
+      }
+    )
+
+    return {
+      id: input.orderId,
+      orderId: input.orderId,
+      amount: input.amount ?? 0,
+      currency_code: "krw",
+      status: "canceled",
+      paymentKey: input.paymentKey,
+    }
+  }
+
   verifyWebhookSignature(input: {
     rawBody: string | Buffer
     signature?: string

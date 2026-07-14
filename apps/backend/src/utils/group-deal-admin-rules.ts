@@ -1,5 +1,5 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { GroupDealStatus } from "../types/group-buying"
+import { GroupDealDepositStatus, GroupDealStatus } from "../types/group-buying"
 
 export type AdminGroupDealLike = {
   status: GroupDealStatus | string
@@ -7,12 +7,14 @@ export type AdminGroupDealLike = {
   starts_at: Date | string
   ends_at: Date | string
   min_participants?: number
+  deposit_status?: GroupDealDepositStatus | string
 }
 
 const TERMINAL_STATUSES = new Set<GroupDealStatus | string>([
   GroupDealStatus.CLOSED,
   GroupDealStatus.FAILED,
   GroupDealStatus.CANCELLED,
+  GroupDealStatus.SETTLED,
 ])
 
 const UPDATABLE_STATUSES = new Set<GroupDealStatus | string>([
@@ -42,6 +44,13 @@ export const assertDealCancellable = (deal: AdminGroupDealLike): void => {
     throw new MedusaError(
       MedusaError.Types.NOT_ALLOWED,
       "Cannot cancel a closed group deal"
+    )
+  }
+
+  if (deal.status === GroupDealStatus.SETTLED) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "Cannot cancel a settled group deal"
     )
   }
 }
@@ -92,9 +101,26 @@ export const validateDealSchedule = (input: {
   }
 }
 
+export const assertDepositBeforeActivate = (
+  deal: AdminGroupDealLike,
+  nextStatus?: GroupDealStatus
+): void => {
+  if (nextStatus !== GroupDealStatus.OPEN) {
+    return
+  }
+
+  if (deal.deposit_status !== GroupDealDepositStatus.DEPOSITED) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "Leader deposit must be paid before activating the group deal"
+    )
+  }
+}
+
 export const assertStatusTransitionAllowed = (
   currentStatus: GroupDealStatus | string,
-  nextStatus?: GroupDealStatus
+  nextStatus?: GroupDealStatus,
+  deal?: AdminGroupDealLike
 ): void => {
   if (!nextStatus || nextStatus === currentStatus) {
     return
@@ -123,5 +149,9 @@ export const assertStatusTransitionAllowed = (
       MedusaError.Types.NOT_ALLOWED,
       `Cannot transition group deal from "${currentStatus}" to "${nextStatus}"`
     )
+  }
+
+  if (deal) {
+    assertDepositBeforeActivate(deal, nextStatus)
   }
 }

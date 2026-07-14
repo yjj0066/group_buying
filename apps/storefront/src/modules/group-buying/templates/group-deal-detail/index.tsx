@@ -9,6 +9,7 @@ import { getMedusaLocaleCode, getServerDictionary, formatMessage } from "@i18n/s
 import { Heading, Text } from "@modules/common/components/ui"
 
 import GroupDealProgress from "@modules/group-buying/components/group-deal-progress"
+import LeaderTrustPanel from "@modules/group-buying/components/leader-trust-panel"
 import UnlockRewardGauge from "@modules/products/components/unlock-reward-gauge"
 
 import JoinDealForm from "@modules/group-buying/components/join-deal-form"
@@ -98,6 +99,12 @@ const GroupDealDetailTemplate = async ({
         {dictionary.groupBuying.backToList}
 
       </LocalizedClientLink>
+
+
+
+      <div className="mb-8">
+        <LeaderTrustPanel deal={groupDeal} />
+      </div>
 
 
 

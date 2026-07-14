@@ -1,48 +1,16 @@
-import PublishedProductsGrid from "@modules/products/templates/published-products-grid"
-
-import { getServerDictionary } from "@i18n/server"
-
-
+import { listGroupDeals } from "@lib/data/group-deals"
+import GroupDealsCatalog from "@modules/group-buying/components/group-deals-catalog"
 
 type GroupDealsListTemplateProps = {
-
   countryCode: string
-
 }
-
-
 
 const GroupDealsListTemplate = async ({
-
-  countryCode,
-
+  countryCode: _countryCode,
 }: GroupDealsListTemplateProps) => {
+  const { group_deals: deals } = await listGroupDeals()
 
-  const dictionary = await getServerDictionary()
-
-
-
-  return (
-
-    <PublishedProductsGrid
-
-      countryCode={countryCode}
-
-      title={dictionary.groupBuying.title}
-
-      description={dictionary.products.groupBuyingDescription}
-
-      emptyMessage={dictionary.products.empty}
-
-      regionErrorMessage={dictionary.products.regionError}
-
-    />
-
-  )
-
+  return <GroupDealsCatalog deals={deals} />
 }
 
-
-
 export default GroupDealsListTemplate
-

@@ -21,6 +21,7 @@ import {
   GroupDealOptionType,
   GroupDealParticipantStatus,
   GroupDealPaymentPhaseMode,
+  GroupDealDepositStatus,
   GroupDealStatus,
 } from "../types/group-buying"
 import {
@@ -33,6 +34,7 @@ import {
   resolveGroupDealPaymentProviderKind,
 } from "../utils/group-deal-payment-provider"
 import { captureGroupDealPaymentsWorkflow, emitGroupDealUpdated } from "./group-deal-billing"
+import { refundGroupDealEscrowWorkflow } from "./group-deal-escrow"
 
 export type CreateGroupDealOptionInput = {
   option_type: GroupDealOptionType
@@ -64,6 +66,9 @@ export type CreateGroupDealStepInput = {
   payment_phase_mode?: GroupDealPaymentPhaseMode
   estimated_shipping_fee?: number | null
   shipping_fee_note?: string | null
+  leader_customer_id?: string | null
+  deposit_amount?: number | null
+  deposit_status?: GroupDealDepositStatus
   options?: CreateGroupDealOptionInput[]
 }
 
@@ -101,6 +106,9 @@ export const createGroupDealStep = createStep(
         payment_phase_mode: paymentPhaseMode,
         estimated_shipping_fee: input.estimated_shipping_fee ?? null,
       }),
+      leader_customer_id: input.leader_customer_id ?? null,
+      deposit_amount: input.deposit_amount ?? null,
+      deposit_status: input.deposit_status ?? GroupDealDepositStatus.PENDING,
     })
 
     if (input.options?.length) {
@@ -227,6 +235,7 @@ const prepareGroupDealCheckoutStep = createStep(
       customer_id: input.customer_id,
       email: input.email,
     })
+    const paymentDeadline = await groupBuyingService.resolvePaymentDeadline()
 
     const existingParticipant = await groupBuyingService.findParticipantByIdentity(
       {
@@ -252,6 +261,7 @@ const prepareGroupDealCheckoutStep = createStep(
         first_payment_amount: firstPaymentAmount,
         second_payment_status: joinValidation.secondPaymentStatus,
         payment_provider_id: paymentProviderId,
+        payment_deadline: paymentDeadline,
       })
     } else if (participant) {
       participant = await groupBuyingService.updateGroupDealParticipants({
@@ -265,6 +275,7 @@ const prepareGroupDealCheckoutStep = createStep(
         second_payment_status: joinValidation.secondPaymentStatus,
         billing_customer_key: billingCustomerKey,
         payment_provider_id: paymentProviderId,
+        payment_deadline: paymentDeadline,
       })
     } else {
       participant = await groupBuyingService.createGroupDealParticipants({
@@ -278,6 +289,7 @@ const prepareGroupDealCheckoutStep = createStep(
         second_payment_status: joinValidation.secondPaymentStatus,
         billing_customer_key: billingCustomerKey,
         payment_provider_id: paymentProviderId,
+        payment_deadline: paymentDeadline,
       })
     }
 
@@ -685,7 +697,7 @@ const updateGroupDealStep = createStep(
     } = await import("../utils/group-deal-admin-rules")
 
     assertDealUpdatable(existing)
-    assertStatusTransitionAllowed(existing.status, input.status)
+    assertStatusTransitionAllowed(existing.status, input.status, existing)
 
     const nextStartsAt = input.starts_at
       ? new Date(input.starts_at)
@@ -797,66 +809,16 @@ export type CancelGroupDealInput = {
   reason?: string | null
 }
 
-const cancelGroupDealStep = createStep(
-  "cancel-group-deal",
-  async (input: CancelGroupDealInput, { container }) => {
-    const groupBuyingService: GroupBuyingModuleService = container.resolve(
-      GROUP_BUYING_MODULE
-    )
-
-    const existing = await groupBuyingService.retrieveGroupDeal(input.id)
-    const { assertDealCancellable } = await import(
-      "../utils/group-deal-admin-rules"
-    )
-
-    assertDealCancellable(existing)
-
-    const updated = await groupBuyingService.updateGroupDeals({
-      id: input.id,
-      status: GroupDealStatus.CANCELLED,
-      metadata: {
-        ...(existing.metadata ?? {}),
-        cancelled_at: new Date().toISOString(),
-        cancel_reason: input.reason ?? null,
-      },
-    })
-
-    return new StepResponse(updated, {
-      id: input.id,
-      previous_status: existing.status,
-      previous_metadata: existing.metadata,
-    })
-  },
-  async (
-    compensation:
-      | {
-          id: string
-          previous_status: GroupDealStatus | string
-          previous_metadata: Record<string, unknown> | null
-        }
-      | undefined,
-    { container }
-  ) => {
-    if (!compensation) {
-      return
-    }
-
-    const groupBuyingService: GroupBuyingModuleService = container.resolve(
-      GROUP_BUYING_MODULE
-    )
-
-    await groupBuyingService.updateGroupDeals({
-      id: compensation.id,
-      status: compensation.previous_status as GroupDealStatus,
-      metadata: compensation.previous_metadata,
-    })
-  }
-)
-
 export const cancelGroupDealWorkflow = createWorkflow(
   "cancel-group-deal",
   (input: CancelGroupDealInput) => {
-    const groupDeal = cancelGroupDealStep(input)
+    const groupDeal = refundGroupDealEscrowWorkflow.runAsStep({
+      input: {
+        group_deal_id: input.id,
+        final_status: GroupDealStatus.CANCELLED,
+        reason: input.reason,
+      },
+    })
 
     return new WorkflowResponse(groupDeal)
   }

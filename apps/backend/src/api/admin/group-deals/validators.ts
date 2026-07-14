@@ -2,6 +2,7 @@ import { z } from "@medusajs/framework/zod"
 import {
   GroupDealOptionType,
   GroupDealPaymentPhaseMode,
+  GroupDealReceiptStatus,
   GroupDealStatus,
 } from "../../../types/group-buying"
 
@@ -80,4 +81,39 @@ export const PostAdminCancelGroupDeal = z.object({
 
 export type PostAdminCancelGroupDealType = z.infer<
   typeof PostAdminCancelGroupDeal
+>
+
+export const PostAdminGroupDealReceipt = z
+  .object({
+    image_base64: z.string().min(1).optional(),
+    image_url: z.string().url().optional(),
+    filename: z.string().optional(),
+    status: z.nativeEnum(GroupDealReceiptStatus).optional(),
+    note: z.string().optional().nullable(),
+  })
+  .refine(
+    (value) => Boolean(value.image_base64 || value.image_url || value.status),
+    {
+      message: "Provide image_base64, image_url, or status",
+    }
+  )
+
+export type PostAdminGroupDealReceiptType = z.infer<
+  typeof PostAdminGroupDealReceipt
+>
+
+export const PostAdminGroupDealTracking = z.object({
+  entries: z
+    .array(
+      z.object({
+        participant_id: z.string().min(1),
+        tracking_number: z.string().min(1),
+        carrier: z.string().optional().nullable(),
+      })
+    )
+    .min(1),
+})
+
+export type PostAdminGroupDealTrackingType = z.infer<
+  typeof PostAdminGroupDealTracking
 >

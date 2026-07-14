@@ -1,7 +1,9 @@
 import { MedusaContainer } from "@medusajs/framework/types"
+import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { GROUP_BUYING_MODULE } from "../modules/group-buying"
 import GroupBuyingModuleService from "../modules/group-buying/service"
 import { GroupDealStatus } from "../types/group-buying"
+import { isParticipantAddressComplete } from "./group-deal-leader-ops"
 
 export type SerializedGroupDealOption = {
   id: string
@@ -50,6 +52,12 @@ export type SerializedGroupDeal = {
   shipping_fee_status: string
   estimated_shipping_fee: number | null
   shipping_fee_note: string | null
+  leader_customer_id: string | null
+  deposit_status: string
+  deposit_amount: number | null
+  purchase_receipt_url: string | null
+  purchase_receipt_status: string
+  purchase_receipt_verified_at: string | null
   status: GroupDealStatus | string
   starts_at: string
   ends_at: string
@@ -78,6 +86,12 @@ export type SerializedGroupDealParticipant = {
   last_capture_error: string | null
   reserved_at: string | null
   captured_at: string | null
+  payment_deadline: string | null
+  delivery_confirmed_at: string | null
+  tracking_number: string | null
+  carrier: string | null
+  tracking_updated_at: string | null
+  has_shipping_address?: boolean
   created_at: string
   updated_at: string
   selections?: SerializedGroupDealSelection[]
@@ -121,7 +135,8 @@ const serializeGroupDealSelection = (
 
 const serializeGroupDealParticipant = (
   participant: Record<string, unknown>,
-  selections?: Record<string, unknown>[]
+  selections?: Record<string, unknown>[],
+  shippingAddress?: Record<string, unknown> | null
 ): SerializedGroupDealParticipant => ({
   id: String(participant.id),
   group_deal_id: String(participant.group_deal_id),
@@ -155,6 +170,25 @@ const serializeGroupDealParticipant = (
   captured_at: participant.captured_at
     ? new Date(participant.captured_at as string | Date).toISOString()
     : null,
+  payment_deadline: participant.payment_deadline
+    ? new Date(participant.payment_deadline as string | Date).toISOString()
+    : null,
+  delivery_confirmed_at: participant.delivery_confirmed_at
+    ? new Date(participant.delivery_confirmed_at as string | Date).toISOString()
+    : null,
+  tracking_number: (participant.tracking_number as string | null) ?? null,
+  carrier: (participant.carrier as string | null) ?? null,
+  tracking_updated_at: participant.tracking_updated_at
+    ? new Date(participant.tracking_updated_at as string | Date).toISOString()
+    : null,
+  has_shipping_address: shippingAddress
+    ? isParticipantAddressComplete({
+        address_line_1: String(shippingAddress.address_1 ?? ""),
+        city: String(shippingAddress.city ?? ""),
+        postal_code: String(shippingAddress.postal_code ?? ""),
+        country_code: String(shippingAddress.country_code ?? ""),
+      })
+    : false,
   created_at: new Date(
     participant.created_at as string | Date
   ).toISOString(),
@@ -170,6 +204,7 @@ const serializeGroupDeal = (
     participants?: Record<string, unknown>[]
     options?: Record<string, unknown>[]
     participantSelections?: Map<string, Record<string, unknown>[]>
+    participantShippingAddresses?: Map<string, Record<string, unknown> | null>
   }
 ): SerializedGroupDeal => {
   return {
@@ -194,6 +229,20 @@ const serializeGroupDeal = (
         ? null
         : Number(deal.estimated_shipping_fee),
     shipping_fee_note: (deal.shipping_fee_note as string | null) ?? null,
+    leader_customer_id: (deal.leader_customer_id as string | null) ?? null,
+    deposit_status: String(deal.deposit_status ?? "pending"),
+    deposit_amount:
+      deal.deposit_amount == null ? null : Number(deal.deposit_amount),
+    purchase_receipt_url:
+      (deal.purchase_receipt_url as string | null) ?? null,
+    purchase_receipt_status: String(
+      deal.purchase_receipt_status ?? "pending"
+    ),
+    purchase_receipt_verified_at: deal.purchase_receipt_verified_at
+      ? new Date(
+          deal.purchase_receipt_verified_at as string | Date
+        ).toISOString()
+      : null,
     status: String(deal.status) as GroupDealStatus,
     starts_at: new Date(deal.starts_at as string | Date).toISOString(),
     ends_at: new Date(deal.ends_at as string | Date).toISOString(),
@@ -204,7 +253,8 @@ const serializeGroupDeal = (
     participants: extras?.participants?.map((participant) =>
       serializeGroupDealParticipant(
         participant,
-        extras.participantSelections?.get(String(participant.id))
+        extras.participantSelections?.get(String(participant.id)),
+        extras.participantShippingAddresses?.get(String(participant.id)) ?? null
       )
     ),
   }
@@ -260,6 +310,10 @@ export const queryGroupDeal = async (
   let participants: Record<string, unknown>[] | undefined
   let dealOptions: Record<string, unknown>[] | undefined
   const participantSelections = new Map<string, Record<string, unknown>[]>()
+  const participantShippingAddresses = new Map<
+    string,
+    Record<string, unknown> | null
+  >()
 
   if (options?.withOptions ?? true) {
     const listed = await groupBuyingService.listDealOptions(id)
@@ -273,6 +327,33 @@ export const queryGroupDeal = async (
 
     participants = listed as Record<string, unknown>[]
 
+    const orderIds = participants
+      .map((participant) => participant.order_id as string | null)
+      .filter((orderId): orderId is string => Boolean(orderId))
+
+    const ordersById = new Map<string, Record<string, unknown>>()
+
+    if (orderIds.length) {
+      const query = scope.resolve(ContainerRegistrationKeys.QUERY)
+      const { data: orders } = await query.graph({
+        entity: "order",
+        fields: [
+          "id",
+          "shipping_address.address_1",
+          "shipping_address.city",
+          "shipping_address.postal_code",
+          "shipping_address.country_code",
+        ],
+        filters: { id: orderIds },
+      })
+
+      for (const order of orders ?? []) {
+        if (order?.id) {
+          ordersById.set(String(order.id), order as Record<string, unknown>)
+        }
+      }
+    }
+
     for (const participant of participants) {
       const selections = await groupBuyingService.listParticipantSelections(
         String(participant.id)
@@ -282,6 +363,13 @@ export const queryGroupDeal = async (
         String(participant.id),
         selections as Record<string, unknown>[]
       )
+
+      const orderId = participant.order_id as string | null
+      const order = orderId ? ordersById.get(orderId) : undefined
+      participantShippingAddresses.set(
+        String(participant.id),
+        (order?.shipping_address as Record<string, unknown> | null) ?? null
+      )
     }
   }
 
@@ -289,5 +377,6 @@ export const queryGroupDeal = async (
     participants,
     options: dealOptions,
     participantSelections,
+    participantShippingAddresses,
   })
 }

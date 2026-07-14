@@ -798,6 +798,8 @@ export class GroupDealBillingCaptureService {
 
         order_id: captured.transactionId ?? participant.order_id,
 
+        capture_payment_key: captured.paymentKey ?? captured.transactionId ?? null,
+
       })
 
 
@@ -1037,6 +1039,8 @@ export class GroupDealBillingCaptureService {
         captured_at: new Date(),
 
         order_id: captured.transactionId ?? participant.order_id,
+
+        capture_payment_key: captured.paymentKey ?? captured.transactionId ?? null,
 
       })
 
