@@ -12,8 +12,11 @@ export const GroupDeal = model.define(
     description: model.text().nullable(),
     product_id: model.text(),
     variant_id: model.text().nullable(),
+    min_participants: model.number().default(1),
+    current_participants: model.number().default(0),
     target_quantity: model.number(),
     current_quantity: model.number().default(0),
+    max_quantity: model.number().nullable(),
     original_price: model.bigNumber(),
     deal_price: model.bigNumber(),
     currency_code: model.text(),
@@ -37,6 +40,7 @@ export const GroupDealParticipant = model.define(
     status: model
       .enum(GroupDealParticipantStatus)
       .default(GroupDealParticipantStatus.PENDING),
+    cart_id: model.text().nullable(),
     order_id: model.text().nullable(),
     group_deal: model.belongsTo(() => GroupDeal, {
       mappedBy: "participants",

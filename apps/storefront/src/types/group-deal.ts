@@ -1,9 +1,12 @@
 export type GroupDealStatus =
   | "draft"
-  | "active"
-  | "success"
+  | "open"
+  | "minimum_reached"
+  | "closed"
   | "failed"
   | "cancelled"
+  | "active"
+  | "success"
 
 export type GroupDealParticipantStatus =
   | "pending"
@@ -16,6 +19,7 @@ export type GroupDealParticipant = {
   email: string
   quantity: number
   status: GroupDealParticipantStatus
+  cart_id: string | null
   order_id: string | null
   created_at: string
   updated_at: string
@@ -27,8 +31,11 @@ export type GroupDeal = {
   description: string | null
   product_id: string
   variant_id: string | null
+  min_participants: number
+  current_participants: number
   target_quantity: number
   current_quantity: number
+  max_quantity: number | null
   original_price: number
   deal_price: number
   currency_code: string
@@ -50,6 +57,40 @@ export type GroupDealResponse = {
 }
 
 export type JoinGroupDealResponse = {
+  cart_id: string
   participant: GroupDealParticipant
   group_deal: GroupDeal
+  checkout_path: string
+}
+
+export const isJoinableGroupDealStatus = (status: GroupDealStatus): boolean => {
+  return status === "open" || status === "minimum_reached" || status === "active"
+}
+
+export const getParticipationRate = (deal: GroupDeal): number => {
+  const min = deal.min_participants || deal.target_quantity || 1
+  const current = deal.current_participants ?? 0
+
+  return Math.min(100, Math.round((current / min) * 100))
+}
+
+export const getDealStatusLabelKey = (
+  status: GroupDealStatus
+): "open" | "minimumReached" | "closed" | "failed" | "cancelled" | "draft" => {
+  switch (status) {
+    case "open":
+    case "active":
+      return "open"
+    case "minimum_reached":
+    case "success":
+      return "minimumReached"
+    case "closed":
+      return "closed"
+    case "failed":
+      return "failed"
+    case "cancelled":
+      return "cancelled"
+    default:
+      return "draft"
+  }
 }

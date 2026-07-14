@@ -20,6 +20,8 @@ export const isValidDictionary = (
       dict.products?.detailDescription &&
       dict.products?.relatedProducts &&
       dict.products?.addToCart &&
+      dict.cart?.summary &&
+      dict.checkout?.payment &&
       dict.idol?.demandSurvey?.title &&
       dict.idol?.productionStatus
   )

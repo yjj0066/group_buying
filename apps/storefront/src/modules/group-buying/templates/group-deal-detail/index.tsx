@@ -83,7 +83,8 @@ const GroupDealDetailTemplate = async ({
 
 
 
-  const participantCount = groupDeal.participants?.length ?? 0
+  const participantCount = groupDeal.current_participants ?? 0
+  const minParticipants = groupDeal.min_participants || groupDeal.target_quantity
 
 
 
@@ -182,7 +183,7 @@ const GroupDealDetailTemplate = async ({
 
               {formatMessage(dictionary.groupBuying.targetAndCurrent, {
 
-                target: groupDeal.target_quantity,
+                target: minParticipants,
 
                 current: participantCount,
 

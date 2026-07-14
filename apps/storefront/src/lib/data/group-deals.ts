@@ -1,6 +1,8 @@
 "use server"
 
 import { sdk } from "@lib/config"
+import { getAuthHeaders, getCacheTag, getCartId, setCartId } from "@lib/data/cookies"
+import { revalidateTag } from "next/cache"
 import {
   GroupDealResponse,
   GroupDealsResponse,
@@ -25,15 +27,40 @@ export async function retrieveGroupDeal(id: string) {
   })
 }
 
-export async function joinGroupDeal(
+export async function startGroupDealCheckout(
   id: string,
-  data: { email: string; quantity: number }
+  data: {
+    email: string
+    quantity: number
+    countryCode: string
+  }
 ) {
-  return sdk.client.fetch<JoinGroupDealResponse>(
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  const existingCartId = await getCartId()
+
+  const response = await sdk.client.fetch<JoinGroupDealResponse>(
     `/store/group-deals/${id}/join`,
     {
       method: "POST",
-      body: data,
+      body: {
+        email: data.email,
+        quantity: data.quantity,
+        country_code: data.countryCode,
+        cart_id: existingCartId,
+      },
+      headers,
     }
   )
+
+  await setCartId(response.cart_id)
+
+  const cartCacheTag = await getCacheTag("carts")
+  if (cartCacheTag) {
+    revalidateTag(cartCacheTag)
+  }
+
+  return response
 }

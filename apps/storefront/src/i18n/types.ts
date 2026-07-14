@@ -45,6 +45,8 @@ export type Dictionary = {
     email: string
     quantity: string
     joinButton: string
+    checkoutButton: string
+    checkoutNote: string
     joining: string
     joinError: string
     timeRemaining: string
@@ -58,6 +60,79 @@ export type Dictionary = {
     goToCart: string
     empty: string
     explore: string
+    summary: string
+    goToCheckout: string
+    item: string
+    price: string
+    total: string
+    emptyDescription: string
+    signInTitle: string
+    signInSubtitle: string
+    signIn: string
+    selectPlaceholder: string
+    subtotalExcl: string
+    shipping: string
+    discount: string
+    taxes: string
+    totalLabel: string
+  }
+  checkout: {
+    backToCart: string
+    back: string
+    inYourCart: string
+    edit: string
+    shippingAddress: string
+    billingAddress: string
+    contact: string
+    billingSameAsShipping: string
+    billingSameAsShippingSummary: string
+    continueToDelivery: string
+    savedAddressPrompt: string
+    chooseAddress: string
+    delivery: string
+    shippingMethod: string
+    shippingMethodHint: string
+    pickUpOrder: string
+    store: string
+    chooseStore: string
+    method: string
+    continueToPayment: string
+    payment: string
+    paymentMethod: string
+    paymentDetails: string
+    giftCard: string
+    enterCardDetails: string
+    enterCardDetailsButton: string
+    continueToReview: string
+    anotherStepWillAppear: string
+    selectPaymentMethod: string
+    placeOrder: string
+    testBadgeAttention: string
+    testBadgeNote: string
+    review: string
+    reviewDisclaimer: string
+    addPromotionCode: string
+    apply: string
+    promotionsApplied: string
+    removeDiscountAria: string
+    country: string
+    firstName: string
+    lastName: string
+    address: string
+    company: string
+    postalCode: string
+    city: string
+    stateProvince: string
+    email: string
+    phone: string
+    emailValidationTitle: string
+    paymentProviders: {
+      creditCard: string
+      ideal: string
+      bancontact: string
+      paypal: string
+      manual: string
+    }
   }
   sideMenu: {
     home: string
