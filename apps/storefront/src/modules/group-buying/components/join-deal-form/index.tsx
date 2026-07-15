@@ -7,6 +7,7 @@ import { startGroupDealCheckout } from "@lib/data/group-deals"
 import { useDictionary } from "@i18n/provider"
 import { Button, Input, Label, Text } from "@modules/common/components/ui"
 import WaitlistForm from "@modules/group-buying/components/waitlist-form"
+import type { SelectedSeat } from "@modules/group-buying/components/member-seat-picker"
 import {
   GroupDeal,
   isDealSoldOut,
@@ -15,9 +16,17 @@ import {
 
 type JoinDealFormProps = {
   deal: GroupDeal
+  selectedSeat?: SelectedSeat | null
+  holdExpiresAt?: number | null
+  requiresSeat?: boolean
 }
 
-const JoinDealForm = ({ deal }: JoinDealFormProps) => {
+const JoinDealForm = ({
+  deal,
+  selectedSeat = null,
+  holdExpiresAt = null,
+  requiresSeat = false,
+}: JoinDealFormProps) => {
   const router = useRouter()
   const params = useParams()
   const t = useDictionary()
@@ -32,9 +41,24 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
 
   const isJoinable = isJoinableGroupDealStatus(deal.status)
   const isSoldOut = isDealSoldOut(deal)
+  const isDemoDeal = deal.metadata?.is_demo === true
+  const isProductPreview = deal.metadata?.is_product_preview === true
+  const holdExpired =
+    holdExpiresAt != null && holdExpiresAt <= Date.now()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (requiresSeat && !selectedSeat) {
+      setError(t.groupBuying.seatSelectRequired)
+      return
+    }
+
+    if (holdExpiresAt && holdExpired) {
+      setError(t.groupBuying.seatHoldExpired)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -43,6 +67,9 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
         email,
         quantity,
         countryCode,
+        selections: selectedSeat
+          ? [{ option_id: selectedSeat.optionId, quantity }]
+          : undefined,
       })
 
       router.push(`/${countryCode}/checkout`)
@@ -69,11 +96,13 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
     )
   }
 
-  if (!isJoinable) {
+  if (!isJoinable || isProductPreview) {
     return (
       <div className="rounded-lg border border-ui-border-base bg-ui-bg-subtle p-6">
         <Text className="text-ui-fg-subtle">
-          {t.groupBuying.joinClosedInactive}
+          {isProductPreview
+            ? t.groupBuying.productPreviewNotice
+            : t.groupBuying.joinClosedInactive}
         </Text>
       </div>
     )
@@ -81,8 +110,27 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-y-4">
+      {isDemoDeal && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <Text className="text-sm font-medium text-blue-900">
+            {t.groupBuying.demoDealNotice}
+          </Text>
+        </div>
+      )}
+
+      {selectedSeat && (
+        <div className="rounded-lg border border-ui-border-base bg-ui-bg-subtle p-3">
+          <Text className="text-sm font-medium text-ui-fg-base">
+            {t.groupBuying.selectedSeatSummary.replace(
+              "{member}",
+              selectedSeat.label
+            )}
+          </Text>
+        </div>
+      )}
+
       <Text className="text-small-regular text-ui-fg-subtle">
-        {t.groupBuying.checkoutNote}
+        {t.groupBuying.seatHoldNotice}
       </Text>
 
       <div className="flex flex-col gap-y-2">
@@ -114,8 +162,12 @@ const JoinDealForm = ({ deal }: JoinDealFormProps) => {
         <Text className="text-small-regular text-ui-fg-error">{error}</Text>
       )}
 
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? t.groupBuying.joining : t.groupBuying.checkoutButton}
+      <Button
+        type="submit"
+        disabled={loading || isDemoDeal || (requiresSeat && !selectedSeat)}
+        className="w-full"
+      >
+        {loading ? t.groupBuying.joining : t.groupBuying.applyButton}
       </Button>
     </form>
   )

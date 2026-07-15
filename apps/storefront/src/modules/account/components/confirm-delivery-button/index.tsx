@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { confirmParticipantDelivery } from "@lib/data/account-group-deals"
-import { Button, Text } from "@modules/common/components/ui"
+import { Button } from "@modules/common/components/ui"
 
 type ConfirmDeliveryButtonProps = {
   participantId: string
@@ -21,44 +21,47 @@ const ConfirmDeliveryButton = ({
   labels,
 }: ConfirmDeliveryButtonProps) => {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [confirmed, setConfirmed] = useState(false)
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
+    "idle"
+  )
 
-  const handleConfirm = () => {
-    setError(null)
+  const handleConfirm = async () => {
+    if (
+      !window.confirm(
+        "수령 확인 후에는 되돌릴 수 없습니다. 문제가 있으면 분쟁 신고를 이용해 주세요."
+      )
+    ) {
+      return
+    }
 
-    startTransition(async () => {
-      try {
-        await confirmParticipantDelivery(participantId)
-        setConfirmed(true)
-        router.refresh()
-      } catch {
-        setError(labels.error)
-      }
-    })
+    setStatus("loading")
+
+    try {
+      await confirmParticipantDelivery(participantId)
+      setStatus("done")
+      router.refresh()
+    } catch {
+      setStatus("error")
+    }
   }
 
-  if (confirmed) {
+  if (status === "done") {
     return (
-      <Text className="text-sm font-medium text-emerald-700">
+      <Button size="small" variant="secondary" disabled>
         {labels.confirmed}
-      </Text>
+      </Button>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button
-        size="small"
-        onClick={handleConfirm}
-        disabled={isPending}
-        isLoading={isPending}
-      >
-        {isPending ? labels.confirming : labels.confirm}
-      </Button>
-      {error && <Text className="text-xs text-red-600">{error}</Text>}
-    </div>
+    <Button
+      size="small"
+      onClick={handleConfirm}
+      disabled={status === "loading"}
+      isLoading={status === "loading"}
+    >
+      {status === "loading" ? labels.confirming : labels.confirm}
+    </Button>
   )
 }
 

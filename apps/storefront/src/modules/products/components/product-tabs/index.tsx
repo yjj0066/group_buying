@@ -55,12 +55,13 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
   return (
     <div className="w-full">
       <Accordion type="multiple">
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <Accordion.Item
             key={tab.label}
             title={tab.label}
             headingSize="medium"
             value={tab.label}
+            className={index === 0 ? "border-t-0" : undefined}
           >
             {tab.component}
           </Accordion.Item>

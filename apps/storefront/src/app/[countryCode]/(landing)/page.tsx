@@ -12,6 +12,10 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function Home() {
-  return <LandingPageTemplate />
+export default async function Home(props: {
+  params: Promise<{ countryCode: string }>
+}) {
+  const params = await props.params
+
+  return <LandingPageTemplate countryCode={params.countryCode} />
 }

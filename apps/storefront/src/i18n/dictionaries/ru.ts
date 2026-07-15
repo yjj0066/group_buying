@@ -4,6 +4,7 @@ import { landingEn } from "./landing-shared"
 const dictionary: Dictionary = {
   nav: {
     storeName: "Совместные покупки",
+    allProducts: "Все товары",
     groupBuying: "Совместная покупка",
     account: "Аккаунт",
     cart: "Корзина",
@@ -52,6 +53,7 @@ const dictionary: Dictionary = {
     searchSubmit: "Найти",
     searchResultsFor: 'Результаты по запросу "{query}"',
     noSearchResults: "Нет товаров, соответствующих фильтрам.",
+    aiSearchActive: "Результаты AI-поиска ({model})",
     categoryFilter: "Категория",
     allCategories: "Все категории",
     sortBy: "Сортировка",

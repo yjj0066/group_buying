@@ -4,11 +4,14 @@ import {
   DEFAULT_GROUP_DEAL_FILTERS,
   extractGroupDealFacets,
   filterGroupDeals,
+  hasActiveFilters,
+  SEARCH_MIN_LENGTH,
   type GroupDealFilterFacets,
   type GroupDealFilterState,
 } from "@lib/util/group-deal-filters"
 import { useDictionary } from "@i18n/provider"
 import { Button, Input, Label, Text } from "@modules/common/components/ui"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import type { GroupDeal } from "types/group-deal"
 
 type GroupDealFiltersProps = {
@@ -29,16 +32,31 @@ const GroupDealFilters = ({
     onChange({ ...filters, ...patch })
   }
 
+  const queryTooShort =
+    filters.query.trim().length > 0 &&
+    filters.query.trim().length < SEARCH_MIN_LENGTH
+
   return (
     <aside className="flex flex-col gap-y-5 rounded-xl border border-ui-border-base bg-ui-bg-base p-5">
       <div>
-        <HeadingBlock title={t.groupBuying.filtersTitle} />
+        <Text className="text-sm font-semibold text-ui-fg-base">
+          {t.groupBuying.filtersTitle}
+        </Text>
         <Input
           value={filters.query}
           onChange={(event) => update({ query: event.target.value })}
           placeholder={t.groupBuying.searchPlaceholder}
           className="mt-2"
+          aria-describedby={queryTooShort ? "search-min-hint" : undefined}
         />
+        {queryTooShort && (
+          <Text
+            id="search-min-hint"
+            className="mt-1 text-xs text-amber-600"
+          >
+            {t.groupBuying.searchMinLengthHint}
+          </Text>
+        )}
       </div>
 
       <FilterSelect
@@ -63,6 +81,21 @@ const GroupDealFilters = ({
         options={facets.goodsTypes}
         onChange={(value) => update({ goodsType: value })}
         allLabel={t.groupBuying.filterAll}
+      />
+
+      <FilterSelect
+        label={t.groupBuying.filterSort}
+        value={filters.sortBy}
+        options={["deadline", "newest"]}
+        optionLabels={{
+          deadline: t.groupBuying.sortDeadline,
+          newest: t.groupBuying.sortNewest,
+        }}
+        onChange={(value) =>
+          update({ sortBy: value as GroupDealFilterState["sortBy"] })
+        }
+        allLabel={t.groupBuying.sortDeadline}
+        hideAllOption
       />
 
       <div className="flex flex-col gap-y-2">
@@ -123,19 +156,17 @@ const GroupDealFilters = ({
         </label>
       </div>
 
-      <Button
-        variant="secondary"
-        onClick={() => onChange({ ...DEFAULT_GROUP_DEAL_FILTERS })}
-      >
-        {t.groupBuying.resetFilters}
-      </Button>
+      {hasActiveFilters(filters) && (
+        <Button
+          variant="secondary"
+          onClick={() => onChange({ ...DEFAULT_GROUP_DEAL_FILTERS })}
+        >
+          {t.groupBuying.resetFilters}
+        </Button>
+      )}
     </aside>
   )
 }
-
-const HeadingBlock = ({ title }: { title: string }) => (
-  <Text className="text-sm font-semibold text-ui-fg-base">{title}</Text>
-)
 
 const FilterSelect = ({
   label,
@@ -143,12 +174,16 @@ const FilterSelect = ({
   options,
   onChange,
   allLabel,
+  optionLabels,
+  hideAllOption = false,
 }: {
   label: string
   value: string
   options: string[]
   onChange: (value: string) => void
   allLabel: string
+  optionLabels?: Record<string, string>
+  hideAllOption?: boolean
 }) => (
   <div className="flex flex-col gap-y-2">
     <Label>{label}</Label>
@@ -157,10 +192,10 @@ const FilterSelect = ({
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
-      <option value="">{allLabel}</option>
+      {!hideAllOption && <option value="">{allLabel}</option>}
       {options.map((option) => (
         <option key={option} value={option}>
-          {option}
+          {optionLabels?.[option] ?? option}
         </option>
       ))}
     </select>

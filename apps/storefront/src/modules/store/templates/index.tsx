@@ -65,6 +65,11 @@ const StoreTemplate = async ({
       <div className="w-full">
         <div className="mb-8 text-2xl-semi">
           <h1 data-testid="store-page-title">{pageTitle}</h1>
+          {!query && !selectedCategory && (
+            <p className="mt-2 text-base text-ui-fg-subtle">
+              {dictionary.products.homeDescription}
+            </p>
+          )}
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts

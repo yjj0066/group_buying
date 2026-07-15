@@ -1,3 +1,5 @@
+import { getProductGroupDealIndex } from "@lib/data/group-deals"
+import { searchProductsViaAiEngine } from "@lib/data/ai-engine"
 import { listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { getServerDictionary } from "@i18n/server"
@@ -5,7 +7,7 @@ import { OptionValueIds } from "@lib/util/product-option-filters"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-
+import { Text } from "@modules/common/components/ui"
 const PRODUCT_LIMIT = 12
 
 type PaginatedProductsParams = {
@@ -41,6 +43,21 @@ export default async function PaginatedProducts({
     limit: 12,
   }
 
+  let searchSource: "ai" | "medusa" | null = null
+  let aiModel: string | undefined
+
+  if (query?.trim()) {
+    const aiResult = await searchProductsViaAiEngine(query)
+
+    if (aiResult?.productIds.length) {
+      queryParams.id = aiResult.productIds
+      searchSource = "ai"
+      aiModel = aiResult.model
+    } else {
+      queryParams.q = query
+      searchSource = "medusa"
+    }
+  }
   if (collectionId) {
     queryParams["collection_id"] = [collectionId]
   }
@@ -53,10 +70,6 @@ export default async function PaginatedProducts({
     queryParams["id"] = productsIds
   }
 
-  if (query) {
-    queryParams.q = query
-  }
-
   if (sortBy === "created_at") {
     queryParams["order"] = "created_at"
   }
@@ -66,6 +79,8 @@ export default async function PaginatedProducts({
   if (!region) {
     return null
   }
+
+  const productGroupDealIndex = await getProductGroupDealIndex()
 
   const {
     response: { products, count },
@@ -92,6 +107,11 @@ export default async function PaginatedProducts({
 
   return (
     <>
+      {searchSource === "ai" && (
+        <Text className="mb-4 text-xs text-ui-fg-subtle">
+          {dictionary.products.aiSearchActive.replace("{model}", aiModel ?? "hybrid")}
+        </Text>
+      )}
       <ul
         className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
         data-testid="products-list"
@@ -99,7 +119,11 @@ export default async function PaginatedProducts({
         {products.map((p) => {
           return (
             <li key={p.id}>
-              <ProductPreview product={p} region={region} />
+              <ProductPreview
+                product={p}
+                region={region}
+                groupDealId={productGroupDealIndex.get(p.id)}
+              />
             </li>
           )
         })}

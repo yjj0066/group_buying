@@ -8,7 +8,6 @@ import { processOverdueParticipantsWorkflow } from "../workflows/group-deal-escr
 const ACTIVE_STATUSES = [
   GroupDealStatus.OPEN,
   GroupDealStatus.MINIMUM_REACHED,
-  GroupDealStatus.ACTIVE,
 ]
 
 /**
@@ -17,32 +16,27 @@ const ACTIVE_STATUSES = [
 export default async function groupDealMaintenanceHandler(
   container: MedusaContainer
 ) {
-  const groupBuyingService: GroupBuyingModuleService = container.resolve(
-    GROUP_BUYING_MODULE
-  )
+  const groupBuyingService: GroupBuyingModuleService =
+    container.resolve(GROUP_BUYING_MODULE)
 
   const deals = await groupBuyingService.listGroupDeals({
     status: ACTIVE_STATUSES,
   })
 
+  for (const deal of deals) {
+    await processOverdueParticipantsWorkflow(container).run({
+      input: { group_deal_id: String(deal.id) },
+    })
+  }
+
   const now = new Date()
 
   for (const deal of deals) {
-    try {
-      await processOverdueParticipantsWorkflow(container).run({
-        input: { group_deal_id: deal.id },
-      })
-    } catch {
-      // Continue with other deals if one fails.
-    }
+    const endsAt = deal.ends_at ? new Date(deal.ends_at as string | Date) : null
 
-    if (
-      deal.ends_at &&
-      new Date(deal.ends_at) <= now &&
-      deal.status === GroupDealStatus.OPEN
-    ) {
+    if (endsAt && endsAt <= now && deal.status === GroupDealStatus.OPEN) {
       await groupBuyingService.updateGroupDeals({
-        id: deal.id,
+        id: String(deal.id),
         status: GroupDealStatus.CLOSED,
       })
     }
@@ -51,5 +45,5 @@ export default async function groupDealMaintenanceHandler(
 
 export const config = {
   name: "group-deal-maintenance",
-  schedule: process.env.GROUP_DEAL_MAINTENANCE_CRON ?? "0 * * * *",
+  schedule: "0 * * * *",
 }

@@ -3,8 +3,16 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useDictionary } from "@i18n/provider"
 
-const LandingFooter = () => {
+type LandingFooterProps = {
+  isLoggedIn?: boolean
+}
+
+const LandingFooter = ({ isLoggedIn = false }: LandingFooterProps) => {
   const t = useDictionary()
+
+  const accountLabel = isLoggedIn
+    ? t.landing.nav.myPage
+    : t.landing.nav.signIn
 
   return (
     <footer className="border-t border-neutral-100 bg-white">
@@ -30,13 +38,18 @@ const LandingFooter = () => {
             </h4>
             <ul className="mt-4 space-y-2 text-sm text-neutral-500">
               <li>
+                <LocalizedClientLink href="/store" className="hover:text-brand-pink">
+                  {t.nav.allProducts}
+                </LocalizedClientLink>
+              </li>
+              <li>
                 <LocalizedClientLink href="/group-buying" className="hover:text-brand-pink">
                   {t.landing.nav.groupBuys}
                 </LocalizedClientLink>
               </li>
               <li>
                 <LocalizedClientLink href="/account" className="hover:text-brand-pink">
-                  {t.landing.nav.signIn}
+                  {accountLabel}
                 </LocalizedClientLink>
               </li>
             </ul>

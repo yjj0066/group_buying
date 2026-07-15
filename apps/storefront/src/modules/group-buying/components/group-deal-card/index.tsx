@@ -1,6 +1,7 @@
 "use client"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { calculateLeaderTrustScore } from "@lib/util/group-deal-trust"
 import { Heading, Text } from "@modules/common/components/ui"
 import { convertToLocale } from "@lib/util/money"
 import { useDictionary } from "@i18n/provider"
@@ -18,13 +19,12 @@ type GroupDealCardProps = {
   highlightMember?: string
 }
 
-const formatMemberStatus = (
-  template: string,
-  member: string
-) => template.replace("{member}", member)
+const formatMemberStatus = (template: string, member: string) =>
+  template.replace("{member}", member)
 
 const GroupDealCard = ({ deal, highlightMember }: GroupDealCardProps) => {
   const t = useDictionary()
+  const trust = calculateLeaderTrustScore(deal)
 
   const discount = Math.round(
     ((deal.original_price - deal.deal_price) / deal.original_price) * 100
@@ -54,7 +54,7 @@ const GroupDealCard = ({ deal, highlightMember }: GroupDealCardProps) => {
           {deal.title}
         </Heading>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="px-2 py-1 text-xs font-medium rounded bg-ui-tag-green-bg text-ui-tag-green-text">
+          <span className="rounded bg-ui-tag-green-bg px-2 py-1 text-xs font-medium text-ui-tag-green-text">
             {discount}%
           </span>
           {isDepositSecured(deal) && (
@@ -62,6 +62,12 @@ const GroupDealCard = ({ deal, highlightMember }: GroupDealCardProps) => {
               {t.groupBuying.depositSecuredBadge}
             </span>
           )}
+          <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+            {t.groupBuying.cardTrustScore.replace(
+              "{score}",
+              trust.score.toFixed(1)
+            )}
+          </span>
         </div>
       </div>
 
@@ -103,13 +109,19 @@ const GroupDealCard = ({ deal, highlightMember }: GroupDealCardProps) => {
       {highlightMember && (
         <Text className="text-xs font-semibold text-ui-fg-interactive">
           {memberVacant
-            ? formatMemberStatus(t.groupBuying.cardMemberVacancy, highlightMember)
+            ? formatMemberStatus(
+                t.groupBuying.cardMemberVacancy,
+                highlightMember
+              )
             : soldOut
               ? formatMemberStatus(
                   t.groupBuying.cardMemberWaitlist,
                   highlightMember
                 )
-              : formatMemberStatus(t.groupBuying.cardMemberFull, highlightMember)}
+              : formatMemberStatus(
+                  t.groupBuying.cardMemberFull,
+                  highlightMember
+                )}
         </Text>
       )}
 
@@ -134,7 +146,10 @@ const GroupDealCard = ({ deal, highlightMember }: GroupDealCardProps) => {
           {soldOut
             ? t.groupBuying.cardWaitlistLabel
             : daysLeft > 0
-              ? t.groupBuying.cardDaysLeft.replace("{days}", String(daysLeft))
+              ? t.groupBuying.cardDaysLeft.replace(
+                  "{days}",
+                  String(daysLeft)
+                )
               : t.groupBuying.cardEndsToday}
         </Text>
       </div>

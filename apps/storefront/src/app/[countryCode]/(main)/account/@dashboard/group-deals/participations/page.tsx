@@ -31,9 +31,18 @@ export default async function ParticipationsPage() {
       <ParticipationsList
         participations={participations}
         labels={{
+          tabActive: t.tabActive,
+          tabCompleted: t.tabCompleted,
+          tabCancelled: t.tabCancelled,
           empty: t.empty,
+          emptyActive: t.emptyActive,
+          emptyActiveCta: t.emptyActiveCta,
+          emptyCompleted: t.emptyCompleted,
+          emptyCancelled: t.emptyCancelled,
+          autoDeliveryConfirmHint: t.autoDeliveryConfirmHint,
           quantity: t.quantity,
           viewDeal: t.viewDeal,
+          viewDetail: t.viewDetail,
           tracking: t.tracking,
           confirmDelivery: t.confirmDelivery,
           confirmingDelivery: t.confirmingDelivery,

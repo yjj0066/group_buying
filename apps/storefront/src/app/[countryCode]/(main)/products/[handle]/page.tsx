@@ -1,11 +1,15 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
+
+import { findGroupDealByProductId } from "@lib/data/group-deals"
 import { listProducts } from "@lib/data/products"
 import { getRegion, listRegions } from "@lib/data/regions"
-import { translateProductFields } from "@lib/util/translate-content"
-import { getMedusaLocaleCode, getServerDictionary } from "@i18n/server"
-import ProductTemplate from "@modules/products/templates"
-import { HttpTypes } from "@medusajs/types"
+import {
+  buildGroupDealFromProduct,
+  resolveProductHeroImage,
+} from "@lib/util/product-group-deal"
+import { getServerDictionary } from "@i18n/server"
+import GroupDealDetailTemplate from "@modules/group-buying/templates/group-deal-detail"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -52,25 +56,6 @@ export async function generateStaticParams() {
     )
     return []
   }
-}
-
-function getImagesForVariant(
-  product: HttpTypes.StoreProduct | undefined,
-  selectedVariantId?: string
-) {
-  if (!product) return []
-
-  if (!selectedVariantId || !product.variants) {
-    return product.images
-  }
-
-  const variant = product.variants!.find((v) => v.id === selectedVariantId)
-  if (!variant || !variant.images?.length) {
-    return product.images
-  }
-
-  const imageIdsMap = new Map(variant.images!.map((i) => [i.id, true]))
-  return product.images?.filter((i) => imageIdsMap.has(i.id)) ?? null
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -135,28 +120,16 @@ export default async function ProductPage(props: Props) {
     notFound()
   }
 
-  const localeCode = await getMedusaLocaleCode()
-  const translatedFields = await translateProductFields(pricedProduct, localeCode)
-  const localizedProduct = {
-    ...pricedProduct,
-    description: translatedFields.description ?? pricedProduct.description,
-    material: translatedFields.material ?? pricedProduct.material,
-    type: pricedProduct.type
-      ? {
-          ...pricedProduct.type,
-          value: translatedFields.typeValue ?? pricedProduct.type.value,
-        }
-      : pricedProduct.type,
+  const linkedGroupDeal = await findGroupDealByProductId(pricedProduct.id)
+
+  if (linkedGroupDeal) {
+    redirect(`/${params.countryCode}/group-buying/${linkedGroupDeal.id}`)
   }
 
-  const images = getImagesForVariant(localizedProduct, selectedVariantId)
+  const groupDeal = buildGroupDealFromProduct(pricedProduct, selectedVariantId)
+  const heroImageUrl = resolveProductHeroImage(groupDeal, pricedProduct)
 
   return (
-    <ProductTemplate
-      product={localizedProduct}
-      region={region}
-      countryCode={params.countryCode}
-      images={images ?? []}
-    />
+    <GroupDealDetailTemplate groupDeal={groupDeal} heroImageUrl={heroImageUrl} />
   )
 }

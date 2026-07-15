@@ -18,9 +18,11 @@ export const landingKo: Dictionary["landing"] = {
   stickyCta: "지금 공동구매 참여하기",
   nav: {
     groupBuys: "공동구매",
+    searchDeals: "빈자리 검색",
     categories: "카테고리",
     whyUs: "서비스 소개",
     signIn: "로그인",
+    myPage: "마이페이지",
     startGroupBuy: "공구 시작하기",
   },
   hero: {
@@ -31,6 +33,9 @@ export const landingKo: Dictionary["landing"] = {
     cta: "공동구매 둘러보기",
     featuredCta: "이번 주 픽 보기",
     liveParticipants: "지금 {count}명이 참여 중",
+    weeklyPopularTitle: "이번 주 인기 공동구매",
+    summaryExpectedPrice: "달성 예상가",
+    summaryAchievementRate: "달성률 {percent}%",
   },
   ticker: {
     joined: "{name}님이 {group} 공동구매에 참여했습니다",
@@ -61,6 +66,12 @@ export const landingKo: Dictionary["landing"] = {
   trending: { title: "트렌딩 공구" },
   newlyOpened: { title: "새로 열린 공구" },
   fanFavorites: { title: "팬덤 픽" },
+  viewAll: "전체 보기",
+  viewAllDeals: "전체 공구 보기",
+  viewAllProducts: "전체 상품 보기",
+  demoDataNotice:
+    "현재 데모 공구 데이터를 표시 중입니다. 실제 등록 공구는 빈자리 검색에서 확인하세요.",
+  aiRecommendationsTitle: "AI 추천 상품",
   why: {
     title: "왜 BiasBuy인가요?",
     authentic: {
@@ -131,9 +142,11 @@ export const landingEn: Dictionary["landing"] = {
   stickyCta: "Join a group buy now",
   nav: {
     groupBuys: "Group Buys",
+    searchDeals: "Find open seats",
     categories: "Categories",
     whyUs: "Why us",
     signIn: "Sign in",
+    myPage: "My page",
     startGroupBuy: "Start a group buy",
   },
   hero: {
@@ -144,6 +157,9 @@ export const landingEn: Dictionary["landing"] = {
     cta: "Browse group buys",
     featuredCta: "View this week's pick",
     liveParticipants: "{count} fans joining now",
+    weeklyPopularTitle: "This week's popular group buys",
+    summaryExpectedPrice: "Target price",
+    summaryAchievementRate: "{percent}% reached",
   },
   ticker: {
     joined: "{name} joined the {group} group buy",
@@ -174,6 +190,12 @@ export const landingEn: Dictionary["landing"] = {
   trending: { title: "Trending" },
   newlyOpened: { title: "Newly Opened" },
   fanFavorites: { title: "Fan Favorites" },
+  viewAll: "View all",
+  viewAllDeals: "View all group buys",
+  viewAllProducts: "View all products",
+  demoDataNotice:
+    "Showing demo group-buy data. Live deals are available in group-buy search.",
+  aiRecommendationsTitle: "AI picks for you",
   why: {
     title: "Why BiasBuy?",
     authentic: {

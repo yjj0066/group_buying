@@ -1,14 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Image from "next/image"
 
-import {
-  getDiscountPercent,
-  getParticipationRate,
-  getSpotsLeft,
-} from "@lib/util/landing-deals"
-import { convertToLocale } from "@lib/util/money"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { formatMessage, useDictionary } from "@i18n/provider"
 import type { LandingDealCard } from "types/landing-deal"
@@ -18,47 +11,113 @@ type LandingHeroProps = {
   liveCount: number
 }
 
-const formatCountdown = (endsAt: string) => {
-  const diff = Math.max(0, new Date(endsAt).getTime() - Date.now())
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-  return {
-    hours: String(hours).padStart(2, "0"),
-    minutes: String(minutes).padStart(2, "0"),
-    seconds: String(seconds).padStart(2, "0"),
-  }
+type HeroWeeklyDeal = {
+  id: string
+  title: string
+  priceLabel: string
+  imageUrl: string
+  imageAlt: string
+  currentParticipants: number
+  targetParticipants: number
+  href: string
 }
 
-const PLACEHOLDER_COUNTDOWN = {
-  hours: "--",
-  minutes: "--",
-  seconds: "--",
+const HERO_WEEKLY_DEALS: HeroWeeklyDeal[] = [
+  {
+    id: "hero-bts-proof",
+    title: "BTS 'Proof' Album Standard Ed.",
+    priceLabel: "₩12,000 | 33% 할인",
+    imageUrl:
+      "https://images.unsplash.com/photo-1619983081563-430f6360275f?w=600&h=600&fit=crop",
+    imageAlt: "BTS Proof album",
+    currentParticipants: 312,
+    targetParticipants: 400,
+    href: "/group-buying/mock-bts-album",
+  },
+  {
+    id: "hero-bp-lightstick",
+    title: "BLACKPINK Lightstick [Ver.2]",
+    priceLabel: "₩12,000 | 33% 할인",
+    imageUrl:
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=600&fit=crop",
+    imageAlt: "BLACKPINK lightstick Ver.2",
+    currentParticipants: 312,
+    targetParticipants: 400,
+    href: "/group-buying/mock-ive-lightstick",
+  },
+  {
+    id: "hero-exo-photobook",
+    title: "EXO 11th Aniv. Photobook",
+    priceLabel: "₩11,000 | 33% 할인",
+    imageUrl:
+      "https://images.unsplash.com/photo-1571330737116-fde987fa9327?w=600&h=600&fit=crop",
+    imageAlt: "EXO 11th Anniversary Photobook",
+    currentParticipants: 312,
+    targetParticipants: 400,
+    href: "/group-buying/mock-newjeans-pc",
+  },
+]
+
+const SUMMARY = {
+  originalPrice: "₩18,000",
+  expectedPrice: "₩12,000",
+  currentParticipants: 312,
+  targetParticipants: 400,
+  achievementPercent: 78,
+}
+
+const HeroWeeklyCard = ({ deal }: { deal: HeroWeeklyDeal }) => {
+  const t = useDictionary()
+  const progress = Math.round(
+    (deal.currentParticipants / deal.targetParticipants) * 100
+  )
+
+  return (
+    <LocalizedClientLink
+      href={deal.href}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-md backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-pink/40 hover:shadow-lg"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
+        <Image
+          src={deal.imageUrl}
+          alt={deal.imageAlt}
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(max-width:768px) 100vw, 200px"
+        />
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <h3 className="line-clamp-2 text-sm font-bold leading-snug text-neutral-900">
+          {deal.title}
+        </h3>
+        <p className="text-xs font-semibold text-brand-pink">{deal.priceLabel}</p>
+        <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
+          <div
+            className="landing-progress-bar h-full rounded-full bg-gradient-to-r from-brand-pink to-brand-purple"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-[11px] font-medium text-neutral-500">
+          {formatMessage(t.landing.participants, {
+            current: deal.currentParticipants,
+            target: deal.targetParticipants,
+          })}
+        </p>
+      </div>
+    </LocalizedClientLink>
+  )
 }
 
 const LandingHero = ({ featured, liveCount }: LandingHeroProps) => {
   const t = useDictionary()
-  const [countdown, setCountdown] = useState(PLACEHOLDER_COUNTDOWN)
-  const progress = getParticipationRate(featured)
-  const spotsLeft = getSpotsLeft(featured)
-  const discount = getDiscountPercent(featured)
-
-  useEffect(() => {
-    const update = () => setCountdown(formatCountdown(featured.endsAt))
-
-    update()
-    const timer = setInterval(update, 1000)
-
-    return () => clearInterval(timer)
-  }, [featured.endsAt])
 
   return (
     <section className="relative overflow-hidden">
       <div className="landing-hero-gradient absolute inset-0" />
       <div className="absolute inset-0 landing-sparkle opacity-40" aria-hidden />
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 py-16 small:px-6 medium:grid-cols-2 medium:items-center medium:py-24">
+      <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 small:px-6 medium:grid-cols-2 medium:items-start medium:gap-12 medium:py-24">
+        {/* Left — headline, CTAs, live badge */}
         <div className="flex flex-col gap-8">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/40 bg-white/70 px-4 py-2 text-xs font-semibold text-brand-purple shadow-sm backdrop-blur">
             <span className="relative flex h-2 w-2">
@@ -94,87 +153,57 @@ const LandingHero = ({ featured, liveCount }: LandingHeroProps) => {
               {t.landing.hero.featuredCta}
             </LocalizedClientLink>
           </div>
-
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-lg backdrop-blur">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-neutral-700">
-                {t.landing.priceDropTitle}
-              </span>
-              <span className="font-bold text-brand-pink">
-                {formatMessage(t.landing.spotsLeft, { count: spotsLeft })}
-              </span>
-            </div>
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs text-neutral-500">{t.landing.targetPrice}</p>
-                <p className="text-lg font-bold text-neutral-400 line-through">
-                  {convertToLocale({
-                    amount: featured.originalPrice,
-                    currency_code: featured.currencyCode,
-                  })}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-neutral-500">{t.landing.currentPrice}</p>
-                <p className="text-2xl font-black text-neutral-900">
-                  {convertToLocale({
-                    amount: featured.currentPrice,
-                    currency_code: featured.currencyCode,
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="landing-progress-bar h-full rounded-full bg-gradient-to-r from-brand-pink via-brand-purple to-brand-pink"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-neutral-500">
-              {formatMessage(t.landing.participants, {
-                current: featured.currentParticipants,
-                target: featured.targetParticipants,
-              })}
-            </p>
-          </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-md medium:max-w-none">
-          <div className="landing-hero-card relative overflow-hidden rounded-[2rem] border border-white/50 bg-white p-4 shadow-2xl">
-            <div className="relative aspect-square overflow-hidden rounded-[1.5rem]">
-              <Image
-                src={featured.imageUrl}
-                alt={featured.title}
-                fill
-                className="object-cover"
-                priority
-                sizes="(max-width:768px) 100vw, 480px"
-              />
-              <span className="absolute left-4 top-4 rounded-full bg-brand-pink px-3 py-1 text-xs font-bold text-white">
-                -{discount}%
-              </span>
-            </div>
+        {/* Right — weekly popular grid + compact summary */}
+        <div className="flex w-full flex-col gap-4">
+          <h2 className="text-lg font-black tracking-tight text-neutral-900">
+            {t.landing.hero.weeklyPopularTitle}
+          </h2>
 
-            <div className="mt-5 space-y-3 px-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-brand-purple">
-                {featured.groupName} · {t.landing.groupBuyLabel}
-              </p>
-              <h2 className="text-xl font-bold text-neutral-900">{featured.title}</h2>
+          <div className="grid grid-cols-1 gap-3 small:grid-cols-3">
+            {HERO_WEEKLY_DEALS.map((deal) => (
+              <HeroWeeklyCard key={deal.id} deal={deal} />
+            ))}
+          </div>
 
-              <div className="flex items-center justify-center gap-3 rounded-2xl bg-neutral-50 py-4">
-                {[countdown.hours, countdown.minutes, countdown.seconds].map(
-                  (value, index) => (
-                    <div key={index} className="text-center">
-                      <span className="block text-2xl font-black tabular-nums text-neutral-900">
-                        {value}
-                      </span>
-                      <span className="text-[10px] uppercase text-neutral-400">
-                        {index === 0 ? "H" : index === 1 ? "M" : "S"}
-                      </span>
-                    </div>
-                  )
-                )}
+          <div className="rounded-2xl border border-white/60 bg-white/85 p-4 shadow-lg backdrop-blur">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0 flex-1 space-y-2">
+                <p className="text-sm font-bold text-neutral-800">
+                  {t.landing.priceDropTitle}
+                </p>
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+                  <span className="text-neutral-400 line-through">
+                    {t.landing.targetPrice}: {SUMMARY.originalPrice}
+                  </span>
+                  <span className="font-bold text-neutral-900">
+                    {t.landing.hero.summaryExpectedPrice}: {SUMMARY.expectedPrice}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-600">
+                  <span>
+                    {formatMessage(t.landing.participants, {
+                      current: SUMMARY.currentParticipants,
+                      target: SUMMARY.targetParticipants,
+                    })}
+                  </span>
+                  <span className="font-semibold text-brand-purple">
+                    {formatMessage(t.landing.hero.summaryAchievementRate, {
+                      percent: SUMMARY.achievementPercent,
+                    })}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
+                  <div
+                    className="landing-progress-bar h-full rounded-full bg-gradient-to-r from-brand-pink via-brand-purple to-brand-pink"
+                    style={{ width: `${SUMMARY.achievementPercent}%` }}
+                  />
+                </div>
               </div>
+              <p className="shrink-0 text-3xl font-black tabular-nums text-neutral-900 small:text-4xl">
+                {SUMMARY.expectedPrice}
+              </p>
             </div>
           </div>
         </div>
