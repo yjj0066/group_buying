@@ -1,6 +1,7 @@
 export type Dictionary = {
   nav: {
     storeName: string
+    allProducts: string
     groupBuying: string
     account: string
     cart: string
@@ -38,9 +39,11 @@ export type Dictionary = {
     stickyCta: string
     nav: {
       groupBuys: string
+      searchDeals: string
       categories: string
       whyUs: string
       signIn: string
+      myPage: string
       startGroupBuy: string
     }
     hero: {
@@ -50,6 +53,9 @@ export type Dictionary = {
       cta: string
       featuredCta: string
       liveParticipants: string
+      weeklyPopularTitle: string
+      summaryExpectedPrice: string
+      summaryAchievementRate: string
     }
     ticker: {
       joined: string
@@ -71,6 +77,11 @@ export type Dictionary = {
     trending: { title: string }
     newlyOpened: { title: string }
     fanFavorites: { title: string }
+    viewAll: string
+    viewAllDeals: string
+    viewAllProducts: string
+    demoDataNotice: string
+    aiRecommendationsTitle: string
     why: {
       title: string
       authentic: { title: string; description: string }
@@ -105,6 +116,15 @@ export type Dictionary = {
     relatedProducts: string
     relatedProductsDescription: string
     addToCart: string
+    groupBuyParticipate: string
+    demandSurveyParticipate: string
+    expectedGroupBuyPrice: string
+    msrpLabel: string
+    achievementRate: string
+    stageBadgeDemandSurvey: string
+    stageBadgeRecruiting: string
+    stageBadgeProduction: string
+    stageBadgeShipping: string
     selectVariant: string
     outOfStock: string
     selectOptions: string
@@ -116,6 +136,7 @@ export type Dictionary = {
     searchSubmit: string
     searchResultsFor: string
     noSearchResults: string
+    aiSearchActive: string
     categoryFilter: string
     allCategories: string
     sortBy: string
@@ -157,8 +178,11 @@ export type Dictionary = {
     email: string
     quantity: string
     joinButton: string
+    applyButton: string
     checkoutButton: string
     checkoutNote: string
+    demoDealNotice: string
+    productPreviewNotice: string
     joining: string
     joinError: string
     timeRemaining: string
@@ -169,6 +193,9 @@ export type Dictionary = {
     filterMember: string
     filterGoodsType: string
     filterPriceRange: string
+    filterSort: string
+    sortDeadline: string
+    sortNewest: string
     filterAll: string
     favoriteMember: string
     favoriteMemberPlaceholder: string
@@ -176,6 +203,23 @@ export type Dictionary = {
     resetFilters: string
     resultsCount: string
     emptyFiltered: string
+    emptyFilteredCta: string
+    searchMinLengthHint: string
+    dealTimelineTitle: string
+    dealTimelineStages: {
+      created: string
+      recruiting: string
+      payment: string
+      purchasing: string
+      shipping: string
+      settlement: string
+    }
+    fixedShippingFeeNotice: string
+    seatHoldNotice: string
+    seatHoldActive: string
+    autoDeliveryConfirmNotice: string
+    escrowNoticeTitle: string
+    escrowNoticeDescription: string
     leaderTrustTitle: string
     leaderTrustLabels: {
       excellent: string
@@ -188,6 +232,17 @@ export type Dictionary = {
     depositStatusPending: string
     receiptVerified: string
     receiptPending: string
+    receiptPanelTitle: string
+    receiptViewButton: string
+    receiptCloseButton: string
+    receiptHiddenUntilPurchase: string
+    memberSeatsTitle: string
+    seatVacant: string
+    seatClosed: string
+    seatSelectRequired: string
+    seatHoldExpired: string
+    selectedSeatSummary: string
+    cardTrustScore: string
     waitlistButton: string
     waitlistDescription: string
     waitlistSuccess: string
@@ -362,12 +417,25 @@ export type Dictionary = {
       participations: string
       settlements: string
       preferences: string
+      customerService: string
       logout: string
       hello: string
     }
     dashboard: {
       title: string
       description: string
+      roleHint: string
+    }
+    customerService: {
+      title: string
+      description: string
+      faqTitle: string
+      faqItems: string[]
+      inquiryTitle: string
+      inquiryDescription: string
+      disputeTitle: string
+      disputeDescription: string
+      disputeCta: string
     }
     paymentMethods: {
       title: string
@@ -407,9 +475,24 @@ export type Dictionary = {
     participations: {
       title: string
       description: string
+      tabActive: string
+      tabCompleted: string
+      tabCancelled: string
       empty: string
+      emptyActive: string
+      emptyActiveCta: string
+      emptyCompleted: string
+      emptyCancelled: string
+      autoDeliveryConfirmHint: string
       quantity: string
       viewDeal: string
+      viewDetail: string
+      detailTitle: string
+      backToList: string
+      progressTitle: string
+      trackingTitle: string
+      escrowTitle: string
+      confirmDeliveryIrreversible: string
       tracking: string
       confirmDelivery: string
       confirmingDelivery: string
@@ -503,6 +586,12 @@ export type Dictionary = {
       demand_survey: { label: string; shortLabel: string }
       pre_deposit: { label: string; shortLabel: string }
       general_deposit: { label: string; shortLabel: string }
+      in_production: { label: string; shortLabel: string }
+      shipping: { label: string; shortLabel: string }
+    }
+    displayStages: {
+      demand_survey: { label: string; shortLabel: string }
+      group_recruitment: { label: string; shortLabel: string }
       in_production: { label: string; shortLabel: string }
       shipping: { label: string; shortLabel: string }
     }

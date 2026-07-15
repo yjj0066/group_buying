@@ -4,6 +4,7 @@ import { landingEn } from "./landing-shared"
 const dictionary: Dictionary = {
   nav: {
     storeName: "共同購入モール",
+    allProducts: "すべての商品",
     groupBuying: "共同購入",
     account: "アカウント",
     cart: "カート",
@@ -51,6 +52,7 @@ const dictionary: Dictionary = {
     searchSubmit: "検索",
     searchResultsFor: "「{query}」の検索結果",
     noSearchResults: "条件に一致する商品がありません。",
+    aiSearchActive: "AI検索結果 ({model})",
     categoryFilter: "カテゴリー",
     allCategories: "すべてのカテゴリー",
     sortBy: "並び替え",

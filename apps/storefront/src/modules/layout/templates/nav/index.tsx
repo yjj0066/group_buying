@@ -35,10 +35,15 @@ export default function Nav({
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
+              className="flex items-center gap-2 transition-opacity hover:opacity-90"
               data-testid="nav-store-link"
             >
-              {dictionary.nav.storeName}
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-pink to-brand-purple text-xs font-black text-white">
+                GB
+              </span>
+              <span className="text-base font-bold tracking-tight text-neutral-900">
+                {dictionary.landing.brandName}
+              </span>
             </LocalizedClientLink>
           </div>
 
@@ -50,6 +55,13 @@ export default function Nav({
 
           <div className="flex items-center gap-x-4 small:gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
+              <LocalizedClientLink
+                className="hover:text-ui-fg-base"
+                href="/store"
+                data-testid="nav-all-products-link"
+              >
+                {dictionary.nav.allProducts}
+              </LocalizedClientLink>
               <LocalizedClientLink
                 className="hover:text-ui-fg-base"
                 href="/group-buying"

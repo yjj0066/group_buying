@@ -29,7 +29,7 @@ const Register = ({ setCurrentView }: Props) => {
 
   return (
     <div
-      className="max-w-sm flex flex-col items-center"
+      className="flex w-full max-w-sm flex-col items-center"
       data-testid="register-page"
     >
       <h1 className="text-large-semi uppercase mb-6">
@@ -117,7 +117,11 @@ const Register = ({ setCurrentView }: Props) => {
           </LocalizedClientLink>
           {t.account.register.agreementSuffix}
         </span>
-        <SubmitButton className="w-full mt-6" data-testid="register-button">
+        <SubmitButton
+          className="landing-cta-btn mt-6 w-full rounded-full !text-white"
+          variant="transparent"
+          data-testid="register-button"
+        >
           {t.account.register.submit}
         </SubmitButton>
       </form>

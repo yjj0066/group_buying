@@ -1,8 +1,8 @@
 "use client"
 
-import { GroupDeal, getParticipationRate } from "types/group-deal"
+import { getParticipationRate, GroupDeal } from "types/group-deal"
+import { useDictionary } from "@i18n/provider"
 import { Text } from "@modules/common/components/ui"
-import { formatMessage, useDictionary } from "@i18n/provider"
 
 type GroupDealProgressProps = {
   deal: GroupDeal
@@ -10,26 +10,24 @@ type GroupDealProgressProps = {
 
 const GroupDealProgress = ({ deal }: GroupDealProgressProps) => {
   const t = useDictionary()
-
-  const minParticipants = deal.min_participants || deal.target_quantity
-  const currentParticipants = deal.current_participants ?? 0
-  const progress = getParticipationRate(deal)
+  const rate = getParticipationRate(deal)
+  const target = deal.target_quantity || deal.min_participants || 1
+  const current = deal.current_participants ?? deal.current_quantity ?? 0
 
   return (
-    <div className="flex flex-col gap-y-2 w-full">
-      <div className="flex justify-between text-small-regular text-ui-fg-subtle">
-        <Text as="span">
-          {formatMessage(t.groupBuying.participants, {
-            current: currentParticipants,
-            target: minParticipants,
-          })}
+    <div className="flex flex-col gap-y-2">
+      <div className="flex items-center justify-between text-xs text-ui-fg-subtle">
+        <Text>
+          {t.groupBuying.participants
+            .replace("{current}", String(current))
+            .replace("{target}", String(target))}
         </Text>
-        <Text as="span">{progress}%</Text>
+        <Text>{rate}%</Text>
       </div>
-      <div className="w-full h-2 bg-ui-bg-subtle rounded-full overflow-hidden">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-ui-bg-subtle">
         <div
-          className="h-full bg-ui-fg-interactive rounded-full transition-all duration-300"
-          style={{ width: `${progress}%` }}
+          className="h-full rounded-full bg-gradient-to-r from-brand-pink to-brand-purple transition-all duration-500"
+          style={{ width: `${rate}%` }}
         />
       </div>
     </div>

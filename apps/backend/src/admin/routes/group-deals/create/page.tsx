@@ -45,7 +45,7 @@ const GroupDealCreatePage = () => {
   const [currencyCode, setCurrencyCode] = useState("KRW")
   const [startsAt, setStartsAt] = useState(defaultStartsAt)
   const [endsAt, setEndsAt] = useState(defaultEndsAt)
-  const [status, setStatus] = useState<GroupDealStatus>(GroupDealStatus.DRAFT)
+  const [status] = useState<GroupDealStatus>(GroupDealStatus.OPEN)
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === productId),

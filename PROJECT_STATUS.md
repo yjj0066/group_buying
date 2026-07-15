@@ -399,7 +399,7 @@ pnpm --filter @dtc/storefront build
 | 항목 | 현황 | 보완 방향 |
 |------|------|-----------|
 | **Cron job 로딩** | `group-deal-maintenance.ts` — 빌드 dist 경로 미인식 가능성 | `medusa build` 후 job 로드 확인, `MEDUSA_WORKER_MODE=worker` 분리 |
-| **`GroupDealStatus.ACTIVE`** | `group-deal-maintenance.ts`에서 참조하나 enum에 미정의 | enum 정리 또는 `OPEN`/`MINIMUM_REACHED`로 통일 |
+| **`GroupDealStatus.ACTIVE`** | `group-deal-maintenance.ts`에서 참조하나 enum에 미정의 | **수정 완료** — `OPEN` + `MINIMUM_REACHED` 사용 |
 | **통합 테스트** | HTTP integration test 스크립트 존재, E2E 미완 | join → capture → delivery → settle 시나리오 |
 
 ### 5.5 스토어프론트

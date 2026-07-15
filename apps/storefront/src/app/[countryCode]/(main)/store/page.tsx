@@ -1,5 +1,4 @@
-import { Metadata } from "next"
-
+import { getServerDictionary } from "@i18n/server"
 import { parseOptionValueIds } from "@lib/util/product-option-filters"
 import {
   parseCategoryId,
@@ -8,9 +7,13 @@ import {
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import StoreTemplate from "@modules/store/templates"
 
-export const metadata: Metadata = {
-  title: "Store",
-  description: "Explore all of our products.",
+export async function generateMetadata() {
+  const dictionary = await getServerDictionary()
+
+  return {
+    title: dictionary.products.allProducts,
+    description: dictionary.products.homeDescription,
+  }
 }
 
 type StorePageSearchParams = Record<string, string | string[] | undefined> & {
@@ -29,8 +32,8 @@ type Params = {
 }
 
 export default async function StorePage(props: Params) {
-  const params = await props.params;
-  const searchParams = await props.searchParams;
+  const params = await props.params
+  const searchParams = await props.searchParams
   const { sortBy, page } = searchParams
   const optionValueIds = parseOptionValueIds(searchParams)
   const query = parseSearchQuery(searchParams)

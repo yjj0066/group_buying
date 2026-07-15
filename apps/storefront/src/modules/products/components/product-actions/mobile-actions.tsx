@@ -3,10 +3,10 @@ import { Button, clx } from "@modules/common/components/ui"
 import React, { Fragment, useMemo } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
+import { getProductPrice } from "@lib/util/get-product-price"
+import { formatMessage, useDictionary } from "@i18n/provider"
 import ChevronDown from "@modules/common/icons/chevron-down"
 import X from "@modules/common/icons/x"
-
-import { getProductPrice } from "@lib/util/get-product-price"
 import OptionSelect from "./option-select"
 import { HttpTypes } from "@medusajs/types"
 import { isSimpleProduct } from "@lib/util/product"
@@ -17,12 +17,15 @@ type MobileActionsProps = {
   options: Record<string, string | undefined>
   updateOptions: (title: string, value: string) => void
   inStock?: boolean
-  handleAddToCart: () => void
+  handlePrimaryAction: () => void
   isAdding?: boolean
   show: boolean
   optionsDisabled: boolean
+  primaryCtaLabel: string
+  isPrimaryDisabled: boolean
+  participation: { current: number; target: number }
+  achievementRate: number
   labels: {
-    addToCart: string
     selectVariant: string
     outOfStock: string
     selectOptions: string
@@ -34,13 +37,17 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   variant,
   options,
   updateOptions,
-  inStock,
-  handleAddToCart,
+  handlePrimaryAction,
   isAdding,
   show,
   optionsDisabled,
+  primaryCtaLabel,
+  isPrimaryDisabled,
+  participation,
+  achievementRate,
   labels,
 }) => {
+  const t = useDictionary()
   const { state, open, close } = useToggleState()
 
   const price = getProductPrice({
@@ -62,7 +69,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   return (
     <>
       <div
-        className={clx("lg:hidden inset-x-0 bottom-0 fixed z-50", {
+        className={clx("fixed inset-x-0 bottom-0 z-50 large:hidden", {
           "pointer-events-none": !show,
         })}
       >
@@ -77,64 +84,71 @@ const MobileActions: React.FC<MobileActionsProps> = ({
           leaveTo="opacity-0"
         >
           <div
-            className="bg-white flex flex-col gap-y-3 justify-center items-center text-large-regular p-4 h-full w-full border-t border-gray-200"
+            className="flex h-full w-full flex-col items-center justify-center gap-y-3 border-t border-neutral-100 bg-white p-4 text-large-regular"
             data-testid="mobile-actions"
           >
-            <div className="flex items-center gap-x-2">
-              <span data-testid="mobile-title">{product.title}</span>
-              <span>—</span>
-              {selectedPrice ? (
-                <div className="flex items-end gap-x-2 text-ui-fg-base">
-                  {selectedPrice.price_type === "sale" && (
-                    <p>
-                      <span className="line-through text-small-regular">
-                        {selectedPrice.original_price}
-                      </span>
-                    </p>
-                  )}
-                  <span
-                    className={clx({
-                      "text-ui-fg-interactive":
-                        selectedPrice.price_type === "sale",
-                    })}
-                  >
-                    {selectedPrice.calculated_price}
-                  </span>
-                </div>
-              ) : (
-                <div></div>
+            <div className="flex w-full items-center gap-x-2">
+              <span className="line-clamp-1 flex-1" data-testid="mobile-title">
+                {product.title}
+              </span>
+              {selectedPrice && (
+                <span className="shrink-0 font-bold text-brand-pink">
+                  {selectedPrice.calculated_price}
+                </span>
               )}
             </div>
-            <div className={clx("grid grid-cols-2 w-full gap-x-4", {
-              "!grid-cols-1": isSimple
-            })}>
-              {!isSimple && <Button
-                onClick={open}
-                variant="secondary"
-                className="w-full"
-                data-testid="mobile-actions-button"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>
-                    {variant
-                      ? Object.values(options).join(" / ")
-                      : labels.selectOptions}
-                  </span>
-                  <ChevronDown />
-                </div>
-              </Button>}
+            <div className="w-full">
+              <div className="mb-2 flex items-center justify-between text-xs text-neutral-500">
+                <span>
+                  {formatMessage(t.idol.participationProgress, {
+                    current: participation.current.toLocaleString(),
+                    target: participation.target.toLocaleString(),
+                  })}
+                </span>
+                <span className="font-semibold text-brand-purple">
+                  {formatMessage(t.products.achievementRate, {
+                    percent: Math.min(achievementRate, 100),
+                  })}
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-pink to-brand-purple"
+                  style={{ width: `${Math.min(achievementRate, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div
+              className={clx("grid w-full grid-cols-2 gap-x-4", {
+                "!grid-cols-1": isSimple,
+              })}
+            >
+              {!isSimple && (
+                <Button
+                  onClick={open}
+                  variant="secondary"
+                  className="w-full"
+                  data-testid="mobile-actions-button"
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span>
+                      {variant
+                        ? Object.values(options).join(" / ")
+                        : labels.selectOptions}
+                    </span>
+                    <ChevronDown />
+                  </div>
+                </Button>
+              )}
               <Button
-                onClick={handleAddToCart}
-                disabled={!inStock || !variant}
-                className="w-full"
+                onClick={handlePrimaryAction}
+                disabled={isPrimaryDisabled}
+                variant="transparent"
+                className="landing-cta-btn w-full rounded-full !font-bold !text-white"
                 isLoading={isAdding}
                 data-testid="mobile-cart-button"
               >
-                {!variant
-                  ? labels.selectVariant
-                  : !inStock
-                    ? labels.outOfStock
-                    : labels.addToCart}
+                {primaryCtaLabel}
               </Button>
             </div>
           </div>
@@ -154,8 +168,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             <div className="fixed inset-0 bg-gray-700 bg-opacity-75 backdrop-blur-sm" />
           </Transition.Child>
 
-          <div className="fixed bottom-0 inset-x-0">
-            <div className="flex min-h-full h-full items-center justify-center text-center">
+          <div className="fixed inset-x-0 bottom-0">
+            <div className="flex h-full min-h-full items-center justify-center text-center">
               <Transition.Child
                 as={Fragment}
                 enter="ease-out duration-300"
@@ -166,13 +180,13 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 leaveTo="opacity-0"
               >
                 <Dialog.Panel
-                  className="w-full h-full transform overflow-hidden text-left flex flex-col gap-y-3"
+                  className="flex h-full w-full transform flex-col gap-y-3 overflow-hidden text-left"
                   data-testid="mobile-actions-modal"
                 >
-                  <div className="w-full flex justify-end pr-6">
+                  <div className="flex w-full justify-end pr-6">
                     <button
                       onClick={close}
-                      className="bg-white w-12 h-12 rounded-full text-ui-fg-base flex justify-center items-center"
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-ui-fg-base"
                       data-testid="close-modal-button"
                     >
                       <X />
@@ -181,19 +195,17 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   <div className="bg-white px-6 py-12">
                     {(product.variants?.length ?? 0) > 1 && (
                       <div className="flex flex-col gap-y-6">
-                        {(product.options || []).map((option) => {
-                          return (
-                            <div key={option.id}>
-                              <OptionSelect
-                                option={option}
-                                current={options[option.id]}
-                                updateOption={updateOptions}
-                                title={option.title ?? ""}
-                                disabled={optionsDisabled}
-                              />
-                            </div>
-                          )
-                        })}
+                        {(product.options || []).map((option) => (
+                          <div key={option.id}>
+                            <OptionSelect
+                              option={option}
+                              current={options[option.id]}
+                              updateOption={updateOptions}
+                              title={option.title ?? ""}
+                              disabled={optionsDisabled}
+                            />
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

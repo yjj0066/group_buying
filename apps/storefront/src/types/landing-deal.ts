@@ -26,6 +26,7 @@ export type LandingDealCard = {
 }
 
 export type LandingHomeData = {
+  dataSource: "api" | "mock"
   featured: LandingDealCard
   popular: LandingDealCard[]
   trending: LandingDealCard[]

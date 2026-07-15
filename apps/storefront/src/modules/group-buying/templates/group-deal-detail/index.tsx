@@ -1,225 +1,141 @@
-import { retrieveGroupDeal } from "@lib/data/group-deals"
-
-import { translateContent } from "@lib/util/translate-content"
-
-import { convertToLocale } from "@lib/util/money"
-
-import { getMedusaLocaleCode, getServerDictionary, formatMessage } from "@i18n/server"
-
-import { Heading, Text } from "@modules/common/components/ui"
-
-import GroupDealProgress from "@modules/group-buying/components/group-deal-progress"
-import LeaderTrustPanel from "@modules/group-buying/components/leader-trust-panel"
-import UnlockRewardGauge from "@modules/products/components/unlock-reward-gauge"
-
-import JoinDealForm from "@modules/group-buying/components/join-deal-form"
+import Image from "next/image"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-
-import { notFound } from "next/navigation"
-
-
+import { convertToLocale } from "@lib/util/money"
+import { getServerDictionary } from "@i18n/server"
+import GroupDealProgress from "@modules/group-buying/components/group-deal-progress"
+import GroupDealTimeline from "@modules/group-buying/components/group-deal-timeline"
+import DealJoinSection from "@modules/group-buying/components/deal-join-section"
+import PurchaseReceiptPanel from "@modules/group-buying/components/purchase-receipt-panel"
+import LeaderTrustPanel from "@modules/group-buying/components/leader-trust-panel"
+import { Heading, Text } from "@modules/common/components/ui"
+import type { GroupDeal } from "types/group-deal"
+import { getDealDiscountPercent, isDealAtCapacity } from "types/group-deal"
 
 type GroupDealDetailTemplateProps = {
-
-  id: string
-
+  groupDeal: GroupDeal
+  heroImageUrl?: string | null
 }
 
-
-
 const GroupDealDetailTemplate = async ({
-
-  id,
-
+  groupDeal,
+  heroImageUrl = null,
 }: GroupDealDetailTemplateProps) => {
-
-  let groupDeal
-
-
-
-  try {
-
-    const response = await retrieveGroupDeal(id)
-
-    groupDeal = response.group_deal
-
-  } catch {
-
-    notFound()
-
-  }
-
-
-
-  const [dictionary, localeCode] = await Promise.all([
-    getServerDictionary(),
-    getMedusaLocaleCode(),
-  ])
-
-  const [translatedTitle, translatedDescription] = await Promise.all([
-    translateContent(groupDeal.title, localeCode),
-    translateContent(groupDeal.description, localeCode),
-  ])
-
-  const displayTitle = translatedTitle ?? groupDeal.title
-  const displayDescription = translatedDescription ?? groupDeal.description
-
-
-
-  const discount = Math.round(
-
-    ((groupDeal.original_price - groupDeal.deal_price) /
-
-      groupDeal.original_price) *
-
-      100
-
-  )
-
-
-
-  const participantCount = groupDeal.current_participants ?? 0
-  const minParticipants = groupDeal.min_participants || groupDeal.target_quantity
-
-
+  const t = await getServerDictionary()
+  const originalPrice = groupDeal.original_price ?? 0
+  const dealPrice = groupDeal.deal_price ?? 0
+  const discount = getDealDiscountPercent(groupDeal)
+  const atCapacity = isDealAtCapacity(groupDeal)
+  const perCapitaShipping =
+    groupDeal.per_capita_shipping_fee ??
+    (groupDeal.metadata?.per_capita_shipping_fee as number | undefined)
 
   return (
-
-    <div className="content-container py-12">
-
+    <div className="content-container py-10">
       <LocalizedClientLink
-
         href="/group-buying"
-
-        className="text-small-regular text-ui-fg-subtle hover:text-ui-fg-base mb-6 inline-block"
-
+        className="mb-6 inline-block text-sm text-ui-fg-subtle hover:text-ui-fg-base"
       >
-
-        {dictionary.groupBuying.backToList}
-
+        {t.groupBuying.backToList}
       </LocalizedClientLink>
-
-
 
       <div className="mb-8">
         <LeaderTrustPanel deal={groupDeal} />
       </div>
 
+      <div className="mb-8">
+        <GroupDealTimeline deal={groupDeal} />
+      </div>
 
-
-      <div className="grid grid-cols-1 medium:grid-cols-2 gap-10">
-
+      <div className="grid grid-cols-1 gap-10 medium:grid-cols-2">
         <div className="flex flex-col gap-y-6">
+          {heroImageUrl && (
+            <div className="relative aspect-square overflow-hidden rounded-2xl border border-ui-border-base bg-ui-bg-subtle">
+              <Image
+                src={heroImageUrl}
+                alt={groupDeal.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            </div>
+          )}
 
-          <div className="flex flex-col gap-y-2">
-
-            <span className="inline-flex w-fit px-2 py-1 text-xs font-medium bg-ui-tag-green-bg text-ui-tag-green-text rounded">
-
-              {discount}% {dictionary.groupBuying.discount}
-
-            </span>
-
+          <div>
             <Heading level="h1" className="text-2xl font-semibold">
-
-              {displayTitle}
-
+              {groupDeal.title}
             </Heading>
-
-            {displayDescription && (
-
-              <Text className="text-ui-fg-subtle">
-
-                {displayDescription}
-
+            {groupDeal.metadata?.idol_group && (
+              <Text className="mt-1 text-sm font-medium text-violet-600">
+                {String(groupDeal.metadata.idol_group)}
               </Text>
-
             )}
-
+            {groupDeal.description && (
+              <Text className="mt-4 text-ui-fg-subtle">
+                {groupDeal.description}
+              </Text>
+            )}
           </div>
-
-
 
           <GroupDealProgress deal={groupDeal} />
 
-          <UnlockRewardGauge
-            current={groupDeal.current_quantity}
-            target={groupDeal.target_quantity}
-          />
+          <PurchaseReceiptPanel deal={groupDeal} />
 
-
-
-          <div className="flex flex-col gap-y-2 p-6 border border-ui-border-base rounded-lg">
-
-            <div className="flex justify-between">
-
-              <Text className="text-ui-fg-muted line-through">
-
-                {dictionary.groupBuying.originalPrice}{" "}
-
-                {convertToLocale({
-
-                  amount: groupDeal.original_price,
-
-                  currency_code: groupDeal.currency_code,
-
-                })}
-
-              </Text>
-
-            </div>
-
-            <Text className="text-2xl font-semibold">
-
+          <div className="flex items-end gap-x-4">
+            <Text className="text-small-regular text-ui-fg-muted line-through">
               {convertToLocale({
-
-                amount: groupDeal.deal_price,
-
+                amount: originalPrice,
                 currency_code: groupDeal.currency_code,
-
               })}
-
             </Text>
-
-            <Text className="text-small-regular text-ui-fg-subtle">
-
-              {formatMessage(dictionary.groupBuying.targetAndCurrent, {
-
-                target: minParticipants,
-
-                current: participantCount,
-
+            <Text className="text-2xl font-bold text-ui-fg-base">
+              {convertToLocale({
+                amount: dealPrice,
+                currency_code: groupDeal.currency_code,
               })}
-
             </Text>
-
+            <span className="rounded bg-ui-tag-green-bg px-2 py-1 text-xs font-medium text-ui-tag-green-text">
+              {discount}% {t.groupBuying.discount}
+            </span>
           </div>
 
+          {atCapacity && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <Text className="text-sm font-medium text-blue-900">
+                {t.groupBuying.fixedShippingFeeNotice}
+              </Text>
+              {perCapitaShipping != null && (
+                <Text className="mt-1 text-sm text-blue-800">
+                  {convertToLocale({
+                    amount: perCapitaShipping,
+                    currency_code: groupDeal.currency_code,
+                  })}
+                </Text>
+              )}
+            </div>
+          )}
         </div>
-
-
 
         <div className="flex flex-col gap-y-4">
-
-          <Heading level="h2" className="text-lg font-medium">
-
-            {dictionary.groupBuying.joinTitle}
-
+          <Heading level="h2" className="text-xl font-semibold">
+            {t.groupBuying.joinTitle}
           </Heading>
 
-          <JoinDealForm deal={groupDeal} />
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <Text className="text-sm font-semibold text-emerald-900">
+              {t.groupBuying.escrowNoticeTitle}
+            </Text>
+            <Text className="mt-1 text-sm text-emerald-800">
+              {t.groupBuying.escrowNoticeDescription}
+            </Text>
+          </div>
 
+          <DealJoinSection deal={groupDeal} />
         </div>
-
       </div>
-
     </div>
-
   )
-
 }
 
-
-
 export default GroupDealDetailTemplate
-

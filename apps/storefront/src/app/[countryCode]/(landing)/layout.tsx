@@ -19,7 +19,7 @@ export default async function LandingLayout(props: {
 }) {
   const dictionary = await getServerDictionary()
 
-  const [regions, currentLocale] = await Promise.all([
+  const [regions, currentLocale, customer] = await Promise.all([
     listRegions()
       .then((regions: StoreRegion[]) => regions)
       .catch(() => [] as StoreRegion[]),
@@ -30,12 +30,14 @@ export default async function LandingLayout(props: {
   void regions
   void currentLocale
 
+  const isLoggedIn = !!customer
+
   return (
     <I18nProvider dictionary={dictionary}>
       <div className="min-h-screen bg-white">
-        <LandingNav />
+        <LandingNav isLoggedIn={isLoggedIn} />
         {props.children}
-        <LandingFooter />
+        <LandingFooter isLoggedIn={isLoggedIn} />
       </div>
     </I18nProvider>
   )

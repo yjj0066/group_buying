@@ -102,3 +102,23 @@ export const LEADER_STAGES: GroupDealLeaderStage[] = [
 export const getLeaderStageIndex = (stage: GroupDealLeaderStage): number => {
   return LEADER_STAGES.indexOf(stage)
 }
+
+export const resolveParticipationTab = (
+  participation: AccountParticipation
+): "active" | "completed" | "cancelled" => {
+  if (
+    participation.status === "cancelled" ||
+    participation.status === "refunded"
+  ) {
+    return "cancelled"
+  }
+
+  if (
+    participation.stage === "delivery_confirmed" ||
+    participation.delivery_confirmed_at
+  ) {
+    return "completed"
+  }
+
+  return "active"
+}

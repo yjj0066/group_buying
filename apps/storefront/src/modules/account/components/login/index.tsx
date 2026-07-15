@@ -69,7 +69,11 @@ const Login = ({ setCurrentView }: Props) => {
           error={message?.state === "error" ? message.error : null}
           data-testid="login-error-message"
         />
-        <SubmitButton data-testid="sign-in-button" className="w-full mt-6">
+        <SubmitButton
+          data-testid="sign-in-button"
+          variant="transparent"
+          className="landing-cta-btn mt-6 w-full rounded-full !text-white"
+        >
           {t.account.login.submit}
         </SubmitButton>
       </form>

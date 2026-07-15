@@ -3,6 +3,7 @@
 import { calculateLeaderTrustScore } from "@lib/util/group-deal-trust"
 import { useDictionary } from "@i18n/provider"
 import { Text } from "@modules/common/components/ui"
+import { convertToLocale } from "@lib/util/money"
 import type { GroupDeal } from "types/group-deal"
 import { isDepositSecured } from "types/group-deal"
 
@@ -36,7 +37,7 @@ const LeaderTrustPanel = ({ deal }: LeaderTrustPanelProps) => {
 
         {depositSecured && (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-            ✓ {t.groupBuying.depositSecuredBadge}
+            {t.groupBuying.depositSecuredBadge}
           </span>
         )}
       </div>
@@ -55,6 +56,17 @@ const LeaderTrustPanel = ({ deal }: LeaderTrustPanelProps) => {
           {depositSecured
             ? t.groupBuying.depositStatusDeposited
             : t.groupBuying.depositStatusPending}
+          {deal.deposit_amount != null && deal.deposit_amount > 0 && (
+            <>
+              {" "}
+              (
+              {convertToLocale({
+                amount: deal.deposit_amount,
+                currency_code: deal.currency_code,
+              })}
+              )
+            </>
+          )}
         </li>
         <li>
           {deal.purchase_receipt_status === "verified"

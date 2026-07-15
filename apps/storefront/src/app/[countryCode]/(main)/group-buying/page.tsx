@@ -1,8 +1,8 @@
 import { Metadata } from "next"
 
-import GroupDealsListTemplate from "@modules/group-buying/templates/group-deals-list"
+import { listGroupDeals } from "@lib/data/group-deals"
 import { getServerDictionary } from "@i18n/server"
-import { resolveCountryCode } from "@lib/util/country-code"
+import GroupDealsCatalog from "@modules/group-buying/components/group-deals-catalog"
 
 export async function generateMetadata(): Promise<Metadata> {
   const dictionary = await getServerDictionary()
@@ -13,11 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function GroupBuyingPage(props: {
-  params: Promise<{ countryCode: string }>
-}) {
-  const params = await props.params
-  const countryCode = resolveCountryCode(params.countryCode)
+export default async function GroupBuyingListPage() {
+  const { group_deals: deals } = await listGroupDeals()
 
-  return <GroupDealsListTemplate countryCode={countryCode} />
+  return <GroupDealsCatalog deals={deals} />
 }

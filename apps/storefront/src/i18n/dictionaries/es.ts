@@ -4,6 +4,7 @@ import { landingEn } from "./landing-shared"
 const dictionary: Dictionary = {
   nav: {
     storeName: "Compra Grupal",
+    allProducts: "Todos los productos",
     groupBuying: "Compra grupal",
     account: "Cuenta",
     cart: "Carrito",
@@ -52,6 +53,7 @@ const dictionary: Dictionary = {
     searchSubmit: "Buscar",
     searchResultsFor: 'Resultados para "{query}"',
     noSearchResults: "No hay productos que coincidan con los filtros.",
+    aiSearchActive: "Resultados de búsqueda IA ({model})",
     categoryFilter: "Categoría",
     allCategories: "Todas las categorías",
     sortBy: "Ordenar por",

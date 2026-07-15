@@ -1,6 +1,7 @@
 "use client"
 
 import GroupBuyCard from "@modules/landing/components/group-buy-card"
+import DemoDataBanner from "@modules/landing/components/demo-data-banner"
 import LandingHero from "@modules/landing/components/landing-hero"
 import LiveTicker from "@modules/landing/components/live-ticker"
 import ScrollReveal from "@modules/landing/components/scroll-reveal"
@@ -30,16 +31,30 @@ const WHY_KEYS = ["authentic", "lowerPrices", "secure", "shipping"] as const
 const SectionHeader = ({
   title,
   subtitle,
+  viewAllHref,
+  viewAllLabel,
 }: {
   title: string
   subtitle?: string
+  viewAllHref?: string
+  viewAllLabel?: string
 }) => (
-  <div className="mb-8 max-w-2xl">
-    <h2 className="text-3xl font-black tracking-tight text-neutral-900 small:text-4xl">
-      {title}
-    </h2>
-    {subtitle && (
-      <p className="mt-3 text-base leading-relaxed text-neutral-500">{subtitle}</p>
+  <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="max-w-2xl">
+      <h2 className="text-3xl font-black tracking-tight text-neutral-900 small:text-4xl">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="mt-3 text-base leading-relaxed text-neutral-500">{subtitle}</p>
+      )}
+    </div>
+    {viewAllHref && viewAllLabel && (
+      <LocalizedClientLink
+        href={viewAllHref}
+        className="shrink-0 text-sm font-semibold text-brand-pink transition-colors hover:text-brand-purple"
+      >
+        {viewAllLabel} →
+      </LocalizedClientLink>
     )}
   </div>
 )
@@ -62,6 +77,7 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
 
   return (
     <div className="bg-white text-neutral-900">
+      <DemoDataBanner visible={data.dataSource === "mock"} />
       <LandingHero featured={data.featured} liveCount={liveCount} />
       <LiveTicker />
 
@@ -71,6 +87,8 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
           <SectionHeader
             title={t.landing.popular.title}
             subtitle={t.landing.popular.subtitle}
+            viewAllHref="/group-buying"
+            viewAllLabel={t.landing.viewAllDeals}
           />
         </ScrollReveal>
         <div className="flex gap-5 overflow-x-auto pb-4 no-scrollbar">
@@ -124,6 +142,8 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
           <SectionHeader
             title={t.landing.grid.title}
             subtitle={t.landing.grid.subtitle}
+            viewAllHref="/group-buying"
+            viewAllLabel={t.landing.viewAllDeals}
           />
         </ScrollReveal>
         <div className="grid grid-cols-1 gap-6 xsmall:grid-cols-2 large:grid-cols-3">
@@ -132,6 +152,14 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
               <GroupBuyCard deal={deal} />
             </ScrollReveal>
           ))}
+        </div>
+        <div className="mt-10 flex justify-center">
+          <LocalizedClientLink
+            href="/store"
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-neutral-800 shadow-sm transition hover:border-brand-pink hover:text-brand-pink"
+          >
+            {t.landing.viewAllProducts} →
+          </LocalizedClientLink>
         </div>
       </section>
 
@@ -142,6 +170,8 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
             <SectionHeader
               title={t.landing.endingSoon.title}
               subtitle={t.landing.endingSoon.subtitle}
+              viewAllHref="/group-buying"
+              viewAllLabel={t.landing.viewAllDeals}
             />
           </ScrollReveal>
           <div className="grid grid-cols-1 gap-6 medium:grid-cols-3">
@@ -163,7 +193,11 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
         ].map((section) => (
           <div key={section.title}>
             <ScrollReveal>
-              <SectionHeader title={section.title} />
+              <SectionHeader
+                title={section.title}
+                viewAllHref="/group-buying"
+                viewAllLabel={t.landing.viewAllDeals}
+              />
             </ScrollReveal>
             <div className="grid grid-cols-1 gap-6 xsmall:grid-cols-2 large:grid-cols-4">
               {section.deals.map((deal, index) => (

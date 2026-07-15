@@ -127,3 +127,69 @@ export const calculateAchievementRate = (
 
   return Math.round((current / target) * 100)
 }
+
+export const DISPLAY_PRODUCTION_STAGES = [
+  { id: "demand_survey" },
+  { id: "group_recruitment" },
+  { id: "in_production" },
+  { id: "shipping" },
+] as const
+
+export type DisplayProductionStageId =
+  (typeof DISPLAY_PRODUCTION_STAGES)[number]["id"]
+
+export const getDisplayStageIndex = (
+  stageId: ProductionStageId
+): number => {
+  if (stageId === "demand_survey") {
+    return 0
+  }
+
+  if (stageId === "pre_deposit" || stageId === "general_deposit") {
+    return 1
+  }
+
+  if (stageId === "in_production") {
+    return 2
+  }
+
+  return 3
+}
+
+export const parseIdolGroup = (
+  product: Pick<HttpTypes.StoreProduct, "metadata" | "collection">
+): string | null => {
+  const fromMetadata = product.metadata?.idol_group
+
+  if (typeof fromMetadata === "string" && fromMetadata.trim()) {
+    return fromMetadata.trim()
+  }
+
+  if (product.collection?.title) {
+    return product.collection.title
+  }
+
+  return null
+}
+
+export const parseGoodsCategory = (
+  product: Pick<HttpTypes.StoreProduct, "metadata" | "type">
+): string | null => {
+  const goodsType = product.metadata?.goods_type
+
+  if (typeof goodsType === "string" && goodsType.trim()) {
+    return goodsType.trim()
+  }
+
+  if (product.type?.value) {
+    return product.type.value
+  }
+
+  return null
+}
+
+export const isDemandSurveyStage = (stageId: ProductionStageId): boolean =>
+  stageId === "demand_survey"
+
+export const isGroupRecruitmentStage = (stageId: ProductionStageId): boolean =>
+  stageId === "pre_deposit" || stageId === "general_deposit"

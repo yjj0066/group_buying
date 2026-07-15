@@ -5,9 +5,17 @@ import { useEffect, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useDictionary } from "@i18n/provider"
 
-const LandingNav = () => {
+type LandingNavProps = {
+  isLoggedIn?: boolean
+}
+
+const LandingNav = ({ isLoggedIn = false }: LandingNavProps) => {
   const t = useDictionary()
   const [scrolled, setScrolled] = useState(false)
+
+  const accountLabel = isLoggedIn
+    ? t.landing.nav.myPage
+    : t.landing.nav.signIn
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -36,6 +44,12 @@ const LandingNav = () => {
 
         <nav className="hidden items-center gap-8 medium:flex">
           <LocalizedClientLink
+            href="/store"
+            className="text-sm font-medium text-neutral-600 transition-colors hover:text-brand-pink"
+          >
+            {t.nav.allProducts}
+          </LocalizedClientLink>
+          <LocalizedClientLink
             href="/group-buying"
             className="text-sm font-medium text-neutral-600 transition-colors hover:text-brand-pink"
           >
@@ -60,7 +74,7 @@ const LandingNav = () => {
             href="/account"
             className="hidden text-sm font-medium text-neutral-600 small:inline"
           >
-            {t.landing.nav.signIn}
+            {accountLabel}
           </LocalizedClientLink>
           <LocalizedClientLink
             href="/group-buying"

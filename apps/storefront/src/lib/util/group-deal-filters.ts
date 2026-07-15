@@ -1,5 +1,10 @@
 import type { GroupDeal, GroupDealOption } from "types/group-deal"
-import { hasMemberVacancy, isDealSoldOut } from "types/group-deal"
+import {
+  getParticipationRate,
+  hasMemberVacancy,
+  isDealSoldOut,
+  isDepositSecured,
+} from "types/group-deal"
 
 export type GroupDealFilterState = {
   query: string
@@ -10,6 +15,7 @@ export type GroupDealFilterState = {
   maxPrice: number | null
   favoriteMember: string
   vacantOnly: boolean
+  sortBy: "deadline" | "newest"
 }
 
 export const DEFAULT_GROUP_DEAL_FILTERS: GroupDealFilterState = {
@@ -21,7 +27,10 @@ export const DEFAULT_GROUP_DEAL_FILTERS: GroupDealFilterState = {
   maxPrice: null,
   favoriteMember: "",
   vacantOnly: false,
+  sortBy: "deadline",
 }
+
+export const SEARCH_MIN_LENGTH = 2
 
 export type GroupDealFilterFacets = {
   idolGroups: string[]
@@ -103,12 +112,38 @@ const matchesQuery = (deal: GroupDeal, query: string): boolean => {
 
   const normalized = query.trim().toLowerCase()
 
+  const memberLabels = (deal.options ?? [])
+    .filter((option) => option.option_type === "member")
+    .map((option) => option.label.toLowerCase())
+
+  const goodsType = String(deal.metadata?.goods_type ?? "").toLowerCase()
+
   return (
     deal.title.toLowerCase().includes(normalized) ||
     (deal.description ?? "").toLowerCase().includes(normalized) ||
     String(deal.metadata?.idol_group ?? "")
       .toLowerCase()
-      .includes(normalized)
+      .includes(normalized) ||
+    goodsType.includes(normalized) ||
+    memberLabels.some((label) => label.includes(normalized))
+  )
+}
+
+const sortGroupDeals = (
+  deals: GroupDeal[],
+  sortBy: GroupDealFilterState["sortBy"]
+): GroupDeal[] => {
+  const sorted = [...deals]
+
+  if (sortBy === "newest") {
+    return sorted.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+  }
+
+  return sorted.sort(
+    (a, b) => new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
   )
 }
 
@@ -116,8 +151,15 @@ export const filterGroupDeals = (
   deals: GroupDeal[],
   filters: GroupDealFilterState
 ): GroupDeal[] => {
-  return deals.filter((deal) => {
-    if (!matchesQuery(deal, filters.query)) {
+  const query = filters.query.trim()
+  const shouldApplyQuery = query.length >= SEARCH_MIN_LENGTH
+
+  const filtered = deals.filter((deal) => {
+    if (!isDepositSecured(deal)) {
+      return false
+    }
+
+    if (shouldApplyQuery && !matchesQuery(deal, query)) {
       return false
     }
 
@@ -155,6 +197,8 @@ export const filterGroupDeals = (
 
     return true
   })
+
+  return sortGroupDeals(filtered, filters.sortBy)
 }
 
 export const summarizeOptionVacancy = (
@@ -170,4 +214,17 @@ export const summarizeOptionVacancy = (
 
       return `${option.label}:${remaining == null ? "∞" : remaining}`
     })
+}
+
+export const hasActiveFilters = (filters: GroupDealFilterState): boolean => {
+  return (
+    filters.query.trim().length >= SEARCH_MIN_LENGTH ||
+    Boolean(filters.idolGroup) ||
+    Boolean(filters.member) ||
+    Boolean(filters.goodsType) ||
+    filters.minPrice != null ||
+    filters.maxPrice != null ||
+    Boolean(filters.favoriteMember) ||
+    filters.vacantOnly
+  )
 }

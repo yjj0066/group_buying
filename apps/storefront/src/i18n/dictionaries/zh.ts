@@ -4,6 +4,7 @@ import { landingEn } from "./landing-shared"
 const dictionary: Dictionary = {
   nav: {
     storeName: "团购商城",
+    allProducts: "全部商品",
     groupBuying: "团购",
     account: "账户",
     cart: "购物车",
@@ -49,6 +50,7 @@ const dictionary: Dictionary = {
     searchSubmit: "搜索",
     searchResultsFor: "“{query}”的搜索结果",
     noSearchResults: "没有符合条件的商品。",
+    aiSearchActive: "AI 搜索结果 ({model})",
     categoryFilter: "分类",
     allCategories: "全部分类",
     sortBy: "排序",

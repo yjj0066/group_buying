@@ -10,6 +10,12 @@ export const isStoreVisibleGroupDealStatus = (status: string): boolean => {
   return STORE_VISIBLE_STATUSES.includes(status as GroupDealStatus)
 }
 
+export const isDepositSecured = (deal: {
+  deposit_status?: string | null
+}): boolean => {
+  return String(deal.deposit_status ?? "pending") === "deposited"
+}
+
 const toNumber = (value: unknown): number => {
   const numeric = Number(value)
 
@@ -26,25 +32,25 @@ const toIsoString = (value: unknown): string => {
 
 type DealRecord = Record<string, unknown>
 
-export const serializeStoreGroupDealOption = (option: DealRecord) => ({
+export const serializeStoreGroupDealOption = (
+  option: DealRecord
+) => ({
   id: String(option.id),
-  group_deal_id: String(option.group_deal_id ?? ""),
-  option_type: String(option.option_type ?? "member"),
+  group_deal_id: String(option.group_deal_id),
+  option_type: String(option.option_type ?? "custom"),
   option_key: String(option.option_key ?? ""),
   label: String(option.label ?? ""),
   deal_price: option.deal_price != null ? toNumber(option.deal_price) : null,
   original_price:
     option.original_price != null ? toNumber(option.original_price) : null,
   max_quantity:
-    option.max_quantity != null ? Number(option.max_quantity) : null,
+    option.max_quantity != null ? toNumber(option.max_quantity) : null,
   target_quantity:
-    option.target_quantity != null ? Number(option.target_quantity) : null,
-  current_quantity: toNumber(option.current_quantity ?? 0),
-  sort_order: Number(option.sort_order ?? 0),
-  is_active: option.is_active !== false,
+    option.target_quantity != null ? toNumber(option.target_quantity) : null,
+  current_quantity: toNumber(option.current_quantity),
+  sort_order: toNumber(option.sort_order),
+  is_active: Boolean(option.is_active ?? true),
   metadata: (option.metadata as Record<string, unknown> | null) ?? null,
-  created_at: toIsoString(option.created_at),
-  updated_at: toIsoString(option.updated_at),
 })
 
 export const serializeStoreGroupDeal = (
@@ -56,15 +62,15 @@ export const serializeStoreGroupDeal = (
   description: deal.description != null ? String(deal.description) : null,
   product_id: String(deal.product_id ?? ""),
   variant_id: deal.variant_id != null ? String(deal.variant_id) : null,
-  min_participants: Number(deal.min_participants ?? 0),
-  current_participants: Number(deal.current_participants ?? 0),
-  target_quantity: Number(deal.target_quantity ?? 0),
-  current_quantity: Number(deal.current_quantity ?? 0),
-  max_quantity: deal.max_quantity != null ? Number(deal.max_quantity) : null,
+  min_participants: toNumber(deal.min_participants),
+  current_participants: toNumber(deal.current_participants),
+  target_quantity: toNumber(deal.target_quantity),
+  current_quantity: toNumber(deal.current_quantity),
+  max_quantity: deal.max_quantity != null ? toNumber(deal.max_quantity) : null,
   original_price: toNumber(deal.original_price),
   deal_price: toNumber(deal.deal_price),
-  currency_code: String(deal.currency_code ?? "krw").toLowerCase(),
-  status: String(deal.status ?? GroupDealStatus.DRAFT),
+  currency_code: String(deal.currency_code ?? "krw"),
+  status: String(deal.status ?? "draft"),
   starts_at: toIsoString(deal.starts_at),
   ends_at: toIsoString(deal.ends_at),
   metadata: (deal.metadata as Record<string, unknown> | null) ?? null,
@@ -74,22 +80,13 @@ export const serializeStoreGroupDeal = (
   deposit_amount:
     deal.deposit_amount != null ? toNumber(deal.deposit_amount) : null,
   purchase_receipt_status: String(deal.purchase_receipt_status ?? "pending"),
+  purchase_receipt_url:
+    (deal.purchase_receipt_url as string | null) ??
+    ((deal.metadata as Record<string, unknown> | null)?.purchase_receipt_url as
+      | string
+      | null) ??
+    null,
   options: options.map(serializeStoreGroupDealOption),
   created_at: toIsoString(deal.created_at),
   updated_at: toIsoString(deal.updated_at),
-})
-
-export const serializeStoreGroupDealParticipant = (
-  participant: DealRecord
-) => ({
-  id: String(participant.id),
-  customer_id:
-    participant.customer_id != null ? String(participant.customer_id) : null,
-  email: String(participant.email ?? ""),
-  quantity: Number(participant.quantity ?? 1),
-  status: String(participant.status ?? "pending"),
-  cart_id: participant.cart_id != null ? String(participant.cart_id) : null,
-  order_id: participant.order_id != null ? String(participant.order_id) : null,
-  created_at: toIsoString(participant.created_at),
-  updated_at: toIsoString(participant.updated_at),
 })

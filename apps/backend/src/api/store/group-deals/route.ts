@@ -2,8 +2,8 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 
 import { GROUP_BUYING_MODULE } from "../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../modules/group-buying/service"
-import { GroupDealStatus } from "../../../types/group-buying"
 import {
+  isDepositSecured,
   isStoreVisibleGroupDealStatus,
   serializeStoreGroupDeal,
 } from "../../../utils/group-deal-store"
@@ -13,22 +13,18 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     GROUP_BUYING_MODULE
   )
 
-  const deals = await groupBuyingService.listGroupDeals(
-    {
-      status: [
-        GroupDealStatus.OPEN,
-        GroupDealStatus.MINIMUM_REACHED,
-        GroupDealStatus.CLOSED,
-      ],
-    },
-    {
-      order: { created_at: "DESC" },
-    }
-  )
+  const navigationMode = req.query.navigation === "true"
 
-  const visibleDeals = deals.filter((deal) =>
-    isStoreVisibleGroupDealStatus(String(deal.status))
-  )
+  const deals = await groupBuyingService.listGroupDeals()
+
+  const visibleDeals = deals.filter((deal) => {
+    const status = String(deal.status)
+    const depositOk =
+      navigationMode ||
+      isDepositSecured(deal as { deposit_status?: string | null })
+
+    return isStoreVisibleGroupDealStatus(status) && depositOk
+  })
 
   const serialized = await Promise.all(
     visibleDeals.map(async (deal) => {

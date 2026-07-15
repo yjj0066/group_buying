@@ -11,10 +11,12 @@ export default function ProductPreview({
   product,
   isFeatured,
   region: _region,
+  groupDealId,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
+  groupDealId?: string
 }) {
   const { cheapestPrice } = getProductPrice({
     product,
@@ -43,9 +45,13 @@ export default function ProductPreview({
     </div>
   )
 
+  const detailHref = groupDealId
+    ? `/group-buying/${groupDealId}`
+    : `/products/${product.handle}`
+
   return (
     <LocalizedClientLink
-      href={`/products/${product.handle}`}
+      href={detailHref}
       className="group block rounded-lg transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-interactive"
       scroll
     >
