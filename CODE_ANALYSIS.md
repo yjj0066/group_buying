@@ -1,555 +1,566 @@
-# Group Buying Site — 코드 분석 보고서
+# Group Buying Site — Code Analysis
 
-> 작성 기준: `group-buying-site` 모노레포 (Medusa v2.17.2 + Next.js 15.5.18)  
-> 최종 갱신: 공동구매 결제 연동, 통화 선택, 장바구니·결제 i18n 반영  
-> 대상 독자: 프로젝트에 합류하는 개발자, 기획·운영 담당자
-
----
-
-## 1. 프로젝트 개요
-
-### 1.1 목적
-
-K-POP 아이돌 굿즈를 대상으로 한 **공동구매 + 수요조사** 커머스 플랫폼입니다. Medusa v2를 백엔드로, Next.js를 스토어프론트로 사용하며, 다음 요구사항을 반영했습니다.
-
-- 목표 인원 달성 시 할인가 적용 (공동구매)
-- **결제 완료 후 참여 확정** (v2 — 장바구니 → 체크아웃 → 주문)
-- 제작 전 수요조사 단계에서 관심 표시 수집
-- 제작 진행 상태 시각화 (5단계 타임라인)
-- 글로벌 팬 대상 6개국어 UI (장바구니·결제 포함)
-- **통화 선택** — 언어와 독립적으로 KRW/USD 등 리전 전환
-- 상품명(고유명사)은 원본 유지, UI·설명만 다국어
-
-### 1.2 시스템 구성
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    고객 브라우저                              │
-│              http://localhost:8000/kr                       │
-│  - 언어: _medusa_locale 쿠키 (6개 UI 로케일)                  │
-│  - 통화: /{countryCode}/ URL → Medusa Region               │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│              Next.js 15 Storefront (apps/storefront)         │
-│  - App Router, Server Actions, i18n Provider                 │
-│  - CurrencySelect / LanguageSwitcher                         │
-│  - Medusa JS SDK → Store API 호출                            │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ HTTP (REST)
-┌──────────────────────────▼──────────────────────────────────┐
-│              Medusa v2 Backend (apps/backend)                │
-│  - Custom Group Buying Module                                │
-│  - Payment-integrated join workflows                         │
-│  - order.placed subscriber → 참여 확정                       │
-│  - Demand Survey Workflow (Product Metadata)                 │
-│  - Translation Module (상품명은 스토어프론트에서 우회)         │
-│  - Admin Dashboard: /app                                     │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                    PostgreSQL                                │
-│  - Medusa 코어 테이블 (product, order, cart, ...)           │
-│  - group_deal, group_deal_participant (커스텀)               │
-│  - 수요조사: product.metadata JSON 필드                      │
-└─────────────────────────────────────────────────────────────┘
-```
+> **작성 기준일:** 2026-07-15  
+> **대상:** `group-buying-site/` monorepo (`@dtc/backend` + `@dtc/storefront`)  
+> **관련 문서:** [README.md](./README.md) · [PROJECT_STATUS.md](./PROJECT_STATUS.md) · [docs/api-contract-for-merge.md](./docs/api-contract-for-merge.md)
 
 ---
 
-## 2. 기술 스택 상세
+## 1. Executive Summary
 
-| 계층 | 기술 | 버전 | 역할 |
-|------|------|------|------|
-| 런타임 | Node.js | ≥20 | 서버 실행 환경 |
-| 패키지 | pnpm workspaces | 10.11.1 | 모노레포 의존성 관리 |
-| 빌드 | Turbo | 2.x | 멀티 앱 빌드 오케스트레이션 |
-| 백엔드 프레임워크 | Medusa | 2.17.2 | 커머스 API, Admin, 워크플로 |
-| ORM | MikroORM (Medusa 내장) | — | DB 접근 |
-| 프론트엔드 | Next.js | 15.5.18 | SSR/SSG, App Router |
-| UI 라이브러리 | React | 19.0.5 | 컴포넌트 |
-| 스타일 | Tailwind CSS | 3.x | 유틸리티 CSS |
-| 결제 | Stripe / 수동 결제 | 8.x | 체크아웃 결제 |
-| DB | PostgreSQL | 15+ | 영구 저장소 |
-| 캐시(선택) | Redis / in-memory | — | Medusa 이벤트·캐시 |
+본 프로젝트는 **Medusa v2 커스텀 모듈** 위에 공동구매 도메인을 올리고, **Next.js App Router** 스토어프론트와 **Flask 하이브리드 AI**를 분리 연동한 3-tier 구조이다.
+
+| 레이어 | 역할 | Source of Truth |
+|--------|------|-----------------|
+| **Medusa Backend** | 주문·결제·재고·공구 CRUD·워크플로 | PostgreSQL |
+| **Next.js Storefront** | UI·i18n·BFF·Server Actions | Medusa Store API + Flask BFF |
+| **Flask (Practice)** | 검색·추천·행동 로그·임베딩 | Flask PostgreSQL (SearchDocument) |
+
+**핵심 설계 원칙:**
+
+1. **결제/주문은 Medusa만** — Flask는 commerce path에 끼지 않음
+2. **실패 격리** — Flask/로그 실패가 장바구니·결제 UX를 차단하지 않음
+3. **직렬화 계층 분리** — DB 모델 → `group-deal-store.ts` / `group-deal-account.ts` → Storefront types
+4. **v3 이중 결제** — PG 에스크로 경로와 가상계좌(VA) 경로가 join route에서 분기
 
 ---
 
-## 3. 백엔드 아키텍처 분석
-
-### 3.1 커스텀 모듈: Group Buying
-
-**위치:** `apps/backend/src/modules/group-buying/`
-
-Medusa v2 **Custom Module** 패턴을 따릅니다.
-
-| 파일 | 역할 |
-|------|------|
-| `index.ts` | 모듈 등록 (`GROUP_BUYING_MODULE` 상수) |
-| `service.ts` | `MedusaService` CRUD + 지표 재계산·참여 검증 |
-| `models/index.ts` | `GroupDeal`, `GroupDealParticipant` 엔티티 정의 |
-| `migrations/Migration20250710120000.ts` | 초기 테이블 생성 |
-| `migrations/Migration20250713160000.ts` | v2 필드·상태 마이그레이션 |
-
-**GroupDeal 엔티티 주요 필드:**
-
-| 필드 | 설명 |
-|------|------|
-| `product_id`, `variant_id` | 연결 상품 (텍스트 ID, Module Link 미사용) |
-| `min_participants` | 최소 참여 인원 (고유 결제 고객) |
-| `current_participants` | 확정된 고유 참여 인원 |
-| `target_quantity` | 목표 수량 (특전 게이지용) |
-| `current_quantity` | 확정된 총 수량 |
-| `max_quantity` | 최대 판매 수량 (null = 무제한) |
-| `original_price`, `deal_price`, `currency_code` | 가격 정보 |
-| `status` | `draft \| open \| minimum_reached \| closed \| failed \| cancelled` |
-| `starts_at`, `ends_at` | 캠페인 기간 |
-
-**GroupDealParticipant 엔티티:**
-
-| 필드 | 설명 |
-|------|------|
-| `email`, `customer_id` | 참여자 식별 |
-| `quantity` | 참여 수량 |
-| `status` | `pending \| confirmed \| cancelled` |
-| `cart_id` | 결제 준비 시 생성된 장바구니 |
-| `order_id` | 결제 완료 후 연결된 주문 |
-
-### 3.2 상태 머신 (`utils/group-deal-rules.ts`)
-
-**딜 상태 전이:**
+## 2. System Architecture
 
 ```
-draft → open → minimum_reached → closed
-              ↘ failed
-              ↘ cancelled
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Browser (6 locales)                              │
+└─────────────────────────────────────────────────────────────────────────┘
+         │                              │                    │
+         ▼                              ▼                    ▼
+┌─────────────────┐          ┌──────────────────┐   ┌─────────────────┐
+│  Next.js RSC    │          │  Next.js Client  │   │  Medusa Admin   │
+│  Server Actions │          │  Components      │   │  (Vite + SDK)   │
+└────────┬────────┘          └────────┬─────────┘   └────────┬────────┘
+         │                            │                       │
+         │  sdk.client.fetch          │  fetch /api/ai/*      │  sdk.client.fetch
+         ▼                            ▼                       ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Medusa Backend (:9000)                              │
+│  ┌──────────────┐  ┌─────────────┐  ┌────────────┐  ┌───────────────┐  │
+│  │ group-buying │  │ workflows   │  │ subscribers│  │ PG modules    │  │
+│  │ module       │  │             │  │ + cron     │  │ toss/stripe   │  │
+│  └──────────────┘  └─────────────┘  └────────────┘  └───────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
+         │ search-index feed                    ▲
+         ▼                                        │ events / search / recommendations
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Flask AI Engine (:5000)                               │
+│  SearchDocument · Embedding · SearchLog · Recommendations                │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-| 상태 | 의미 |
-|------|------|
-| `open` | 참여 가능 (레거시 `active` 정규화) |
-| `minimum_reached` | `current_participants >= min_participants` |
-| `closed` | 수량 소진 또는 기간 종료 |
-| `failed` | 기한 내 최소 인원 미달 |
-| `cancelled` | 수동 취소 |
+### 2.1 Route Groups (Storefront)
 
-**참여 가능 조건:** `open` 또는 `minimum_reached` + `starts_at`~`ends_at` 내 + 수량 한도 미초과
+| Group | 경로 | 렌더링 |
+|-------|------|--------|
+| `(landing)` | `/kr` | RSC template + client sections + AI slider |
+| `(main)` | `/store`, `/group-buying`, `/account`, `/products` | RSC + client islands |
+| `(checkout)` | `/cart`, `/checkout` | client-heavy PG widgets |
+| `app/api/ai` | BFF | Route Handlers (no UI) |
 
-**핵심 함수:**
+---
 
-- `assertDealJoinable` — 참여 전 검증
-- `evaluateDealStatus` — 지표 기반 상태 갱신
-- `countUniqueConfirmedParticipants` — 고유 결제 고객 수
-- `sumConfirmedQuantity` — 확정 수량 합계
-- `buildParticipantKey` — customer_id 또는 email 기반 중복 식별
+## 3. Backend Code Analysis
 
-단위 테스트: `apps/backend/src/utils/__tests__/group-deal-rules.spec.ts`
+### 3.1 Module Pattern — `GroupBuyingModuleService`
 
-### 3.3 워크플로 (Workflows)
+**위치:** `apps/backend/src/modules/group-buying/service.ts`
 
-**`workflows/group-deals.ts`**
+Medusa v2 `MedusaService({ Model... })` 패턴을 따른다. 5개 엔티티를 단일 서비스로 관리한다.
 
-```
-createGroupDealWorkflow
-  └─ createGroupDealStep → group_deal INSERT
-
-prepareGroupDealCheckoutWorkflow          ← v2 핵심
-  └─ 참여 검증 (assertDealJoinable)
-  └─ participant 생성/갱신 (status: pending)
-  └─ deal_price로 cart + line item 생성
-  └─ line item metadata: group_deal_id, participant_id, is_group_deal
-
-confirmGroupDealParticipationWorkflow     ← 결제 후 확정
-  └─ order.placed 이벤트에서 호출
-  └─ participant → confirmed
-  └─ 중복 참여자 병합 (customer_id / email)
-  └─ recalculateDealMetrics → 상태·지표 갱신
+```typescript
+class GroupBuyingModuleService extends MedusaService({
+  GroupDeal,
+  GroupDealParticipant,
+  GroupDealOption,
+  GroupDealParticipantSelection,
+  GroupDealWaitlistEntry,
+}) { ... }
 ```
 
-**`workflows/demand-survey.ts`**
+**책임 분리:**
 
-```
-joinDemandSurveyWorkflow
-  └─ joinDemandSurveyStep
-       ├─ Product Query로 metadata 조회
-       ├─ production_stage === demand_survey 검증
-       ├─ participant_id 중복 검사
-       └─ metadata.participation_current += 1
-```
+| 계층 | 파일 | 역할 |
+|------|------|------|
+| Service | `service.ts` | CRUD, join slot, waitlist match, status transition |
+| Rules | `utils/group-deal-rules.ts` | joinable 검증, status evaluation, participant count |
+| Options | `utils/group-deal-options.ts` | selection limit, 1차금 계산 |
+| Admin rules | `utils/group-deal-admin-rules.ts` | deposit guard, status transition guard |
+| Store serialize | `utils/group-deal-store.ts` | Store API DTO, timeline stage |
+| Account serialize | `utils/group-deal-account.ts` | My page DTO, participation stage |
 
-수요조사는 **별도 DB 테이블 없이** Product `metadata` JSON 필드만 사용합니다.
+**분석:** 비즈니스 규칙이 service 메서드 내부가 아닌 `utils/` pure function으로 분리되어 있어 unit test 가능 (`__tests__/` 9개 spec).
 
-### 3.4 서브스크라이버
+### 3.2 State Machine — `GroupDealStatus`
 
-**`subscribers/order-placed-group-deal.ts`**
+**위치:** `apps/backend/src/types/group-buying.ts`
 
-- 이벤트: `OrderWorkflowEvents.PLACED`
-- 동작: `confirmGroupDealParticipationWorkflow` 실행
-- 장바구니 line item의 `group_deal_id` 메타데이터로 딜·참여자 연결
-
-### 3.5 API 라우트
-
-| Method | 경로 | 구현 파일 | 비고 |
-|--------|------|-----------|------|
-| GET | `/admin/group-deals` | `api/admin/group-deals/route.ts` | 목록 |
-| POST | `/admin/group-deals` | `api/admin/group-deals/route.ts` | 생성 |
-| GET | `/admin/group-deals/:id` | `api/admin/group-deals/[id]/route.ts` | 상세 |
-| GET | `/store/group-deals` | `api/store/group-deals/route.ts` | 참여 가능 딜만 |
-| GET | `/store/group-deals/:id` | `api/store/group-deals/[id]/route.ts` | 공개 상세 |
-| POST | `/store/group-deals/:id/join` | `api/store/group-deals/[id]/join/route.ts` | 참여 → cart_id 반환 |
-| POST | `/store/products/:id/demand-survey/participate` | `api/store/products/[id]/demand-survey/participate/route.ts` | 수요조사 |
-
-**Join API 응답:**
-
-```json
-{
-  "cart_id": "cart_...",
-  "participant": { ... },
-  "group_deal": { ... },
-  "checkout_path": "/checkout"
+```typescript
+export enum GroupDealStatus {
+  DRAFT = "draft",
+  OPEN = "open",                    // ← canonical "active recruiting" (ACTIVE 제거됨)
+  MINIMUM_REACHED = "minimum_reached",
+  CLOSED = "closed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+  SETTLED = "settled",
 }
 ```
 
-**미구현 Admin API:** `PUT/DELETE /admin/group-deals/:id`
-
-### 3.6 시드 스크립트
-
-| 스크립트 | 실행 | 역할 |
-|----------|------|------|
-| `migration-scripts/initial-data-seed.ts` | `pnpm db:migrate` 시 자동 | 리전, 상품, 재고, API 키 |
-| `scripts/seed-locales.ts` | `pnpm seed:locales` | 6개 UI 로케일 |
-| `scripts/seed-currency-regions.ts` | `pnpm seed:regions` | Korea/America 리전, KRW 가격 |
-
-### 3.7 Medusa 설정 (`medusa-config.ts`)
-
-- **커스텀 모듈:** `./src/modules/group-buying`
-- **Translation 모듈:** `@medusajs/medusa/translation` (feature flag 활성)
-- **CORS:** `STORE_CORS`, `ADMIN_CORS`, `AUTH_CORS` 환경 변수
-- **개발 시 린트:** `medusa develop` 시작 전 ESLint 자동 실행
-
----
-
-## 4. 스토어프론트 아키텍처 분석
-
-### 4.1 라우팅 구조
-
-모든 페이지는 `/{countryCode}/` 접두사를 사용합니다. `middleware.ts`가 Medusa regions API로 국가 코드를 결정하고 리다이렉트합니다.
-
-| URL | 페이지 | 핵심 파일 |
-|-----|--------|-----------|
-| `/kr` | 메인 홈 | `(main)/page.tsx` |
-| `/kr/products/[handle]` | 상품 상세 | `(main)/products/[handle]/page.tsx` |
-| `/kr/group-buying` | 공동구매 목록 | `(main)/group-buying/page.tsx` |
-| `/kr/group-buying/[id]` | 공동구매 상세 | `(main)/group-buying/[id]/page.tsx` |
-| `/kr/cart` | 장바구니 | `(main)/cart/page.tsx` |
-| `/kr/checkout` | 결제 | `(checkout)/checkout/page.tsx` |
-
-**미들웨어 특이사항 (`middleware.ts`):**
-
-- 백엔드 다운 시 기본 리전(`kr`)으로 fallback
-- regions fetch 5초 타임아웃
-- Edge Runtime에서 raw `fetch` 사용
-
-### 4.2 언어 vs 통화 (독립 설계)
-
-| 축 | 저장 위치 | 영향 범위 |
-|----|-----------|-----------|
-| **언어** | `_medusa_locale` 쿠키 | UI 문자열 (i18n 사전) |
-| **통화/가격** | URL `/{countryCode}/` | Medusa Region, cart.region_id, 가격 표시 |
-
-**CurrencySelect** (`modules/layout/components/currency-select/`)
-
-- Medusa regions에서 통화 목록 추출 (`lib/util/currency-options.ts`)
-- 선택 시 `updateRegion(countryCode)` → cart region 갱신 + URL 리다이렉트
-
-**LanguageSwitcher** (`modules/layout/components/language-switcher/`)
-
-- `updateLocale()` server action → 쿠키 갱신 → hard navigation
-- 가격·리전에는 영향 없음
-
-### 4.3 다국어 (i18n) 설계
-
-**UI 다국어 (사전 기반):**
-
-```
-i18n/dictionaries/{ko,en,es,ru,zh,ja}.ts
-  ↓
-i18n/server.ts → getServerDictionary() (서버)
-i18n/provider.tsx → useDictionary() (클라이언트)
-  ↓
-(main)/layout.tsx, (checkout)/layout.tsx 에서 I18nProvider 주입
-```
-
-**i18n 적용 범위 (v2 확장):**
-
-| 영역 | 주요 키 |
-|------|---------|
-| 네비게이션 | `nav.*` |
-| 장바구니 | `cart.*` (title, summary, goToCheckout, totals 등) |
-| 결제 | `checkout.*` (shippingAddress, payment, placeOrder 등) |
-| 결제 수단명 | `checkout.paymentProviders.*` |
-| 공동구매 | `groupBuying.*` |
-
-**결제 수단명 로컬라이제이션:**
-
-- `lib/constants.tsx` → `getPaymentInfoMap(paymentProviders)`
-- `payment/index.tsx`에서 `useDictionary()` + `useMemo`로 동적 생성
-
-**콘텐츠 다국어 (상품 설명):**
-
-```
-lib/util/translate-content.ts
-  ├─ 한국어(ko) → 번역 안 함
-  ├─ 외국어 → MyMemory API
-  └─ 실패 시 → 원본 fallback
-```
-
-**상품명 정책:**
-
-- Admin 등록 원본 그대로 표시
-- `get-locale-header.ts`가 `x-medusa-locale` 미전송 → Medusa Translation이 title 덮어쓰기 방지
-
-### 4.4 데이터 레이어
-
-| 파일 | 역할 |
-|------|------|
-| `lib/data/products.ts` | 상품 목록/상세 |
-| `lib/data/cart.ts` | 장바구니 CRUD, `updateRegion()` |
-| `lib/data/group-deals.ts` | `startGroupDealCheckout()` — join → checkout 리다이렉트 |
-| `lib/data/demand-survey.ts` | 수요조사 참여 API |
-| `lib/data/regions.ts` | 리전/국가 코드 |
-| `lib/data/locale.ts` | 로케일 쿠키 읽기/쓰기 |
-| `lib/config.ts` | Medusa JS SDK 초기화 |
-
-### 4.5 아이돌 굿즈 UI 컴포넌트
-
-| 컴포넌트 | 파일 | 데이터 소스 |
-|----------|------|-------------|
-| 제작 타임라인 | `production-timeline/` | `product.metadata.production_stage` |
-| 실시간 참여율 | `participation-gauge/` | `participation_current/target` |
-| 특전 해금 게이지 | `unlock-reward-gauge/` | quantity 마일스톤 |
-| 수요조사 패널 | `demand-survey-panel/` | POST participate API |
-| 공동구매 진행률 | `group-deal-progress/` | `current_participants / min_participants` |
-
-**Metadata 규약 (`lib/util/idol-product.ts`):**
+**Store 노출 필터:**
 
 ```typescript
-production_stage: "demand_survey" | "pre_deposit" | "general_deposit" | "in_production" | "shipping"
-participation_current: number
-participation_target: number
-participation_participant_ids: string[]
+// group-deal-store.ts
+const STORE_VISIBLE_STATUSES = [OPEN, MINIMUM_REACHED, CLOSED]
+```
+
+**주의:** `group-deal-maintenance.ts` 등에서 과거 `ACTIVE` 참조가 있었으나 `OPEN`으로 통일됨. 상태 전이 로직은 `evaluateDealStatus()` + admin guards가 담당.
+
+### 3.3 Join Route — v3 VA + Legacy Cart
+
+**위치:** `apps/backend/src/api/store/group-deals/[id]/join/route.ts`
+
+**흐름:**
+
+1. Zod validate (`PostStoreJoinGroupDeal`)
+2. `prepareGroupDealCheckoutWorkflow` — slot reserve + cart/participant
+3. `generateVirtualAccount({ hold_minutes: 5 })` — VA stub
+4. `updateGroupDeals` metadata — `participant_virtual_accounts`, `payment_model: virtual_account`
+5. Response — `virtual_account`, `checkout_path: /group-buying/{id}/deposit?participant=...`
+
+```typescript
+const virtualAccount = generateVirtualAccount({
+  reference_id: participantId,
+  amount: Number(result.first_payment_amount ?? 0),
+  currency_code: String(dealRecord.currency_code ?? "krw"),
+  hold_minutes: 5,
+})
+```
+
+**분석:** workflow는 cart 기반 PG 경로도 지원하지만, join route가 VA metadata를 덮어써 v3 기본 UX는 deposit 페이지로 유도한다. `first_payment_amount`는 `computeFirstPaymentAmount()`에서 option snapshot 기반.
+
+### 3.4 Serialization Layer
+
+**Store API (`group-deal-store.ts`):**
+
+- `serializeStoreGroupDeal()` — idol_group, goods_type, timeline, receipt fields
+- `resolveStoreDealTimelineStage()` — 7단계: created → recruiting → payment → purchasing → **opening** → shipping → settlement
+- `serializeStoreGroupDealParticipant()` — payment_deadline, selections
+
+**Account API (`group-deal-account.ts`):**
+
+- `resolveParticipationStage()` — MYJN 타임라인 (opening 포함)
+- `resolveLeaderStage()` — 총대 hosted deals
+- `readGroupBuyingPreferences()` — `preferred_role: participant | leader`
+
+**Leader stats (`group-deal-leader-stats.ts`):**
+
+```typescript
+// leader_customer_id 기준 deal count → is_first_time_leader, leader_role_number
+```
+
+### 3.5 Stub Integrations (v3 Placeholders)
+
+| Stub | 파일 | 용도 |
+|------|------|------|
+| Virtual Account | `utils/virtual-account.ts` | VA 번호 생성, expires_at |
+| Document AI | `utils/document-extract-stub.ts` | 영수증 OCR → structured fields |
+| Admin receipt | `api/admin/group-deals/[id]/receipt/route.ts` | upload → extract → auto-verify |
+
+이들은 **production adapter 교체 지점**으로 설계됨 — interface는 route/service에 고정, implementation만 swap.
+
+### 3.6 Admin Extension
+
+**SDK 패턴:**
+
+```
+admin/lib/sdk.ts          → Medusa JS SDK singleton (__BACKEND_URL__)
+admin/lib/admin-fetch.ts  → sdk.client.fetch wrapper (JWT 자동)
+```
+
+**문제 해결:** raw `fetch` + cookie는 Admin SPA에서 401 발생 → SDK가 session JWT를 `/admin/*` 요청에 첨부.
+
+**UI:** `admin/routes/group-deals/` — React Query hooks, LeaderManagementPanel (receipt verify/reject).
+
+### 3.7 Workflows & Events
+
+| Workflow | Trigger | Effect |
+|----------|---------|--------|
+| `prepareGroupDealCheckoutWorkflow` | POST join | participant PENDING, cart |
+| `captureGroupDealPaymentsWorkflow` | minimum_reached event | PG batch capture |
+| `processOverdueParticipantsWorkflow` | cron | slot vacate |
+| `confirmParticipantDeliveryWorkflow` | POST confirm-delivery | SETTLED path |
+
+Subscribers는 `group_deal.updated`, `order.placed` 등 Medusa event bus에 연결.
+
+---
+
+## 4. Storefront Code Analysis
+
+### 4.1 Data Layer Pattern
+
+**Server Actions (`"use server"`):**
+
+| 파일 | 패턴 |
+|------|------|
+| `lib/data/group-deals.ts` | Medusa SDK → `/store/group-deals/*` |
+| `lib/data/cart.ts` | cart CRUD, `addToCart`, `placeOrder` |
+| `lib/data/account-group-deals.ts` | authed `/store/me/*` |
+| `lib/data/flask-search.ts` | Flask HTTP (2.5s timeout) |
+| `lib/data/flask-behavior-log.ts` | Flask event forward (swallow errors) |
+
+**Client utilities (no server):**
+
+| 파일 | 패턴 |
+|------|------|
+| `lib/util/flask-behavior-log.ts` | `void fetch().catch()` fire-and-forget |
+| `lib/util/group-deal-filters.ts` | pure filter on in-memory deals |
+| `lib/util/group-deal-trust.ts` | client-side trust heuristic + leader flags |
+
+### 4.2 Flask Integration Architecture
+
+```
+┌──────────────────┐     ┌─────────────────────┐     ┌──────────────┐
+│ Client Component │────▶│ /api/ai/* (BFF)     │────▶│ Flask :5000  │
+│ (slider, track*) │     │ Route Handler       │     │              │
+└──────────────────┘     └─────────────────────┘     └──────────────┘
+┌──────────────────┐     ┌─────────────────────┐
+│ RSC (paginated-  │────▶│ flask-search.ts     │────▶ Flask (direct)
+│  products)       │     │ (server)            │
+└──────────────────┘     └─────────────────────┘
+                              │
+                              ▼
+                         listProducts(id=[])
+                         orderProductsByIds()
+```
+
+**검색 (`paginated-products.tsx`):**
+
+1. `searchProducts(query)` → Flask IDs + synonym meta
+2. `listProductsWithSort({ id: productIds })` — Medusa hydrate
+3. `orderProductsByIds()` — Flask ranking preserved
+4. Flask 실패 → empty/unavailable UI (Medusa `q=` fallback **없음**)
+
+**추천 (`ai-recommendation-slider/index.tsx`):**
+
+- Client `useEffect` → `GET /api/ai/recommendations?context=landing|similar`
+- BFF hydrates products + `group_deal_ids` map
+- Empty → component returns `null` (layout safe)
+
+**행동 로그 (3-layer safety):**
+
+```typescript
+// Layer 1: Client — never throws
+void fetch("/api/ai/events", { keepalive: true }).catch(() => {})
+
+// Layer 2: BFF — always 202
+catch { /* swallow */ }
+
+// Layer 3: Server forward — try/catch, 2.5s timeout
+await forwardFlaskBehaviorEvent(event) // internal catch
+```
+
+### 4.3 Component Composition
+
+**DETL (Group Deal Detail):**
+
+```
+GroupDealDetailTemplate (RSC)
+├── LeaderTrustPanel (client) — first-time vs experienced
+├── GroupDealTimeline (client) — 7 stages
+├── GroupDealProgress
+├── PurchaseReceiptPanel — structured fields
+├── DealJoinSection
+│   ├── MemberSeatPicker
+│   └── JoinDealForm → startGroupDealCheckout → router.push(deposit)
+└── AiRecommendationSlider (client) — similar products
+```
+
+**SRCH (List):**
+
+```
+GroupDealsListTemplate
+├── GroupDealFilters (client) — query, idol, member, urgent
+└── GroupDealsCatalog → GroupDealCard — trust badge, deposit badge
+```
+
+**MYJN (Account):**
+
+```
+ParticipationsList → ParticipationTimeline (opening stage)
+ParticipationDetail → ReviewForm, DisputeForm, tracking external link
+RoleSwitcher → PUT /store/me/preferences { preferred_role }
+BankAccountForm → POST /store/me/bank-account
+```
+
+### 4.4 Type System (Storefront)
+
+| Storefront type | Backend source |
+|-----------------|----------------|
+| `types/group-deal.ts` | `serializeStoreGroupDeal` shape |
+| `types/account-group-deals.ts` | `group-deal-account.ts` |
+| `types/flask-search.ts` | Flask API contract |
+| `types/flask-behavior-log.ts` | Event payloads |
+| `types/landing-deal.ts` | `landing-deals.ts` mapper |
+
+**Gap:** Storefront `GroupDealStatus` union과 backend enum은 mirror 관계이나 자동 sync 없음 — API 변경 시 수동 업데이트 필요.
+
+### 4.5 i18n Architecture
+
+```
+i18n/config.ts           → locale routing (kr default)
+i18n/dictionaries/ko.ts → full Dictionary
+i18n/dictionaries/landing-shared.ts → landingKo, landingEn
+i18n/provider.tsx        → useDictionary() (client)
+i18n/server.ts           → getServerDictionary() (RSC)
+```
+
+6개 로케일 (ko, en, ja, es, zh, ru). ja/es/zh/ru는 landing을 `landingEn` 재사용.
+
+---
+
+## 5. Cross-Cutting Concerns
+
+### 5.1 Authentication
+
+| Context | Mechanism |
+|---------|-----------|
+| Store customer | Medusa session cookie → `getAuthHeaders()` in Server Actions |
+| `/store/me/*` | `api/store/me/middlewares.ts` — `auth_context.actor_id` |
+| Admin | Medusa Admin JWT via `@medusajs/js-sdk` |
+| Flask | Optional `customer_id` query param (no auth required for search) |
+
+### 5.2 Caching
+
+- Server Actions: `revalidateTag` on cart/customer mutations
+- RSC products: `cache: "force-cache"` + tags in production
+- Flask calls: `cache: "no-store"` (always fresh)
+
+### 5.3 Error Handling
+
+| Layer | Pattern |
+|-------|---------|
+| Medusa API | `medusaError()` wrapper → throw with message |
+| Flask | return `null`, console.warn — degrade gracefully |
+| Admin fetch | FetchError → user-friendly Korean message |
+| Behavior log | silent swallow at all layers |
+
+### 5.4 Payment Dual Path
+
+```
+                    POST /join
+                        │
+           ┌────────────┴────────────┐
+           ▼                         ▼
+    virtual_account path        cart_id path
+           │                         │
+           ▼                         ▼
+    /deposit page              /checkout
+    (5min hold UI)             (Toss/Stripe)
+           │                         │
+           ▼                         ▼
+    stub auto-confirm          /order/confirmed
+    + behavior log             + behavior log
+```
+
+**리스크:** 두 경로가 동시에 metadata에 기록될 수 있음. `payment_model: virtual_account` metadata로 구분.
+
+---
+
+## 6. Key Algorithms
+
+### 6.1 Flask Search Merge
+
+```typescript
+// semantic_results 우선, results 보조, medusa_product_id dedupe
+for (const item of [...semantic, ...keyword]) {
+  if (!seen.has(id)) merged.push(item)
+}
+```
+
+### 6.2 Participation Stage Resolution
+
+```typescript
+// group-deal-account.ts — priority order:
+delivery_confirmed_at → shipping (tracking) → opening (receipt verified)
+→ purchasing (closed) → payment_complete (confirmed) → recruiting
+```
+
+### 6.3 Leader Trust (Storefront)
+
+```typescript
+// group-deal-trust.ts
+calculateLeaderTrustScore(deal)  // heuristic from metadata
+isFirstTimeLeader(deal)          // backend leader_role_number === 1
+getLeaderRoleNumber(deal)        // from API serialized field
+```
+
+Backend count가 source of truth; frontend heuristic은 보조 배지용.
+
+### 6.4 Group Deal Filters (Client)
+
+```typescript
+// group-deal-filters.ts — pure functions on GroupDeal[]
+filterGroupDeals(deals, state)  // query min 2 chars, idol, member, urgent, price
+extractGroupDealFacets(deals)   // dynamic filter options
+```
+
+SRCH 필터는 **client-side** — 서버 pagination/filter API 없음.
+
+---
+
+## 7. Dependency Graph (Simplified)
+
+```
+join/route.ts
+  ├── prepareGroupDealCheckoutWorkflow
+  │     ├── GroupBuyingModuleService.validateJoinSelections
+  │     ├── assertDealJoinable (group-deal-rules)
+  │     └── computeFirstPaymentAmount (group-deal-options)
+  ├── generateVirtualAccount
+  └── serializeStoreGroupDealParticipant
+
+paginated-products.tsx
+  ├── searchProducts (flask-search)
+  ├── listProductsWithSort (products)
+  ├── orderProductsByIds
+  └── getProductGroupDealIndex (group-deals)
+
+ai-recommendation-slider
+  └── fetch /api/ai/recommendations
+        ├── getRecommendationsViaAiEngine (ai-engine)
+        └── hydrateRecommendedProducts
+              ├── listProducts
+              └── getProductGroupDealIndex
 ```
 
 ---
 
-## 5. 핵심 데이터 흐름
+## 8. Code Quality Assessment
 
-### 5.1 공동구매 참여 (결제 연동 — v2)
-
-```
-사용자 → /kr/group-buying/{dealId}
-  → GET /store/group-deals/:id
-  → JoinDealForm (email + quantity)
-  → startGroupDealCheckout() [Server Action]
-  → POST /store/group-deals/:id/join
-  → prepareGroupDealCheckoutWorkflow
-       ├─ assertDealJoinable (상태·기간·수량)
-       ├─ participant 생성 (pending)
-       └─ deal_price 장바구니 + line item 생성
-  → /kr/checkout 리다이렉트
-  → 배송지 → 배송 → 결제 → 주문 확인
-  → order.placed 이벤트
-  → confirmGroupDealParticipationWorkflow
-       ├─ participant → confirmed
-       ├─ 중복 참여 병합
-       └─ recalculateDealMetrics (participants, quantity, status)
-```
-
-**v1과의 차이:**
-
-| | v1 (이전) | v2 (현재) |
-|---|----------|----------|
-| 참여 시 | 이메일·수량만 기록 | 장바구니 생성 |
-| 확정 시점 | 즉시 quantity 증가 | 결제 완료 후 |
-| order_id | 항상 null | 주문 연결 |
-| 참여율 기준 | quantity 합계 | 고유 결제 고객 수 |
-
-### 5.2 수요조사 참여
-
-```
-1. 타임라인 "수요조사" 클릭 → DemandSurveyPanel 모달
-2. localStorage participant_id 생성/조회
-3. POST /store/products/:id/demand-survey/participate
-4. metadata.participation_current += 1
-5. UI 참여율 게이지 즉시 갱신
-```
-
-공동구매 DB와 **완전 분리** — metadata + localStorage 기반.
-
-### 5.3 장바구니·결제 (i18n 포함)
-
-```
-/kr/cart
-  → (main)/layout.tsx → I18nProvider
-  → ItemsTemplate, Summary, CartTotals (useDictionary)
-  → generateMetadata() → 언어별 페이지 타이틀
-
-/kr/checkout
-  → (checkout)/layout.tsx → I18nProvider + CheckoutNav
-  → Addresses → Shipping → Payment → Review
-  → PaymentButton → placeOrder()
-```
-
-### 5.4 통화 전환
-
-```
-CurrencySelect → updateRegion("us")
-  → cart.region_id 갱신
-  → redirect /us{currentPath}
-  → 가격이 USD 리전 기준으로 재계산
-```
-
----
-
-## 6. 코드 품질·패턴 평가
-
-### 6.1 잘 된 부분
+### 8.1 Strengths
 
 | 항목 | 설명 |
 |------|------|
-| 도메인 분리 | 공동구매(DB) vs 수요조사(metadata) 역할 분리 |
-| 결제 연동 | 워크플로 + subscriber로 참여 확정 시점 명확 |
-| 상태 머신 | `group-deal-rules.ts`에 규칙 집중 + 단위 테스트 |
-| i18n 구조 | UI 사전 / 콘텐츠 번역 / 상품명 정책 분리 |
-| 언어·통화 독립 | 쿠키 vs URL로 관심사 분리 |
-| 방어적 미들웨어 | 백엔드 다운 시 fallback |
-| Medusa 규칙 준수 | 서비스 public 메서드 async, develop 시 린트 |
+| **Domain separation** | rules/options/admin-rules pure functions + tests |
+| **Hybrid isolation** | Flask failure doesn't break commerce |
+| **Serialization layer** | API shape decoupled from MikroORM models |
+| **i18n coverage** | 6 locales, typed Dictionary |
+| **Progressive enhancement** | AI slider/recommendations optional (null render) |
+| **Admin SDK fix** | Proper JWT for custom admin routes |
 
-### 6.2 개선이 필요한 부분
+### 8.2 Technical Debt
 
-| 항목 | 현황 | 권장 조치 |
-|------|------|-----------|
-| 공동구매 목록 페이지 | `/group-buying`이 상품 그리드만 표시 | `listGroupDeals()` API 연동 |
-| Admin 공동구매 UI | API만 존재 | Admin Extension 개발 |
-| Admin 수정·삭제 API | 미구현 | PUT/DELETE 라우트 추가 |
-| 수요조사 저장소 | metadata 배열 누적 | 대규모 시 별도 테이블 |
-| 상품 설명 번역 | MyMemory 무료 API | Medusa Translation 또는 유료 API |
-| 실패·환불 | `failed` 상태만 존재 | 환불 워크플로 추가 |
-| E2E 테스트 | 없음 | Playwright로 join→checkout 경로 |
+| 항목 | 심각도 | 설명 |
+|------|--------|------|
+| Dual payment paths | Medium | VA + PG cart logic overlap in join |
+| Client-side SRCH filter | Medium | No server pagination at scale |
+| Type mirror drift | Low | Frontend/backend status types manual |
+| Stub adapters | Low | VA, document AI, deposit confirm — need real impl |
+| `Record<string, unknown>` casts | Low | join route participant/deal casting |
+| Mock landing fallback | Low | MOCK_DEALS masks empty API state |
 
-### 6.3 보안 고려사항
+### 8.3 Test Coverage
 
-| 항목 | 상태 |
-|------|------|
-| `.env` git 제외 | `.gitignore` 설정됨 |
-| JWT/COOKIE 시크릿 | dev 기본값 → **배포 시 변경 필수** |
-| 수요조사 participant_id | 클라이언트 UUID — 위조 가능 |
-| CORS | 환경 변수로 origin 제한 |
+| Area | Coverage |
+|------|----------|
+| Backend utils | 9 spec files (rules, options, escrow, store, admin) |
+| Storefront | Minimal — no component/integration tests observed |
+| Flask BFF | No automated tests — manual + contract doc |
 
 ---
 
-## 7. 파일·디렉터리 맵 (핵심만)
+## 9. Security Notes
 
-### Backend (`apps/backend/src/`)
-
-```
-api/
-├── admin/group-deals/              # Admin CRUD (GET/POST)
-└── store/
-    ├── group-deals/                # Store + join (cart 생성)
-    └── products/[id]/demand-survey/participate/
-
-modules/group-buying/
-├── models/index.ts
-├── service.ts                    # recalculateDealMetrics, validateJoinRequest
-└── migrations/
-
-workflows/
-├── group-deals.ts                # prepare/confirm checkout workflows
-└── demand-survey.ts
-
-subscribers/
-└── order-placed-group-deal.ts    # 결제 완료 → 참여 확정
-
-utils/
-├── group-deal-rules.ts           # 상태 머신
-├── resolve-region.ts
-└── __tests__/group-deal-rules.spec.ts
-
-scripts/
-├── seed-locales.ts
-└── seed-currency-regions.ts
-
-migration-scripts/
-└── initial-data-seed.ts
-```
-
-### Storefront (`apps/storefront/src/`)
-
-```
-app/[countryCode]/
-├── (main)/                       # cart, group-buying, products
-└── (checkout)/                   # checkout + I18nProvider layout
-
-i18n/
-├── dictionaries/{ko,en,es,ru,zh,ja}.ts
-├── types.ts                      # cart.*, checkout.* 키 정의
-├── provider.tsx
-└── server.ts
-
-lib/
-├── constants.tsx                 # getPaymentInfoMap()
-├── data/group-deals.ts           # startGroupDealCheckout()
-└── util/
-    ├── currency-options.ts
-    ├── idol-product.ts
-    └── translate-content.ts
-
-modules/
-├── group-buying/                 # join-deal-form, group-deal-progress
-├── cart/                         # i18n 적용
-├── checkout/                     # i18n 적용 + checkout-nav
-├── layout/
-│   └── components/
-│       ├── currency-select/
-│       └── language-switcher/
-└── products/                     # 아이돌 굿즈 UI
-```
+| Topic | Status |
+|-------|--------|
+| Admin JWT | SDK-based — OK after fix |
+| `/store/me/*` | Middleware auth — OK |
+| Flask BFF | No auth on `/api/ai/*` — acceptable for public search; rate limit TBD |
+| Bank account | Stored in `customer.metadata.refund_bank_account` — masked number |
+| Billing keys | `secure-billing-key.ts` encryption |
+| Behavior log | No PII beyond product/order IDs — review before prod |
 
 ---
 
-## 8. 확장 로드맵 제안
+## 10. Extension Guide
 
-### 단기 (1~2주)
+### 10.1 Replace VA Stub with Real Bank API
 
-1. `/group-buying` 페이지를 `GET /store/group-deals` API와 연결
-2. Admin 공동구매 생성·관리 UI
-3. Admin PUT/DELETE API
+1. Implement adapter in `utils/virtual-account.ts`
+2. Add webhook route for deposit confirmation (CHKO-02)
+3. Update `group-deal-maintenance` or subscriber to confirm participant on webhook
+4. Keep `checkout_path` contract unchanged for storefront
 
-### 중기 (1~2개월)
+### 10.2 Add Flask Event Types
 
-4. `failed` 딜 자동 환불 워크플로
-5. 수요조사 참여자 별도 테이블
-6. 이메일 알림 (목표 달성, 마감 임박)
+1. Extend `types/flask-behavior-log.ts`
+2. Add `track*` in `lib/util/flask-behavior-log.ts`
+3. Map in `lib/data/flask-behavior-log.ts` `forwardFlaskBehaviorEvent`
+4. Wire component hook — always fire-and-forget
 
-### 장기
+### 10.3 New Store API Field
 
-7. Product ↔ GroupDeal Module Link
-8. Medusa Translation 기반 상품 설명 번역 (MyMemory 대체)
-9. E2E 테스트 (Playwright)
+1. Add to model/metadata in `modules/group-buying/models`
+2. Expose in `serializeStoreGroupDeal()` or `serializeAccountParticipation()`
+3. Mirror in `apps/storefront/src/types/group-deal.ts`
+4. Consume in component + i18n if needed
 
----
+### 10.4 Server-Side SRCH Filter
 
-## 9. 결론
-
-이 프로젝트는 Medusa v2 확장 포인트(Custom Module, Workflow, Subscriber, Store API)로 **결제 연동 공동구매**를 구현하고, Next.js 스토어프론트에서 K-POP 굿즈 UI, 6개국어, 통화 선택을 더한 실용적인 MVP입니다.
-
-**강점:** 결제 후 참여 확정 흐름, 상태 머신 규칙 집중, 언어·통화 독립 설계, 장바구니·결제 i18n, 상품명 보호 정책.
-
-**약점:** 공동구매 목록 UI 미연동, Admin UI 부재, 환불·E2E 테스트 미구현.
-
-팀원 합류 시 **README.md 시작하기**로 환경을 맞춘 뒤, 이 보고서 **섹션 5 (데이터 흐름)** 과 **섹션 7 (파일 맵)** 을 참고하면 빠르게 이해할 수 있습니다.
+1. Add query params to `GET /store/group-deals`
+2. Implement in `query-group-deals.ts`
+3. Replace client `filterGroupDeals()` with API params in catalog
 
 ---
 
-*본 문서는 `group-buying-site` 저장소의 현재 코드 상태를 기준으로 작성되었습니다.*
+## 11. File Reference Index
+
+### Backend — Critical Path
+
+| File | Lines of concern |
+|------|------------------|
+| `types/group-buying.ts` | All enums, DTOs |
+| `modules/group-buying/service.ts` | Core domain operations |
+| `utils/group-deal-rules.ts` | Join/status rules |
+| `utils/group-deal-store.ts` | Store API serialization |
+| `utils/group-deal-account.ts` | Account API serialization |
+| `api/store/group-deals/[id]/join/route.ts` | v3 VA join |
+| `workflows/group-deals.ts` | Checkout workflow |
+| `jobs/group-deal-maintenance.ts` | Cron (OPEN status) |
+
+### Storefront — Critical Path
+
+| File | Lines of concern |
+|------|------------------|
+| `lib/data/flask-search.ts` | Search API |
+| `lib/util/flask-behavior-log.ts` | Analytics client |
+| `modules/store/templates/paginated-products.tsx` | Search results |
+| `modules/products/components/ai-recommendation-slider/` | Recommendations |
+| `modules/group-buying/components/join-deal-form/` | Join UX |
+| `modules/group-buying/components/virtual-account-deposit/` | CHKO |
+| `modules/group-buying/components/leader-trust-panel/` | Trust UI |
+| `app/api/ai/events/route.ts` | Behavior BFF |
+
+---
+
+## 12. Conclusion
+
+코드베이스는 **Medusa module + workflow** 패턴을 충실히 따르며, v3 스펙(가상계좌·개봉·구조화 영수증)을 **stub adapter**와 **serialization 확장**으로 흡수했다. Flask 연동은 **BFF + fire-and-forget** 패턴으로 commerce critical path와 명확히 분리되어 있다.
+
+**우선 리팩터링 후보:**
+
+1. Join route — VA vs cart path를 strategy pattern으로 명시적 분리
+2. SRCH — server-side filter/pagination API
+3. Stub → production adapter (VA webhook, document OCR)
+4. Storefront integration tests for join → deposit → behavior log flow
+
+---
+
+*본 문서는 2026-07-15 시점 코드베이스 정적 분석 결과입니다.*
