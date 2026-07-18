@@ -1,6 +1,6 @@
 # Group Buying Site — Code Analysis
 
-> **작성 기준일:** 2026-07-15  
+> **작성 기준일:** 2026-07-18 (최초 2026-07-15)  
 > **대상:** `group-buying-site/` monorepo (`@dtc/backend` + `@dtc/storefront`)  
 > **관련 문서:** [README.md](./README.md) · [PROJECT_STATUS.md](./PROJECT_STATUS.md) · [docs/api-contract-for-merge.md](./docs/api-contract-for-merge.md)
 
@@ -34,6 +34,17 @@
 | **HOME-01** | 로그인 역할별 redirect | `(landing)/page.tsx` |
 | **MYJN-07** | D+7 자동 수령 확인 | `service.autoConfirmOverdueDeliveries`, cron job |
 | **Dev perf** | Flask dev OFF, 800ms timeout, Turbopack, landing fetch dedup | `flask-search.ts`, `middleware.ts` |
+
+**2026-07-18 기준 주요 추가:**
+
+| 영역 | 구현 | 핵심 파일 |
+|------|------|-----------|
+| **GB App UI** | `(gb-app)` 라우트 그룹 — 참여자 7단계·총대 10단계·마이 9화면 | `wireframe/routes.ts`, `(gb-app)/**/page.tsx` |
+| **모드 전환** | participant/leader cookie + optimistic UI | `group-buying-mode-provider/`, `group-buying-mode.ts` |
+| **온보딩** | splash → login → signup → bank-account → home | `gb-app-auth-flow.ts` |
+| **INP 최적화** | debounce 200ms, React.memo 카드, 카탈로그 결과 분리 | `use-debounced-value.ts`, `group-deal-card-list/` |
+| **라우트 수정** | stale `[id]` vs `[participantId]` 충돌 제거 | `(gb-app)/my/participations/[participantId]/` |
+| **import 수정** | `leader-settlement-view` 상대 경로 | `leader-settlement-view/index.tsx` |
 
 ---
 
@@ -75,9 +86,19 @@
 | Group | 경로 | 렌더링 |
 |-------|------|--------|
 | `(landing)` | `/kr` | RSC + 역할 redirect + AI slider |
-| `(main)` | `/store`, `/group-buying`, `/account`, `/products` | RSC + client islands |
+| **`(gb-app)`** | **`/home`, `/deals/*`, `/seller/*`, `/my/*`, `/auth/*`** | **RSC gate + client islands + tab bar layout** |
+| `(main)` | `/store`, `/group-buying`, `/account`, `/products` | RSC + client islands (레거시) |
 | `(checkout)` | `/cart`, `/checkout` | client-heavy PG widgets |
 | `app/api/ai` | BFF | Route Handlers (no UI) |
+
+**GB App vs 레거시 `(main)`:**
+
+- **목록/검색:** `/kr/group-buying` (레거시) ↔ `/kr/home`, `/kr/search` (GB App)
+- **상세/입금:** `/kr/group-buying/[id]` ↔ `/kr/deals/[dealId]`
+- **마이:** `/kr/account/*` ↔ `/kr/my/*`
+- **총대:** `/kr/account/group-deals/hosted/[id]` ↔ `/kr/seller/deals/[dealId]/*`
+
+동적 세그먼트 규칙: participations 경로는 **`[participantId]`만** 사용. 같은 depth에 `[id]`와 `[participantId]` 공존 시 Next.js App Router가 startup/compile 단계에서 거부한다.
 
 ### 2.2 Dev Performance Defaults
 
@@ -90,8 +111,15 @@
 | Region fetch | `middleware.ts` | **2s** abort | 5s |
 | Next dev bundler | `storefront/package.json` | **Turbopack** | — |
 | Landing preferences | `(landing)/page.tsx` → template | 비로그인 시 **skip** | — |
+| **GB App search debounce** | `use-debounced-value.ts` | **200ms** | — |
+| **Card memoization** | `GroupDealCard`, `BbGroupBuyCard`, `GroupDealCardList` | **React.memo** | — |
+| **Mode switch** | `group-buying-mode-provider` | **optimistic UI** (server action background) | — |
 
 **분석:** `isFlaskSearchEnabled()`는 dev에서 명시적 `SEARCH_API_ENABLED=true` 없이는 Flask HTTP를 호출하지 않는다. 이로 인해 RSC 페이지가 Flask `:5000` connection refused를 기다리지 않는다. production에서는 `NEXT_PUBLIC_SEARCH_API_URL` 또는 `AI_ENGINE_URL`만으로 활성화된다.
+
+**2026-07-18 INP 분석:** GB App 검색·필터는 client-side `filterGroupDeals()`를 매 keystroke마다 실행하면서 `BbGroupBuyCard`(trust 계산, member chips, progress) 전체를 re-render했다. debounce + memo + catalog 결과 분리로 **입력 핸들러와 카드 트리를 decouple**했다. 모드 전환은 `await setGroupBuyingMode()`가 클릭 핸들러를 block하던 anti-pattern — optimistic `setModeState` 후 `startTransition` + background sync로 교체.
+
+**주의:** Performance 탭에서 `tiptap.ProseMirror.ui-prompt-input-editor__input` 지연은 **Cursor IDE** UI이며 storefront 코드 경로가 아니다.
 
 ---
 
@@ -466,6 +494,157 @@ SettlementsTable → GET /store/me/group-deals/settlements
 
 6개 로케일 (ko, en, ja, es, zh, ru). MTRS·DASH 라벨은 `dictionaries/ko.ts` → `account.trustReviews`, `account.hostedDeals.dashboard` 등.
 
+**Gap (2026-07-18):** `cardDaysHoursLeft`, `cardClosedOverlay` 등 GB App 카드 라벨은 ko/en만 완비 — ja/es/zh/ru는 `cardEndsToday`만 있어 해당 locale에서 runtime error 가능. ko 기본 dev 환경에서는 문제 없음.
+
+### 4.7 GB App Architecture (2026-07-18)
+
+#### 4.7.1 Route Registry — `wireframe/routes.ts`
+
+단일 source of truth for GB App URL 생성:
+
+```typescript
+export const gbAppRoutes = {
+  home: (cc) => `/${cc}/home`,
+  deal: (cc, dealId) => `/${cc}/deals/${dealId}`,
+  participationDetail: (cc, participantId) => `/${cc}/participations/${participantId}`,
+  sellerSettlement: (cc, dealId) => `/${cc}/seller/deals/${dealId}/settlement`,
+  // ...
+}
+```
+
+하단 탭: `GB_TAB_CONFIG`, `getGbTabItems(mode)`, `isMyFlowTabRoute()`. participant 모드(홈·검색·참여·마이) vs leader 모드(홈·검색·개설·내 공구·마이) 분기.
+
+#### 4.7.2 Layout Shell — `(gb-app)/layout.tsx`
+
+```
+GbAppLayout (RSC)
+├── getServerDictionary()
+├── getGroupBuyingMode()          // cookie → preferences fallback
+├── retrieveCustomer()
+└── I18nProvider
+    └── GroupBuyingModeProvider   // client: mode state + setMode
+        ├── GbWebNav
+        ├── GbWebShell → {children}
+        └── GbAppTabBar             // useGroupBuyingMode + pathname hide rules
+```
+
+`HIDE_TAB_PREFIXES`: splash, auth/*, deals/*, seller/deals/* 등에서 탭 바 숨김.
+
+#### 4.7.3 Auth & Onboarding Gate
+
+**파일:** `lib/data/gb-app-auth-flow.ts`, `lib/data/group-deal-pages.ts`
+
+```
+GET /kr/home
+  ├── resolveGbAppOnboardingRedirect()
+  │     └── no favorite_idol_group → redirect /auth/signup
+  ├── requireCustomerForGbApp()     // no session → /auth/login
+  ├── loadHomeDashboardData()       // listGroupDeals + hostedDeals
+  └── retrieveGroupBuyingPreferences()
+        └── HomeModeDashboard (client)
+```
+
+온boarding 완료 조건: `isGbAppOnboardingComplete(metadata)` **또는** `preferences.favorite_idol_group` 존재.
+
+회원가입 flow: `signupGbAppUser` → preferences 저장 → redirect `bankAccount` → `saveGbAppBankAccount` → home.
+
+#### 4.7.4 Participant Browse — `participant-home-browse/`
+
+Client component. 상태:
+
+| State | 용도 | Re-render scope |
+|-------|------|-----------------|
+| `query` (immediate) | input value | search input only |
+| `debouncedQuery` (200ms) | `filterGroupDeals` | filtered list |
+| `statusTab` | all / in_progress / closed | filtered list |
+| `selectedIdols` | chip multi-select | filtered list |
+
+**최적화 전:** `onChange → setQuery → filter → map(GroupDealCard)` 매 keystroke.  
+**최적화 후:** debounced filter + `GroupDealCardList` (memo) + `BbGroupBuyCard` (memo).
+
+#### 4.7.5 Mode Switching — Anti-pattern Fix
+
+**Before (blocking ~1–2s INP):**
+
+```typescript
+const updated = await setGroupBuyingMode(next)  // server action: cookie + PUT preferences
+setModeState(updated)
+startTransition(() => router.push(...))
+```
+
+**After (optimistic):**
+
+```typescript
+setModeState(next)                              // immediate paint
+startTransition(() => router.push(...))         // navigation in transition
+void setGroupBuyingMode(next).then(setModeState).catch(() => rollback)
+```
+
+`setGroupBuyingMode` (`"use server"`)는 cookie 설정 + `updateGroupBuyingPreferences({ preferred_role })`. 네트워크 완료를 UI thread에서 await하지 않는다.
+
+#### 4.7.6 Catalog Split — `group-deals-catalog/`
+
+```
+GroupDealsCatalog
+├── useGroupDealSearch()
+│     ├── draftFilters    ← filter sidebar typing (no list impact)
+│     └── appliedFilters  ← URL-synced, drives list
+├── GroupDealFilters (draft)
+└── CatalogResults (memo) ← only re-renders when appliedFilters / deals change
+      └── GroupDealCardList (memo)
+```
+
+필터 검색어는 sidebar에서 `draftFilters`만 갱신 — **Apply/Submit 전까지** 결과 memo skip.
+
+#### 4.7.7 Deal Flow Components (Client Islands)
+
+| Wireframe | Component | Data |
+|-----------|-----------|------|
+| DETL | `deal-detail-view/` | `getStoreGroupDeal`, product image enrich |
+| APLY | `deal-apply-form/` | shipping, refund bank, Daum postcode |
+| CHKO | `deal-deposit-flow/` | 5min timer, VA copy, expired redirect |
+| DONE | `deal-complete-view/` | summary + dual CTAs |
+| MYJN | `participation-detail-view/` | 5-stage stepper |
+| RPTB | `participant-review-form/` | confirm delivery + star review |
+
+**Backend gap:** `POST /store/group-deals/:id/apply` 미연동 — `group-deals.ts` mock fallback. quantity·seat hold는 클라이언트 stub.
+
+#### 4.7.8 Leader Flow Components
+
+| Step | Component | Storage |
+|------|-----------|---------|
+| Create wizard | `seller-create-*` pages | `sessionStorage` key `gb-leader-create-wizard-draft` |
+| Dashboard | `leader-deal-dashboard/` | hosted deal runtime |
+| Recruitment | `leader-recruitment-view/` | close-recruitment API (partial) |
+| Purchase proof | `leader-purchase-proof/` | OCR via `parseGroupDealReceiptDocument` (stub) |
+| Settlement | `leader-settlement-view/` | `leader-settlement/storage.ts` per dealId |
+
+**Import fix (2026-07-18):** `leader-settlement-view/index.tsx`가 `./bank-account-edit-modal` 등 잘못된 경로 → `../leader-settlement/*`. Turbopack compile failure 시 **전체 dev server 500** (하얀 화면).
+
+#### 4.7.9 Dynamic Route Incident — `[id]` vs `[participantId]`
+
+```
+my/participations/
+├── [id]/review/          ← stale empty folder (삭제됨)
+└── [participantId]/
+    ├── page.tsx          ← redirect to /participations/[participantId]
+    └── review/page.tsx
+```
+
+Next.js error: *"You cannot use different slug names for the same dynamic path"*. `[id]` 폴더에 `page.tsx` 없이 `review/`만 있어 glob 탐색에서 누락되기 쉬움. **라우트 구조 변경 후 dev server 재시작 필수** — stale Turbopack state는 모든 경로 500 유발.
+
+#### 4.7.10 Shared Design System — `modules/design-system/`
+
+| Component | Role | Perf note |
+|-----------|------|-----------|
+| `BbGroupBuyCard` | 카드 UI + trust + progress + link | memoized |
+| `BbSearchInput` | search icon + Enter handler | controlled input |
+| `BbTabs`, `BbChip` | catalog filters | click → parent filter state |
+| `BbToggle` | participant/leader switch | triggers setMode |
+| `BbKpiGrid` | leader dashboard KPIs | — |
+
+Trust 표시: `calculateLeaderTrustScore()` (client) + `LeaderTrustPanel` / `getLeaderRoleNumber()` — DETL duplicate message bug fix (첫 공구 + N번째 동시 표시 방지).
+
 ---
 
 ## 5. Cross-Cutting Concerns
@@ -577,6 +756,26 @@ cards.sort((a, b) => (bMatch ? 1 : 0) - (aMatch ? 1 : 0))
 
 SRCH 필터는 **client-side** — 서버 pagination/filter API 없음.
 
+**2026-07-18 debounce pattern:**
+
+```typescript
+const [query, setQuery] = useState("")
+const debouncedQuery = useDebouncedValue(query, 200)
+
+const filtered = useMemo(
+  () => filterGroupDeals(deals, { ...filters, query: debouncedQuery }),
+  [deals, debouncedQuery, filters]
+)
+```
+
+Input은 `query`에 즉시 반영, 무거운 filter/map은 `debouncedQuery`에만 의존.
+
+### 6.7 GB App Mock Data Layer
+
+**파일:** `lib/data/group-deals.ts` — `MOCK_GROUP_DEALS`, `loadHomeDashboardData()`, `createMockVirtualAccount()`
+
+API 미연동 시 in-memory mock catalog fallback. `listGroupDeals()` 실패 또는 empty → mock merge. **production에서는 Admin seed + Open deal 필수.**
+
 ---
 
 ## 7. Dependency Graph (Simplified)
@@ -616,6 +815,22 @@ landing-page/index.tsx
 hosted/[id]/page.tsx
   ├── retrievePriceRecommendations()
   └── AiPriceRecommendationPanel → applyPriceRecommendations()
+
+(gb-app)/home/page.tsx
+  ├── resolveGbAppOnboardingRedirect()
+  ├── requireCustomerForGbApp()
+  ├── loadHomeDashboardData()
+  └── HomeModeDashboard → ParticipantHomeBrowse | SellerDashboard
+
+participant-home-browse/
+  ├── useDebouncedValue(query, 200)
+  ├── filterGroupDeals + filterDealsByCatalogTab
+  └── GroupDealCardList (memo)
+
+group-buying-mode-provider/
+  ├── setModeState (optimistic)
+  ├── startTransition → router.push
+  └── setGroupBuyingMode (background server action)
 ```
 
 ---
@@ -632,6 +847,8 @@ hosted/[id]/page.tsx
 | **Progressive enhancement** | AI slider/recommendations/trust optional (null/notFound) |
 | **Admin SDK fix** | Proper JWT for custom admin routes |
 | **Cron maintenance** | Single job: expire + close + D+7 auto-confirm |
+| **GB App wireframe routing** | Centralized `gbAppRoutes` + tab config |
+| **INP optimizations (2026-07-18)** | debounce, memo cards, optimistic mode switch |
 
 ### 8.2 Technical Debt
 
@@ -641,7 +858,12 @@ hosted/[id]/page.tsx
 | Dual payment paths | Medium | VA + PG cart logic overlap in join |
 | Price decrease refunds | Medium | DASH apply — no participant refund workflow |
 | Client-side SRCH filter | Medium | No server pagination at scale |
+| **GB App apply API** | **High** | `POST .../apply` mock — real join/apply not wired |
+| **Seat hold server API** | **Medium** | CHKO 5min hold client-only |
+| **i18n partial locales** | **Low** | GB card labels missing in ja/es/zh/ru |
+| **Dual route trees** | **Medium** | `(main)/group-buying` + `(gb-app)/deals` parallel maintenance |
 | API import depth | Medium | Manual `../` count — easy to break startup |
+| **Stale dynamic route folders** | **Medium** | Empty `[id]` sibling caused Next compile error |
 | Type mirror drift | Low | Frontend/backend status types manual |
 | Stub adapters | Low | VA webhook, document AI, deposit confirm |
 | Mock landing fallback | Low | MOCK_DEALS masks empty API state |
@@ -654,6 +876,7 @@ hosted/[id]/page.tsx
 | Backend utils | 9 spec files (rules, options, escrow, store, admin) |
 | Trust / price-rec utils | **No dedicated spec yet** |
 | Storefront | Minimal — no component/integration tests |
+| GB App client perf | **Manual Performance tab only** |
 | Flask BFF | Manual + contract doc |
 
 ---
@@ -710,6 +933,34 @@ NEXT_PUBLIC_SEARCH_API_URL=http://localhost:5000
 # optional: FLASK_REQUEST_TIMEOUT_MS=800
 ```
 
+### 10.6 Wire GB App Apply to Backend
+
+1. Implement `POST /store/group-deals/:id/apply` (or align with existing join + selections + quantity)
+2. Replace mock in `lib/data/group-deals.ts` with SDK fetch
+3. Add server-side seat hold / `payment_deadline` if CHKO-03 required
+4. Keep `(gb-app)/deals/[dealId]/deposit` contract unchanged
+
+### 10.7 Document AI (Upstage) — Planned
+
+**Existing orchestration:**
+
+```
+leader-purchase-proof / shipping forms
+  → parseGroupDealReceiptDocument / parseGroupDealTrackingDocument
+  → group-deal-document-ai.ts
+  → flask-document-ai-client.ts (HYBRID_API_URL) | document-extract-stub.ts
+```
+
+**Rule:** OCR from browser directly 금지 — backend BFF only. Upstage는 merged backend `/api/v1/document-ai/*` 에 구현 예정.
+
+### 10.8 Frontend INP Checklist (GB App)
+
+1. Search inputs → `useDebouncedValue` (200ms default)
+2. List children → `GroupDealCardList` + memo cards
+3. Filter sidebar vs results → separate memo boundary (`CatalogResults`)
+4. Server actions on click → optimistic local state + `startTransition`
+5. Route renames → delete stale dynamic folders + restart dev server
+
 ---
 
 ## 11. File Reference Index
@@ -749,6 +1000,20 @@ NEXT_PUBLIC_SEARCH_API_URL=http://localhost:5000
 | `modules/account/components/ai-price-recommendation-panel/` | DASH UI |
 | `modules/group-buying/components/virtual-account-deposit/` | CHKO |
 | `middleware.ts` | Region cache + dev timeout |
+| **`lib/wireframe/routes.ts`** | **GB App URL + tab registry** |
+| **`lib/hooks/use-debounced-value.ts`** | **Search debounce (INP)** |
+| **`lib/data/gb-app-auth-flow.ts`** | **Onboarding + signup server actions** |
+| **`lib/data/group-buying-mode.ts`** | **Mode cookie + preferences sync** |
+| **`app/[countryCode]/(gb-app)/layout.tsx`** | **GB App shell + I18n + tab bar** |
+| **`app/[countryCode]/(gb-app)/home/page.tsx`** | **Role-based home RSC gate** |
+| **`modules/group-buying/components/participant-home-browse/`** | **HOME/SRCH client browse** |
+| **`modules/group-buying/components/home-mode-dashboard/`** | **Participant vs leader dashboard** |
+| **`modules/group-buying/components/group-buying-mode-provider/`** | **Optimistic mode switch** |
+| **`modules/group-buying/components/group-deal-card-list/`** | **Memoized card list** |
+| **`modules/design-system/components/bb-group-buy-card.tsx`** | **Memoized deal card UI** |
+| **`modules/group-buying/components/leader-settlement-view/`** | **Leader settlement (import path fix)** |
+| **`modules/group-buying/components/deal-deposit-flow/`** | **GB App CHKO** |
+| **`modules/layout/components/gb-app-tab-bar/`** | **Bottom navigation** |
 
 ---
 
@@ -756,10 +1021,15 @@ NEXT_PUBLIC_SEARCH_API_URL=http://localhost:5000
 
 | ID | Status | Primary implementation |
 |----|--------|------------------------|
-| HOME-01 | Partial | `(landing)/page.tsx` redirect by `preferred_role` |
+| HOME-01 | Partial | `(landing)/page.tsx` redirect; GB App `(gb-app)/home` + mode switch |
 | HOME-03 | Done | `landing-deals.ts`, `ai-engine.ts` favorite_idol_group |
-| SRCH/DETL | Done | group-buying modules, timeline, trust panel |
-| CHKO-01/03 | Partial | VA UI + 5min deadline; webhook stub only |
+| **GB HOME/SRCH** | **Frontend done** | `participant-home-browse`, `search-browse`, debounce + memo |
+| **GB DETL→DONE** | **Frontend done** | `deal-detail-view`, `deal-apply-form`, `deal-deposit-flow`, `deal-complete-view` |
+| **GB MYJN/RPTB** | **Frontend done** | `participation-detail-view`, `participant-review-form`, `[participantId]` routes |
+| **GB Leader 10-step** | **Frontend done** | `seller/deals/[dealId]/*`, `leader-settlement-view` |
+| **GB My 9-screen** | **Frontend done** | `(gb-app)/my/*` |
+| SRCH/DETL | Done | group-buying modules (legacy + gb-app parallel) |
+| CHKO-01/03 | Partial | VA UI + 5min deadline; apply API mock; webhook stub only |
 | DASH-05 | Partial | price-rec utils + panel; refund automation missing |
 | MTRS-01 | Done | leader-trust-profile + trust-reviews page |
 | MYJN-05/06/07 | Done | review/dispute routes + D+7 cron |
@@ -773,15 +1043,20 @@ NEXT_PUBLIC_SEARCH_API_URL=http://localhost:5000
 
 코드베이스는 **Medusa module + workflow + pure utils** 패턴을 충실히 따르며, v3 스펙(가상계좌·개봉·구조화 영수증)과 P2(MTRS·DASH·HOME-03)를 **metadata 집계 + serialization 확장**으로 흡수했다. Flask 연동은 **opt-in dev + BFF + fire-and-forget**으로 commerce critical path와 분리되어 있다.
 
+**2026-07-18 추가:** `(gb-app)` 라우트 그룹으로 와이어프레임 기반 **참여자·총대·마이 UI 전면**을 구현했으나, apply/seat-hold 등 핵심 API는 아직 mock·stub 상태다. 프론트엔드는 debounce·React.memo·optimistic mode switch로 INP 병목을 완화했고, dynamic route stale folder·import path 오류는 dev server 전체 500(하얀 화면)을 유발할 수 있어 **라우트 변경 후 재시작**이 필수이다.
+
 **우선 리팩터링 후보:**
 
-1. Review/Dispute — metadata 배열 → 정규화 엔티티
-2. Join route — VA vs cart path strategy pattern 분리
-3. DASH apply — 가격 인하 시 participant refund workflow
-4. API route imports — path alias 또는 barrel로 depth 오류 방지
-5. Stub → production adapter (VA webhook, document OCR)
-6. Storefront integration tests: join → deposit → review → trust profile flow
+1. **GB App apply API** — mock → `POST /store/group-deals/:id/apply` (quantity, selections)
+2. Review/Dispute — metadata 배열 → 정규화 엔티티
+3. Join route — VA vs cart path strategy pattern 분리
+4. DASH apply — 가격 인하 시 participant refund workflow
+5. **Route tree consolidation** — `(main)/group-buying` vs `(gb-app)/deals` 중복 제거
+6. API route imports — path alias 또는 barrel로 depth 오류 방지
+7. Stub → production adapter (VA webhook, document OCR / Upstage)
+8. Storefront integration tests: gb-app join → deposit → review flow
+9. i18n — GB card labels for ja/es/zh/ru
 
 ---
 
-*본 문서는 2026-07-15 시점 코드베이스 정적 분석 결과입니다.*
+*본 문서는 2026-07-18 시점 코드베이스 정적 분석 결과입니다 (2026-07-15 초판 갱신).*
