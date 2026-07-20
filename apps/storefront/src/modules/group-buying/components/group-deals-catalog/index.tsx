@@ -1,91 +1,143 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { memo, useMemo } from "react"
+import { useParams, useRouter } from "next/navigation"
 
-import GroupDealCard from "@modules/group-buying/components/group-deal-card"
-import GroupDealFilters, {
-  DEFAULT_GROUP_DEAL_FILTERS,
+import GroupDealCardList from "@modules/group-buying/components/group-deal-card-list"
+import SearchEmptyResults from "@modules/group-buying/components/search-empty-results"
+import {
   extractGroupDealFacets,
   filterGroupDeals,
-} from "@modules/group-buying/components/group-deal-filters"
+  hasActiveFilters,
+  type GroupDealFilterState,
+} from "@lib/util/group-deal-filters"
+import GroupDealFilters from "@modules/group-buying/components/group-deal-filters"
+import useGroupDealSearch from "@modules/group-buying/hooks/use-group-deal-search"
 import { useDictionary } from "@i18n/provider"
-import { Button, Heading, Text } from "@modules/common/components/ui"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { gbAppRoutes } from "@lib/wireframe/routes"
+import { BbPageShell, BbSectionHeader } from "@modules/design-system"
+import { Text } from "@modules/common/components/ui"
 import type { GroupDeal } from "types/group-deal"
-import { isDepositSecured } from "types/group-deal"
+import { isStoreVisibleDeal } from "@lib/util/normalize-group-deal"
 
 type GroupDealsCatalogProps = {
   deals: GroupDeal[]
+  initialFilters?: GroupDealFilterState
 }
 
-const GroupDealsCatalog = ({ deals }: GroupDealsCatalogProps) => {
-  const t = useDictionary()
-  const [filters, setFilters] = useState(DEFAULT_GROUP_DEAL_FILTERS)
+type CatalogResultsProps = {
+  filteredDeals: GroupDeal[]
+  highlightMember?: string
+  resultsLabel: string
+  onWaitlist: () => void
+  onReset: () => void
+  showReset: boolean
+}
 
-  const depositSecuredDeals = useMemo(
-    () => deals.filter(isDepositSecured),
+const CatalogResults = memo(function CatalogResults({
+  filteredDeals,
+  highlightMember,
+  resultsLabel,
+  onWaitlist,
+  onReset,
+  showReset,
+}: CatalogResultsProps) {
+  return (
+    <div className="flex flex-col gap-y-5">
+      {filteredDeals.length > 0 && (
+        <Text className="text-sm font-medium text-[var(--bb-mute)]">
+          {resultsLabel}
+        </Text>
+      )}
+
+      {filteredDeals.length === 0 ? (
+        <SearchEmptyResults
+          onWaitlist={onWaitlist}
+          onReset={onReset}
+          showReset={showReset}
+        />
+      ) : (
+        <GroupDealCardList
+          deals={filteredDeals}
+          highlightMember={highlightMember}
+          layout="grid"
+        />
+      )}
+    </div>
+  )
+})
+
+const GroupDealsCatalog = ({
+  deals,
+  initialFilters,
+}: GroupDealsCatalogProps) => {
+  const t = useDictionary()
+  const router = useRouter()
+  const { countryCode } = useParams() as { countryCode: string }
+  const {
+    draftFilters,
+    setDraftFilters,
+    appliedFilters,
+    applySearch,
+    resetSearch,
+  } = useGroupDealSearch({ initialFilters })
+
+  const visibleDeals = useMemo(
+    () => deals.filter(isStoreVisibleDeal),
     [deals]
   )
 
   const facets = useMemo(
-    () => extractGroupDealFacets(depositSecuredDeals),
-    [depositSecuredDeals]
+    () => extractGroupDealFacets(visibleDeals),
+    [visibleDeals]
   )
   const filteredDeals = useMemo(
-    () => filterGroupDeals(depositSecuredDeals, filters),
-    [depositSecuredDeals, filters]
+    () => filterGroupDeals(visibleDeals, appliedFilters),
+    [visibleDeals, appliedFilters]
   )
+  const resultsLabel = t.groupBuying.resultsCount.replace(
+    "{count}",
+    String(filteredDeals.length)
+  )
+  const highlightMember =
+    appliedFilters.favoriteMember || appliedFilters.member || undefined
 
   return (
-    <div className="content-container py-10">
-      <div className="mb-8 flex flex-col gap-y-2">
-        <Heading level="h1" className="text-2xl font-semibold">
-          {t.groupBuying.title}
-        </Heading>
-        <Text className="text-ui-fg-subtle">{t.groupBuying.listDescription}</Text>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8 large:grid-cols-[280px_1fr]">
-        <GroupDealFilters
-          deals={depositSecuredDeals}
-          filters={filters}
-          facets={facets}
-          onChange={setFilters}
+    <BbPageShell>
+      <div className="content-container py-10 small:py-12">
+        <BbSectionHeader
+          title={t.groupBuying.title}
+          subtitle={t.groupBuying.listDescription}
         />
 
-        <div className="flex flex-col gap-y-4">
-          <Text className="text-small-regular text-ui-fg-subtle">
-            {t.groupBuying.resultsCount.replace(
-              "{count}",
-              String(filteredDeals.length)
-            )}
-          </Text>
+        <div className="grid grid-cols-1 gap-8 large:grid-cols-[300px_1fr]">
+          <GroupDealFilters
+            deals={visibleDeals}
+            filters={draftFilters}
+            facets={facets}
+            onChange={setDraftFilters}
+            onApply={applySearch}
+            onReset={resetSearch}
+          />
 
-          {filteredDeals.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-ui-border-base p-10 text-center">
-              <Text className="text-ui-fg-subtle">
-                {t.groupBuying.emptyFiltered}
-              </Text>
-              <LocalizedClientLink href="/account/preferences">
-                <Button variant="secondary" className="mt-4">
-                  {t.groupBuying.emptyFilteredCta}
-                </Button>
-              </LocalizedClientLink>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 medium:grid-cols-2">
-              {filteredDeals.map((deal) => (
-                <GroupDealCard
-                  key={deal.id}
-                  deal={deal}
-                  highlightMember={filters.favoriteMember || filters.member}
-                />
-              ))}
-            </div>
-          )}
+          <CatalogResults
+            filteredDeals={filteredDeals}
+            highlightMember={highlightMember}
+            resultsLabel={resultsLabel}
+            onWaitlist={() =>
+              router.push(
+                `${gbAppRoutes.waitlist(countryCode)}?${new URLSearchParams({
+                  q: appliedFilters.query,
+                  member: appliedFilters.favoriteMember,
+                }).toString()}`
+              )
+            }
+            onReset={resetSearch}
+            showReset={hasActiveFilters(appliedFilters)}
+          />
         </div>
       </div>
-    </div>
+    </BbPageShell>
   )
 }
 

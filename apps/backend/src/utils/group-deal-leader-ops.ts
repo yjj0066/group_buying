@@ -48,6 +48,22 @@ export const saveGroupDealReceiptImage = (input: {
   imageBase64: string
   filename?: string
 }): string => {
+  return saveGroupDealDocumentImage({
+    groupDealId: input.groupDealId,
+    imageBase64: input.imageBase64,
+    filename: input.filename,
+    folder: "receipts",
+    prefix: "receipt",
+  })
+}
+
+export const saveGroupDealDocumentImage = (input: {
+  groupDealId: string
+  imageBase64: string
+  filename?: string
+  folder: "receipts" | "tracking"
+  prefix: string
+}): string => {
   const match = input.imageBase64.match(
     /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
   )
@@ -66,25 +82,25 @@ export const saveGroupDealReceiptImage = (input: {
   if (buffer.length > 8 * 1024 * 1024) {
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
-      "Receipt image must be 8MB or smaller"
+      "Document image must be 8MB or smaller"
     )
   }
 
-  const receiptsDir = path.join(process.cwd(), "static", "receipts")
+  const documentsDir = path.join(process.cwd(), "static", input.folder)
 
-  if (!fs.existsSync(receiptsDir)) {
-    fs.mkdirSync(receiptsDir, { recursive: true })
+  if (!fs.existsSync(documentsDir)) {
+    fs.mkdirSync(documentsDir, { recursive: true })
   }
 
   const safeName =
     input.filename?.replace(/[^a-zA-Z0-9._-]/g, "_") ??
-    `receipt_${input.groupDealId}`
+    `${input.prefix}_${input.groupDealId}`
   const storedFilename = `${Date.now()}-${safeName}.${extension}`
-  const absolutePath = path.join(receiptsDir, storedFilename)
+  const absolutePath = path.join(documentsDir, storedFilename)
 
   fs.writeFileSync(absolutePath, buffer)
 
-  return `/static/receipts/${storedFilename}`
+  return `/static/${input.folder}/${storedFilename}`
 }
 
 export const assertAllParticipantsPaid = async (

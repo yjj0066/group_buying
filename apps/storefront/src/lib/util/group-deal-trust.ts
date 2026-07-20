@@ -1,50 +1,65 @@
 import type { GroupDeal } from "types/group-deal"
-import { getParticipationRate, isDepositSecured } from "types/group-deal"
+import { isDepositSecured, isFirstTimeLeader } from "types/group-deal"
 
-export type LeaderTrustScore = {
+export { isFirstTimeLeader }
+
+export type LeaderTrustResult = {
   score: number
   maxScore: number
-  stars: number
-  labelKey: "excellent" | "good" | "fair" | "caution"
+  tier: "excellent" | "good" | "fair" | "caution" | "newcomer"
+  isFirstTime: boolean
 }
 
-export const calculateLeaderTrustScore = (deal: GroupDeal): LeaderTrustScore => {
-  let score = 3
+export const getLeaderRoleNumber = (deal: GroupDeal): number => {
+  if (deal.leader_role_number != null && deal.leader_role_number > 0) {
+    return deal.leader_role_number
+  }
+
+  const completedDeals = deal.leader_completed_deals ?? 0
+  return Math.max(1, completedDeals + 1)
+}
+
+export const calculateLeaderTrustScore = (deal: GroupDeal): LeaderTrustResult => {
+  if (isFirstTimeLeader(deal)) {
+    return { score: 0, maxScore: 100, tier: "newcomer", isFirstTime: true }
+  }
+
+  const score = deal.leader_trust_score ?? 75
+
+  if (score >= 85) {
+    return { score, maxScore: 100, tier: "excellent", isFirstTime: false }
+  }
+
+  if (score >= 70) {
+    return { score, maxScore: 100, tier: "good", isFirstTime: false }
+  }
+
+  if (score >= 55) {
+    return { score, maxScore: 100, tier: "fair", isFirstTime: false }
+  }
+
+  return { score, maxScore: 100, tier: "caution", isFirstTime: false }
+}
+
+export const getLeaderTrustDescriptionKey = (
+  tier: LeaderTrustResult["tier"]
+): "excellent" | "good" | "fair" | "caution" => {
+  if (tier === "newcomer") {
+    return "fair"
+  }
+
+  return tier
+}
+
+export const getLeaderTrustBadges = (deal: GroupDeal) => {
+  const badges: Array<{
+    label: string
+    variant?: "deposit" | "trust" | "success"
+  }> = []
 
   if (isDepositSecured(deal)) {
-    score += 1
+    badges.push({ label: "deposit", variant: "deposit" })
   }
 
-  if (deal.purchase_receipt_status === "verified") {
-    score += 0.5
-  }
-
-  if (getParticipationRate(deal) >= 50) {
-    score += 0.5
-  }
-
-  if (deal.purchase_receipt_status === "rejected") {
-    score -= 1
-  }
-
-  score = Math.max(1, Math.min(5, score))
-
-  const stars = Math.round(score * 2) / 2
-
-  let labelKey: LeaderTrustScore["labelKey"] = "fair"
-
-  if (score >= 4.5) {
-    labelKey = "excellent"
-  } else if (score >= 3.5) {
-    labelKey = "good"
-  } else if (score < 2.5) {
-    labelKey = "caution"
-  }
-
-  return {
-    score,
-    maxScore: 5,
-    stars,
-    labelKey,
-  }
+  return badges
 }

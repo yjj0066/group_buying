@@ -34,4 +34,5 @@ export type LandingHomeData = {
   fanFavorites: LandingDealCard[]
   allDeals: LandingDealCard[]
   endingSoon: LandingDealCard[]
+  favoriteIdolGroup?: string | null
 }

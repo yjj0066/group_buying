@@ -14,8 +14,7 @@ import User from "@modules/common/icons/user"
 import { formatMessage, useDictionary } from "@i18n/provider"
 
 const accountLinks = [
-  { href: "/account", key: "overview" as const, testId: "overview-link" },
-  { href: "/account/payment-methods", key: "paymentMethods" as const, testId: "payment-methods-link" },
+  { href: "/account/bank-account", key: "bankAccount" as const, testId: "bank-account-link" },
   { href: "/account/group-deals/hosted", key: "hostedDeals" as const, testId: "hosted-deals-link" },
   {
     href: "/account/group-deals/participations",
@@ -23,10 +22,18 @@ const accountLinks = [
     testId: "participations-link",
   },
   { href: "/account/settlements", key: "settlements" as const, testId: "settlements-link" },
-  { href: "/account/preferences", key: "preferences" as const, testId: "preferences-link" },
+  {
+    href: "/account/trust-reviews",
+    key: "trustReviews" as const,
+    testId: "trust-reviews-link",
+  },
   { href: "/account/profile", key: "profile" as const, testId: "profile-link" },
-  { href: "/account/addresses", key: "addresses" as const, testId: "addresses-link" },
-  { href: "/account/orders", key: "orders" as const, testId: "orders-link" },
+  { href: "/account/preferences", key: "preferences" as const, testId: "preferences-link" },
+  {
+    href: "/account/customer-service",
+    key: "customerService" as const,
+    testId: "customer-service-link",
+  },
 ]
 
 const AccountNav = ({

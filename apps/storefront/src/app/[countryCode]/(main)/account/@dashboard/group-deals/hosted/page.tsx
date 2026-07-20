@@ -1,19 +1,12 @@
 import { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { listHostedGroupDeals } from "@lib/data/account-group-deals"
+import { retrieveCustomer } from "@lib/data/customer"
 import { getServerDictionary } from "@i18n/server"
 import HostedDealsList from "@modules/account/components/hosted-deals-list"
 import { Text } from "@modules/common/components/ui"
-
-function getAdminBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
-
-  if (url) {
-    return `${url.replace(/\/$/, "")}/app`
-  }
-
-  return "http://localhost:9000/app"
-}
+import { resolveCountryCode } from "@lib/util/country-code"
 
 export async function generateMetadata(): Promise<Metadata> {
   const dictionary = await getServerDictionary()
@@ -24,13 +17,24 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function HostedGroupDealsPage() {
-  const [dictionary, deals] = await Promise.all([
+export default async function HostedGroupDealsPage(props: {
+  params: Promise<{ countryCode: string }>
+}) {
+  const params = await props.params
+  const countryCode = resolveCountryCode(params.countryCode)
+
+  const [dictionary, customer, deals] = await Promise.all([
     getServerDictionary(),
+    retrieveCustomer(),
     listHostedGroupDeals(),
   ])
 
+  if (!customer) {
+    redirect(`/${countryCode}/account`)
+  }
+
   const t = dictionary.account.hostedDeals
+  const leaderStages = dictionary.account.groupBuying.leaderStages
 
   return (
     <div className="flex flex-col gap-y-6">
@@ -40,16 +44,21 @@ export default async function HostedGroupDealsPage() {
       </div>
       <HostedDealsList
         deals={deals}
-        adminBaseUrl={getAdminBaseUrl()}
+        countryCode={countryCode}
         labels={{
           empty: t.empty,
-          depositSecured: t.depositSecured,
-          depositPending: t.depositPending,
-          adminLink: t.adminLink,
-          participants: t.participants,
-          viewDeal: t.viewDeal,
-          leaderStage: t.leaderStage,
-          leaderStages: dictionary.account.groupBuying.leaderStages,
+          createCta: t.createCta,
+          tabDraft: t.tabDraft,
+          tabRecruiting: t.tabRecruiting,
+          tabActive: t.tabActive,
+          tabCompleted: t.tabCompleted,
+          emptyDraft: t.emptyDraft,
+          emptyRecruiting: t.emptyRecruiting,
+          emptyActive: t.emptyActive,
+          emptyCompleted: t.emptyCompleted,
+          footerNotice: t.footerNotice,
+          achievementRate: t.achievementRate,
+          leaderStages,
         }}
       />
     </div>

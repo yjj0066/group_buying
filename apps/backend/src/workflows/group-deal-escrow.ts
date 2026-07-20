@@ -17,6 +17,7 @@ import {
   GroupDealStatus,
   GroupDealWaitlistMatchResult,
 } from "../types/group-buying"
+import { hasOpenParticipantDisputes } from "../utils/group-deal-disputes"
 import { emitGroupDealUpdated } from "./group-deal-billing"
 
 export const emitGroupDealWaitlistMatched = async (
@@ -314,6 +315,15 @@ const settleGroupDealStep = createStep(
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
         "All confirmed participants must confirm delivery before settlement"
+      )
+    }
+
+    const dealMetadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+
+    if (hasOpenParticipantDisputes(dealMetadata)) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Settlement is on hold until open participant disputes are resolved"
       )
     }
 

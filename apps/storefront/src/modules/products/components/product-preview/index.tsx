@@ -2,21 +2,29 @@
 
 import { Text } from "@modules/common/components/ui"
 import { getProductPrice } from "@lib/util/get-product-price"
+import { trackSearchResultClick } from "@lib/util/flask-behavior-log"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
+
+type SearchTrackingContext = {
+  query: string
+  position?: number
+}
 
 export default function ProductPreview({
   product,
   isFeatured,
   region: _region,
   groupDealId,
+  searchTracking,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
   groupDealId?: string
+  searchTracking?: SearchTrackingContext
 }) {
   const { cheapestPrice } = getProductPrice({
     product,
@@ -24,6 +32,18 @@ export default function ProductPreview({
 
   if (!product.handle) {
     return null
+  }
+
+  const handleSearchClick = () => {
+    if (!searchTracking?.query.trim()) {
+      return
+    }
+
+    trackSearchResultClick({
+      query: searchTracking.query.trim(),
+      medusa_product_id: product.id,
+      position: searchTracking.position,
+    })
   }
 
   const content = (
@@ -52,6 +72,7 @@ export default function ProductPreview({
   return (
     <LocalizedClientLink
       href={detailHref}
+      onClick={searchTracking ? handleSearchClick : undefined}
       className="group block rounded-lg transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-interactive"
       scroll
     >

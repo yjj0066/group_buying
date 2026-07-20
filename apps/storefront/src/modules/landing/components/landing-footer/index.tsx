@@ -48,7 +48,10 @@ const LandingFooter = ({ isLoggedIn = false }: LandingFooterProps) => {
                 </LocalizedClientLink>
               </li>
               <li>
-                <LocalizedClientLink href="/account" className="hover:text-brand-pink">
+                <LocalizedClientLink
+                  href={isLoggedIn ? "/my" : "/account"}
+                  className="hover:text-brand-pink"
+                >
                   {accountLabel}
                 </LocalizedClientLink>
               </li>

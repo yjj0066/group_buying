@@ -17,6 +17,32 @@ export enum GroupDealReceiptStatus {
   REJECTED = "rejected",
 }
 
+/** Flask Document AI 처리 상태 (영수증/송장 공통) */
+export enum GroupDealDocumentAiStatus {
+  NOT_REQUESTED = "not_requested",
+  PROCESSING = "processing",
+  PARSED = "parsed",
+  NEEDS_REVIEW = "needs_review",
+  FAILED = "failed",
+}
+
+/** 총대/참여자 리포트 진행 단계 */
+export enum GroupDealReportStage {
+  NOT_STARTED = "not_started",
+  RECEIPT_REVIEW = "receipt_review",
+  SHIPPING = "shipping",
+  SETTLEMENT_READY = "settlement_ready",
+  SETTLED = "settled",
+}
+
+/** 공구 분쟁 상태 */
+export enum GroupDealDisputeStatus {
+  NONE = "none",
+  OPEN = "open",
+  UNDER_REVIEW = "under_review",
+  RESOLVED = "resolved",
+}
+
 /** 총대(리더) 보증금 예치 상태 */
 export enum GroupDealDepositStatus {
   PENDING = "pending",
@@ -139,6 +165,20 @@ export type GroupDealDTO = {
   /** 총대 1차 구매 영수증 인증 상태 */
   purchase_receipt_status: GroupDealReceiptStatus
   purchase_receipt_verified_at: Date | null
+  /** 영수증 Document AI 처리 상태 */
+  receipt_ai_status: GroupDealDocumentAiStatus
+  receipt_ai_confidence: number | null
+  receipt_ai_job_id: string | null
+  receipt_ai_result: Record<string, unknown> | null
+  /** 송장 Document AI 처리 상태 */
+  tracking_ai_status: GroupDealDocumentAiStatus
+  tracking_ai_confidence: number | null
+  tracking_ai_job_id: string | null
+  tracking_ai_result: Record<string, unknown> | null
+  /** 참여자/총대 리포트 단계 */
+  report_stage: GroupDealReportStage
+  /** 분쟁 상태 */
+  dispute_status: GroupDealDisputeStatus
   status: GroupDealStatus
   starts_at: Date
   ends_at: Date
@@ -312,4 +352,41 @@ export type GroupDealPackingSlip = {
   generated_at: string
   total_rows: number
   rows: GroupDealPackingSlipRow[]
+}
+
+export type GroupDealSearchIndexMemberOption = {
+  key: string
+  label: string
+  max_quantity: number | null
+  current_quantity: number
+  remaining: number | null
+}
+
+export type GroupDealSearchIndexLeaderSummary = {
+  leader_role_number: number
+  is_first_time_leader: boolean
+  trust_badge_label: string | null
+}
+
+/** Flask hybrid search feed snapshot for a store-visible group deal */
+export type GroupDealSearchIndexSnapshot = {
+  id: string
+  title: string
+  product_id: string
+  status: string
+  deal_price: number
+  currency_code: string
+  current_participants: number
+  target_quantity: number
+  ends_at: string
+  updated_at: string
+  idol_group: string | null
+  member_options: GroupDealSearchIndexMemberOption[]
+  vacant_member_list: string[]
+  urgent_flag: boolean
+  trust_badge: string | null
+  deposit_status: string
+  leader_summary: GroupDealSearchIndexLeaderSummary
+  receipt_status: string
+  stage: string
 }

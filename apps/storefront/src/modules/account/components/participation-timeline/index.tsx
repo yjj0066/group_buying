@@ -12,6 +12,7 @@ const STAGES: GroupDealParticipantStage[] = [
   "recruiting",
   "payment_complete",
   "purchasing",
+  "opening",
   "shipping",
   "delivery_confirmed",
 ]

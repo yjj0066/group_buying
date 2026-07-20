@@ -2,22 +2,20 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { MedusaError } from "@medusajs/framework/utils"
 
+import { confirmParticipantDeliveryWorkflow } from "../../../../../../../workflows/group-deal-escrow"
 import { GROUP_BUYING_MODULE } from "../../../../../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../../../../../modules/group-buying/service"
 import { serializeAccountParticipation } from "../../../../../../../utils/group-deal-account"
-import { confirmParticipantDeliveryWorkflow } from "../../../../../../../workflows/group-deal-escrow"
 
-export const POST = async (
+const resolveParticipant = async (
   req: AuthenticatedMedusaRequest,
-  res: MedusaResponse
+  participantId: string
 ) => {
   const customerId = req.auth_context?.actor_id
 
   if (!customerId) {
-    res.status(401).json({ message: "Unauthorized" })
-    return
+    return null
   }
 
   const groupBuyingService: GroupBuyingModuleService = req.scope.resolve(
@@ -25,31 +23,42 @@ export const POST = async (
   )
 
   const participant = await groupBuyingService.retrieveGroupDealParticipant(
-    req.params.id
+    participantId
   )
 
-  if (participant.customer_id !== customerId) {
-    throw new MedusaError(
-      MedusaError.Types.NOT_ALLOWED,
-      "You can only confirm delivery for your own participation"
-    )
+  if (String(participant.customer_id ?? "") !== customerId) {
+    return null
   }
-
-  const { result } = await confirmParticipantDeliveryWorkflow(req.scope).run({
-    input: {
-      participant_id: participant.id,
-    },
-  })
 
   const deal = await groupBuyingService.retrieveGroupDeal(
     String(participant.group_deal_id)
   )
 
-  res.json({
-    participation: serializeAccountParticipation({
-      participant: result.participant as unknown as Record<string, unknown>,
-      deal: deal as unknown as Record<string, unknown>,
-    }),
+  return { participant, deal }
+}
+
+export const POST = async (
+  req: AuthenticatedMedusaRequest,
+  res: MedusaResponse
+) => {
+  const resolved = await resolveParticipant(req, req.params.id)
+
+  if (!resolved) {
+    res.status(401).json({ message: "Unauthorized" })
+    return
+  }
+
+  const { result } = await confirmParticipantDeliveryWorkflow(req.scope).run({
+    input: { participant_id: req.params.id },
+  })
+
+  const participation = serializeAccountParticipation({
+    participant: result.participant as unknown as Record<string, unknown>,
+    deal: resolved.deal as unknown as Record<string, unknown>,
+  })
+
+  res.status(200).json({
+    participation,
     all_delivery_confirmed: result.all_delivery_confirmed,
     settlement: result.settlement,
   })

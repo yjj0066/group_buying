@@ -6,7 +6,6 @@ export type Dictionary = {
     account: string
     cart: string
     menu: string
-    currencyAriaLabel: string
   }
   hero: {
     badge: string
@@ -82,6 +81,8 @@ export type Dictionary = {
     viewAllProducts: string
     demoDataNotice: string
     aiRecommendationsTitle: string
+    aiRecommendationsSubtitle: string
+    aiRecommendationsForIdol: string
     why: {
       title: string
       authentic: { title: string; description: string }
@@ -103,6 +104,16 @@ export type Dictionary = {
       securePayment: string
       authenticGoods: string
       copyright: string
+    }
+    hub: {
+      title: string
+      subtitle: string
+      searchVacant: string
+      searchVacantDescription: string
+      createDeal: string
+      createDealDescription: string
+      myPage: string
+      myPageDescription: string
     }
   }
   products: {
@@ -137,6 +148,10 @@ export type Dictionary = {
     searchResultsFor: string
     noSearchResults: string
     aiSearchActive: string
+    searchSynonymExpansion: string
+    searchOriginalQuery: string
+    searchUnavailable: string
+    aiRecommendationsPoweredBy: string
     categoryFilter: string
     allCategories: string
     sortBy: string
@@ -179,6 +194,15 @@ export type Dictionary = {
     quantity: string
     joinButton: string
     applyButton: string
+    participateApplyButton: string
+    optionSelectLabel: string
+    optionSelectPlaceholder: string
+    optionSelectRequired: string
+    estimatedTotalLabel: string
+    dealPeriodLabel: string
+    platformFeeLabel: string
+    shippingFeeLabel: string
+    subtotalLabel: string
     checkoutButton: string
     checkoutNote: string
     demoDealNotice: string
@@ -197,9 +221,15 @@ export type Dictionary = {
     sortDeadline: string
     sortNewest: string
     filterAll: string
+    filterApply: string
+    filterClear: string
+    filterIdolGroupSearchPlaceholder: string
+    filterIdolGroupEmpty: string
     favoriteMember: string
     favoriteMemberPlaceholder: string
     vacantOnlyToggle: string
+    urgentOnlyToggle: string
+    urgentFillBadge: string
     resetFilters: string
     resultsCount: string
     emptyFiltered: string
@@ -211,6 +241,7 @@ export type Dictionary = {
       recruiting: string
       payment: string
       purchasing: string
+      opening: string
       shipping: string
       settlement: string
     }
@@ -221,6 +252,9 @@ export type Dictionary = {
     escrowNoticeTitle: string
     escrowNoticeDescription: string
     leaderTrustTitle: string
+    leaderFirstTimeBadge: string
+    leaderFirstTimeDescription: string
+    leaderRoleNumber: string
     leaderTrustLabels: {
       excellent: string
       good: string
@@ -254,7 +288,101 @@ export type Dictionary = {
     cardMemberFull: string
     cardWaitlistLabel: string
     cardDaysLeft: string
+    cardDaysHoursLeft: string
+    cardClosedOverlay: string
     cardEndsToday: string
+    depositPageTitle: string
+    depositTitle: string
+    depositBank: string
+    depositAccountNumber: string
+    depositHolder: string
+    depositAmount: string
+    depositExpires: string
+    depositCopy: string
+    depositCopied: string
+    depositCopyAccount: string
+    depositAccountCopied: string
+    depositTimeoutWarning: string
+    depositTimeoutRemaining: string
+    depositTimeoutExpired: string
+    depositNameGuideTitle: string
+    depositNameGuideDescription: string
+    depositConfirmCta: string
+    depositExpiredTitle: string
+    depositExpiredDescription: string
+    depositExpiredReapply: string
+    depositAutoConfirmNotice: string
+    depositCompleteTitle: string
+    depositCompleteDescription: string
+    depositDoneCta: string
+    applicationCompleteSuccessTitle: string
+    applicationCompletePendingTitle: string
+    applicationCompleteSummaryProduct: string
+    applicationCompleteSummaryAmount: string
+    applicationCompleteSummaryAddress: string
+    applicationCompleteViewParticipations: string
+    applicationCompleteGoHome: string
+    depositMissingAccount: string
+    receiptStructuredTitle: string
+    receiptFieldSeller: string
+    receiptFieldOrderNumber: string
+    receiptFieldAlbumQuantity: string
+    receiptFieldOrderedAt: string
+    receiptFieldTotalAmount: string
+    documentAiProcessing: string
+    documentAiUploadError: string
+    documentAiVerificationTitle: string
+    documentAiMaskingPreview: string
+    documentAiStatusParsed: string
+    documentAiStatusNeedsReview: string
+    documentAiStatusFailed: string
+    documentAiStatusProcessing: string
+    documentAiStatusPending: string
+    documentAiConfidence: string
+    documentAiQuantitySuffix: string
+    documentAiFieldCarrier: string
+    documentAiFieldTrackingNumber: string
+    documentAiFieldRecipient: string
+    documentAiFieldAddress: string
+    documentAiCheckOrderNumber: string
+    documentAiCheckOrderNumberDetail: string
+    documentAiCheckSeller: string
+    documentAiCheckSellerDetail: string
+    documentAiCheckDate: string
+    documentAiCheckDateDetail: string
+    documentAiCheckQuantity: string
+    documentAiCheckQuantityDetail: string
+    documentAiCheckExtract: string
+    documentAiCheckExtractDetail: string
+    documentAiCheckMatch: string
+    documentAiCheckMatchDetail: string
+    documentAiCheckReview: string
+    documentAiCheckReviewDetail: string
+    applyForm: {
+      summaryTitle: string
+      selectedOption: string
+      quantity: string
+      productAmount: string
+      platformFee: string
+      shippingFee: string
+      totalAmount: string
+      shippingTitle: string
+      recipientName: string
+      phone: string
+      postalCode: string
+      address: string
+      addressDetail: string
+      addressSearch: string
+      addressSearchError: string
+      deliveryNote: string
+      refundAccountTitle: string
+      refundAccountInfo: string
+      bankSelect: string
+      submitButton: string
+      shippingRequired: string
+      finalAmountNotice: string
+      seatHoldBanner: string
+    }
   }
   cart: {
     title: string
@@ -354,6 +482,316 @@ export type Dictionary = {
     cart: string
     copyright: string
   }
+  gbApp: {
+    modeParticipant: string
+    modeLeader: string
+    modeActiveSuffix: string
+    modeSwitcherAria: string
+    tabBarAria: string
+    navEntryLabel: string
+    tabs: {
+      home: string
+      search: string
+      create: string
+      participations: string
+      myHosted: string
+      my: string
+    }
+    myHubTitle: string
+    myHubDescription: string
+    myHubParticipantLinks: string
+    myHubLeaderLinks: string
+    notificationsAria: string
+    settingsAria: string
+    myMenu: {
+      bankAccount: string
+      hostedDeals: string
+      participations: string
+      settlements: string
+      trustReviews: string
+      profile: string
+      notifications: string
+      support: string
+    }
+    myProfile: {
+      trustSummary: string
+      interestIdols: string
+    }
+    leaderDashboardTitle: string
+    leaderDashboardSubtitle: string
+    leaderKpiInProgress: string
+    leaderKpiDepositPending: string
+    leaderKpiVacantSeats: string
+    leaderKpiShipping: string
+    leaderKpiSectionLabel: string
+    leaderKpiCompleted: string
+    homeSearchPlaceholder: string
+    homeTabAll: string
+    homeTabInProgress: string
+    homeTabClosed: string
+    homeSectionFavoriteVacancy: string
+    homeSectionDeadline: string
+    homeSectionUrgentVacancy: string
+    homeSectionNews: string
+    homeNewsBanner: string
+    homeEmptyFavoriteVacancy: string
+    auth: {
+      logo: string
+      splashLoading: string
+      emailPlaceholder: string
+      passwordPlaceholder: string
+      passwordConfirmPlaceholder: string
+      loginSubmit: string
+      loginError: string
+      kakaoContinue: string
+      appleContinue: string
+      socialLoginComingSoon: string
+      forgotPassword: string
+      signupLink: string
+      loginLink: string
+      signupTitle: string
+      signupSteps: [string, string, string]
+      nicknamePlaceholder: string
+      nicknameCheck: string
+      nicknameTakenError: string
+      nicknameAvailableSuccess: string
+      nicknameCheckRequired: string
+      passwordMismatchError: string
+      agreeTerms: string
+      agreePrivacy: string
+      agreeMarketing: string
+      step0Error: string
+      step1Title: string
+      step1Error: string
+      idolSearchPlaceholder: string
+      idolAdd: string
+      step2Title: string
+      roleParticipant: string
+      roleLeader: string
+      next: string
+      signupSubmit: string
+      submitError: string
+      alreadyMember: string
+      bankTitle: string
+      bankInfo: string
+      bankSelectPlaceholder: string
+      bankSubmit: string
+      bankHolderMismatchError: string
+      bankSaveError: string
+      bankSkip: string
+    }
+    leaderActiveDealsTitle: string
+    leaderNextActionsTitle: string
+    leaderActionPurchase: string
+    leaderActionShipping: string
+    leaderActionUrgentFill: string
+    leaderCreateCta: string
+    leaderPurchaseProof: {
+      title: string
+      uploadButton: string
+      uploadHint: string
+      uploadError: string
+      uploading: string
+      previewAlt: string
+      targetQuantityLabel: string
+      purchasedQuantityLabel: string
+      purchasedQuantityPlaceholder: string
+      totalPaidAmountLabel: string
+      totalPaidAmountPlaceholder: string
+      quantityUnit: string
+      receiptRequiredError: string
+      purchasedQuantityError: string
+      totalPaidAmountError: string
+      submitButton: string
+    }
+    leaderPurchaseVerify: {
+      title: string
+      stepLabel: string
+      targetQuantityLabel: string
+      purchasedQuantityLabel: string
+      differenceLabel: string
+      quantityUnit: string
+      matchMessage: string
+      shortageMessage: string
+      surplusMessage: string
+      missingDataMessage: string
+      proceedShippingButton: string
+      distributionTitle: string
+      distributionAutoLabel: string
+      distributionManualLabel: string
+      nextButton: string
+      autoAllocationSummaryTitle: string
+      autoAllocationEmpty: string
+      autoRefundNameColumn: string
+      autoRefundMemberColumn: string
+      autoRefundQuantityColumn: string
+      autoRefundAmountColumn: string
+    }
+    leaderManualDistribution: {
+      title: string
+      stepLabel: string
+      description: string
+      shortageLabel: string
+      targetQuantityLabel: string
+      purchasedQuantityLabel: string
+      quantityUnit: string
+      placeholderMessage: string
+      missingSelectionMessage: string
+      backToVerificationButton: string
+      proceedShippingButton: string
+    }
+    leaderManualDistribution: {
+      title: string
+      actualPurchaseQtyLabel: string
+      assignedTotalLabel: string
+      remainingQtyLabel: string
+      quantityUnit: string
+      participantListTitle: string
+      participantNameColumn: string
+      orderedQtyColumn: string
+      assignedQtyColumn: string
+      decreaseAssignedAria: string
+      increaseAssignedAria: string
+      assignedInputAria: string
+      remainingOverMessage: string
+      remainingUnderMessage: string
+      partialRefundHint: string
+      confirmPartialRefundMessage: string
+      confirmBalancedMessage: string
+      submitButton: string
+      emptyParticipantsMessage: string
+      backToVerifyButton: string
+    }
+    leaderShippingPrep: {
+      title: string
+      stepLabel: string
+      backToDashboard: string
+      bulkToolsTitle: string
+      downloadTemplate: string
+      uploadCsv: string
+      uploadHint: string
+      participantListTitle: string
+      courierLabel: string
+      courierPlaceholder: string
+      trackingLabel: string
+      trackingPlaceholder: string
+      memberLabel: string
+      emptyParticipants: string
+      validationError: string
+      uploadEmptyError: string
+      uploadParseError: string
+      uploadSuccess: string
+      submitButton: string
+      submitting: string
+      successMessage: string
+      csvNameColumn: string
+      csvPhoneColumn: string
+      csvAddressColumn: string
+      csvCourierColumn: string
+      csvTrackingColumn: string
+    }
+    leaderSettlement: {
+      title: string
+      stepLabel: string
+      summaryTitle: string
+      participantTotalLabel: string
+      purchaseCostLabel: string
+      shippingFeesLabel: string
+      platformFeesLabel: string
+      depositRefundLabel: string
+      finalPayoutLabel: string
+      bankAccountTitle: string
+      bankAccountDescription: string
+      editBankAccount: string
+      submitButton: string
+      submitting: string
+      alreadySubmittedMessage: string
+      successDialogTitle: string
+      successDialogMessage: string
+      successDialogConfirm: string
+      bankEditTitle: string
+      bankSelectPlaceholder: string
+      accountNumberLabel: string
+      accountHolderLabel: string
+      saveBankAccount: string
+      cancel: string
+      bankRequiredError: string
+      disputeWarning: string
+      backToDashboard: string
+    }
+    leaderCreateWizard: {
+      title: string
+      wireframeTitle: string
+      stepTitles: [string, string, string, string]
+      steps: [string, string, string, string]
+      placeholderStepMessage: string
+      idolGroupLabel: string
+      idolGroupPlaceholder: string
+      goodsTypePlaceholder: string
+      titlePlaceholder: string
+      photoUploadLabel: string
+      primarySellerPlaceholder: string
+      immutableInfo: string
+      recruitmentDeadlineLabel: string
+      expectedShipDateLabel: string
+      expectedShippingFeePlaceholder: string
+      totalSeatsLabel: string
+      totalAmountLabel: string
+      memberSeatsDescription: string
+      memberNameLabel: string
+      memberNamePlaceholder: string
+      memberPriceLabel: string
+      memberPricePlaceholder: string
+      memberQuantityLabel: string
+      addMemberSeat: string
+      removeMemberSeat: string
+      loadMockData: string
+      albumQuantityHint: string
+      albumVerificationInfo: string
+      depositPeriodTitle: string
+      depositStartLabel: string
+      depositStartTimeLabel: string
+      depositEndLabel: string
+      depositEndTimeLabel: string
+      shippingMethodsTitle: string
+      shippingMethodNamePlaceholder: string
+      shippingFeePlaceholder: string
+      addShippingMethod: string
+      removeShippingMethod: string
+      refundAccountTitle: string
+      refundAccountDescription: string
+      bankSelectPlaceholder: string
+      nextToDeposit: string
+      requiredFieldsError: string
+      back: string
+      next: string
+      depositPaymentTitle: string
+      depositPaymentDescription: string
+      depositPaymentPlaceholder: string
+      depositPaymentNote: string
+      depositPaymentDraftNote: string
+      depositPaymentContinue: string
+      depositMissingDraft: string
+      depositTimeoutWarning: string
+      depositTimeoutRemaining: string
+      depositTimeoutExpired: string
+      depositExpiredCancel: string
+      depositResetCta: string
+      depositRefundNote: string
+      depositConfirmCta: string
+      depositConfirmError: string
+      depositValidationBackHint: string
+      depositCopied: string
+      depositRecruitmentAmountLabel: string
+      depositRateLabel: string
+      depositBaseAmountLabel: string
+      depositGradeLabel: string
+      depositFinalAmountLabel: string
+      depositForfeitureWarning: string
+      depositAgreementLabel: string
+      depositAutoOpenNote: string
+    }
+  }
   footer: {
     categories: string
     collections: string
@@ -372,6 +810,7 @@ export type Dictionary = {
       notMember: string
       joinUs: string
       submit: string
+      forgotPassword: string
     }
     register: {
       title: string
@@ -414,9 +853,12 @@ export type Dictionary = {
       orders: string
       paymentMethods: string
       hostedDeals: string
+      trustReviews: string
+      createGroupDeal: string
       participations: string
       settlements: string
       preferences: string
+      bankAccount: string
       customerService: string
       logout: string
       hello: string
@@ -425,17 +867,124 @@ export type Dictionary = {
       title: string
       description: string
       roleHint: string
+      hubTitle: string
+    }
+    roleSwitcher: {
+      title: string
+      description: string
+      participant: string
+      leader: string
+      saveError: string
+    }
+    forgotPassword: {
+      title: string
+      description: string
+      submit: string
+      success: string
+      backToLogin: string
+    }
+    profileManagement: {
+      description: string
+      avatarChangeAria: string
+      avatarInvalidType: string
+      nicknameLabel: string
+      nicknamePlaceholder: string
+      emailLabel: string
+      emailPlaceholder: string
+      emailReauthNote: string
+      interestIdolsLabel: string
+      idolSearchPlaceholder: string
+      idolAdd: string
+      saveButton: string
+      saving: string
+      saveSuccess: string
+      saveError: string
+      emailVerificationMessage: string
+      changePassword: string
+      withdrawAccount: string
+      withdrawBlockedAlert: string
+      withdrawActiveDealsWarning: string
+      withdrawConfirmTitle: string
+      withdrawConfirmMessage: string
+      withdrawConfirmButton: string
+      withdrawCancelButton: string
+    }
+    bankAccount: {
+      title: string
+      description: string
+      onboardingDescription: string
+      onboardingBanner: string
+      formTitle: string
+      formDescription: string
+      savedTitle: string
+      registeredAccountTitle: string
+      bankCodeLabel: string
+      bankCodePlaceholder: string
+      bankNameLabel: string
+      bankNamePlaceholder: string
+      accountNumberLabel: string
+      accountNumberPlaceholder: string
+      accountHolderLabel: string
+      accountHolderPlaceholder: string
+      registeredAtLabel: string
+      changeButton: string
+      registerButton: string
+      noAccountRegistered: string
+      activeDealsBlockWarning: string
+      refundSettlementNote: string
+      cancelButton: string
+      bankSelectPlaceholder: string
+      saveButton: string
+      saving: string
+      saveSuccess: string
+      saveError: string
+      requiredFields: string
     }
     customerService: {
       title: string
       description: string
+      searchPlaceholder: string
       faqTitle: string
       faqItems: string[]
+      faqCategories: Array<{
+        id: string
+        question: string
+        answer: string
+      }>
+      noFaqResults: string
+      inquiryButton: string
       inquiryTitle: string
       inquiryDescription: string
+      inquiryDealLabel: string
+      inquiryDealPlaceholder: string
+      inquirySubjectLabel: string
+      inquirySubjectPlaceholder: string
+      inquiryMessageLabel: string
+      inquiryMessagePlaceholder: string
+      inquirySubmit: string
+      inquirySubmitting: string
+      inquirySuccess: string
+      inquiryError: string
+      inquiryMessageRequired: string
+      disputeButton: string
       disputeTitle: string
       disputeDescription: string
       disputeCta: string
+      disputeDealLabel: string
+      disputeDealPlaceholder: string
+      disputeDealRequired: string
+      disputeReasonTextLabel: string
+      disputeReasonTextPlaceholder: string
+      disputeReasonRequired: string
+      disputeSubmit: string
+      disputeSubmitting: string
+      disputeSuccess: string
+      disputeSuccessSettlementHold: string
+      disputeError: string
+      disputeSettlementHoldNotice: string
+      objectionBannerTitle: string
+      objectionBannerDescription: string
+      backToSupport: string
     }
     paymentMethods: {
       title: string
@@ -465,12 +1014,294 @@ export type Dictionary = {
       title: string
       description: string
       empty: string
+      createCta: string
+      tabDraft: string
+      tabRecruiting: string
+      tabActive: string
+      tabCompleted: string
+      emptyDraft: string
+      emptyRecruiting: string
+      emptyActive: string
+      emptyCompleted: string
+      footerNotice: string
+      achievementRate: string
       depositSecured: string
       depositPending: string
       adminLink: string
       participants: string
       viewDeal: string
+      dashboardDeal: string
+      reportDeal: string
       leaderStage: string
+      dashboard: {
+        title: string
+        backToList: string
+        heroSubtitle: string
+        heroImagePlaceholder: string
+        progressTitle: string
+        achievementRate: string
+        timeRemainingDays: string
+        timeRemainingHours: string
+        managementTitle: string
+        statusBadges: {
+          preparing: string
+          recruiting: string
+          purchasing: string
+          inspecting: string
+          shipping: string
+          settlement: string
+          completed: string
+        }
+        managementMenus: {
+          recruitment: {
+            title: string
+            description: string
+          }
+          purchase_proof: {
+            title: string
+            description: string
+          }
+          shipping: {
+            title: string
+            description: string
+          }
+          settlement: {
+            title: string
+            description: string
+          }
+        }
+        menuStageStatus: {
+          waiting: string
+          in_progress: string
+          completed: string
+        }
+        fillRate: string
+        participants: string
+        vacantSeats: string
+        daysLeft: string
+        urgentBanner: string
+        urgentBannerShort: string
+        urgentFillLink: string
+        seatFillTitle: string
+        depositStatus: string
+        kpiFilled: string
+        kpiDeposit: string
+        kpiVacant: string
+        kpiDaysLeft: string
+        ordersTitle: string
+        orderNickname: string
+        orderMember: string
+        orderAmount: string
+        orderDeposit: string
+        orderShipping: string
+        excelDownload: string
+        ordersEmpty: string
+        depositSectionTitle: string
+        depositAutoNote: string
+        depositSummary: string
+        depositPaid: string
+        depositPending: string
+        shippingEmpty: string
+        memberFillEmpty: string
+        seatsAction: string
+        reportAction: string
+        packingCta: string
+        packingCtaDisabled: string
+        priceTitle: string
+        priceDescription: string
+        priceDisclaimer: string
+        applyRecommendedPrices: string
+        applyingPrices: string
+        applySuccess: string
+        applyError: string
+        priceEmpty: string
+        currentPrice: string
+        recommendedPrice: string
+        vacancyRisk: string
+        riskLevels: {
+          low: string
+          medium: string
+          high: string
+        }
+      }
+      report: {
+        title: string
+        description: string
+        backToList: string
+        statusLabel: string
+        participantsLabel: string
+        depositLabel: string
+        depositPending: string
+        receiptLabel: string
+        stubNote: string
+        reportStageTitle: string
+        currentStageBadge: string
+        receiptAiTitle: string
+        receiptStatusLabel: string
+        receiptEmpty: string
+        trackingAiTitle: string
+        trackingMatchedLabel: string
+        trackingConflictLabel: string
+        trackingEmpty: string
+        disputeTitle: string
+        disputeDescription: string
+        validationPass: string
+        validationFail: string
+        validationPending: string
+        reportStageLabels: {
+          not_started: string
+          receipt_review: string
+          shipping: string
+          settlement_ready: string
+          settled: string
+        }
+        disputeStatusLabels: {
+          none: string
+          open: string
+          under_review: string
+          resolved: string
+        }
+      }
+      recruitment: {
+        title: string
+        backToDashboard: string
+        shareTitle: string
+        copyApplyLink: string
+        copySuccess: string
+        copyError: string
+        shareKakao: string
+        shareTwitter: string
+        shareMore: string
+        participantsTitle: string
+        nameColumn: string
+        quantityColumn: string
+        depositColumn: string
+        emptyParticipants: string
+        participantCount: string
+        closeRecruitment: string
+        cancelDeal: string
+        closeDisabledHint: string
+        cancelDisabledHint: string
+        cancelModalTitle: string
+        cancelModalMessage: string
+        cancelModalConfirm: string
+        cancelModalDismiss: string
+        cancelSuccess: string
+        cancelError: string
+        closeError: string
+        dealCancelledBanner: string
+        notifyParticipantsStub: string
+      }
+      finalize: {
+        title: string
+        backToRecruitment: string
+        summaryTitle: string
+        confirmedParticipants: string
+        totalQuantity: string
+        totalDeposited: string
+        optionTableTitle: string
+        optionColumn: string
+        quantityColumn: string
+        totalRow: string
+        shippingTableTitle: string
+        nameColumn: string
+        phoneColumn: string
+        memberColumn: string
+        addressColumn: string
+        downloadCsv: string
+        proceedPurchase: string
+        emptyParticipants: string
+        csvDealTitle: string
+        csvParticipantCount: string
+        csvTotalQuantity: string
+        csvTotalDeposited: string
+      }
+    }
+    trustReviews: {
+      title: string
+      description: string
+      trustTitle: string
+      trustDescription: string
+      scoreLabel: string
+      badgeLabels: {
+        platinum: string
+        gold: string
+        silver: string
+        bronze: string
+        newcomer: string
+      }
+      completedDeals: string
+      averageRating: string
+      reviewCount: string
+      onTimeRate: string
+      disputeCount: string
+      depositForfeitureCount: string
+      reviewsTitle: string
+      reviewsEmpty: string
+      ratingDistribution: string
+      reportReview: string
+      reporting: string
+      reportSuccess: string
+      reportError: string
+      reportedBadge: string
+      scoreUnit: string
+      statsSummary: string
+      contributionsTitle: string
+      contributionCompletedDeals: string
+      contributionReviewRating: string
+      contributionActivitySpeed: string
+      contributionReportHistory: string
+      noEditNotice: string
+    }
+    createGroupDeal: {
+      title: string
+      description: string
+      stepInfo: string
+      stepPricing: string
+      stepDeposit: string
+      titleLabel: string
+      titlePlaceholder: string
+      descriptionLabel: string
+      descriptionPlaceholder: string
+      productLabel: string
+      productPlaceholder: string
+      noProducts: string
+      noProductsHint: string
+      variantLabel: string
+      variantPlaceholder: string
+      minParticipantsLabel: string
+      targetQuantityLabel: string
+      declaredAlbumQuantityLabel: string
+      maxQuantityLabel: string
+      originalPriceLabel: string
+      dealPriceLabel: string
+      currencyLabel: string
+      startsAtLabel: string
+      endsAtLabel: string
+      depositTitle: string
+      depositDescription: string
+      depositAmount: string
+      depositPending: string
+      depositRefundNote: string
+      depositStubNote: string
+      next: string
+      back: string
+      submit: string
+      submitting: string
+      cancel: string
+      createError: string
+      requiredFields: string
+      nextToDeposit: string
+      leaderDepositTitle: string
+      leaderDepositTimeoutWarning: string
+      leaderDepositTimeoutRemaining: string
+      leaderDepositTimeoutExpired: string
+      leaderDepositExpiredCancel: string
+      leaderDepositRefundNote: string
+      leaderDepositConfirmCta: string
+      leaderDepositCopied: string
+      leaderDepositMissingDraft: string
+      leaderDepositMissingDealId: string
     }
     participations: {
       title: string
@@ -483,6 +1314,7 @@ export type Dictionary = {
       emptyActiveCta: string
       emptyCompleted: string
       emptyCancelled: string
+      deliveryConfirmNeededAlert: string
       autoDeliveryConfirmHint: string
       quantity: string
       viewDeal: string
@@ -494,10 +1326,105 @@ export type Dictionary = {
       escrowTitle: string
       confirmDeliveryIrreversible: string
       tracking: string
+      trackingWithCarrier: string
+      trackingExternalLink: string
       confirmDelivery: string
       confirmingDelivery: string
       deliveryConfirmed: string
       confirmDeliveryError: string
+      confirmPurchase: string
+      confirmPurchaseTitle: string
+      confirmPurchaseMessage: string
+      confirmPurchaseConfirm: string
+      confirmPurchaseCancel: string
+      progressStages: {
+        deposit_confirming: string
+        order_complete: string
+        shipping_prep: string
+        shipping_started: string
+        delivery_complete: string
+      }
+      memberLabel: string
+      memberFallback: string
+      statusCancelled: string
+      statusRefunded: string
+      shippingAddressTitle: string
+      changeAddressButton: string
+      changeAddressDisabledMessage: string
+      addressChangeTitle: string
+      addressChangeSave: string
+      addressChangeCancel: string
+      addressRecipientLabel: string
+      addressPhoneLabel: string
+      addressPostalCodeLabel: string
+      addressLine1Label: string
+      addressLine2Label: string
+      addressNoteLabel: string
+      trackingCarrierLabel: string
+      trackingNumberLabel: string
+      inquiryButton: string
+      inquiryDescription: string
+      reviewTitle: string
+      reviewDescription: string
+      reviewRatingLabel: string
+      reviewRatingOption: string
+      reviewCommentLabel: string
+      reviewCommentPlaceholder: string
+      reviewSubmit: string
+      reviewSubmitting: string
+      reviewSuccess: string
+      reviewError: string
+      reviewPageTitle: string
+      reviewDescriptionRptb: string
+      reviewCommentLabelRptb: string
+      reviewTextGuide: string
+      reviewTextMinLengthWarning: string
+      reviewPhotoAttach: string
+      reviewSubmitRptb: string
+      reviewSuccessRptb: string
+      disputeTitle: string
+      disputeDescription: string
+      disputeReasonLabel: string
+      disputeReasonPlaceholder: string
+      disputeReasonOptions: string[]
+      disputeReasonRequired: string
+      disputeDetailsLabel: string
+      disputeDetailsPlaceholder: string
+      disputeSubmit: string
+      disputeSubmitting: string
+      disputeSuccess: string
+      disputeError: string
+      report: {
+        title: string
+        description: string
+        reportStageTitle: string
+        currentStageBadge: string
+        receiptAiTitle: string
+        receiptStatusLabel: string
+        receiptEmpty: string
+        trackingAiTitle: string
+        trackingMatchedLabel: string
+        trackingConflictLabel: string
+        trackingEmpty: string
+        disputeTitle: string
+        disputeDescription: string
+        validationPass: string
+        validationFail: string
+        validationPending: string
+        reportStageLabels: {
+          not_started: string
+          receipt_review: string
+          shipping: string
+          settlement_ready: string
+          settled: string
+        }
+        disputeStatusLabels: {
+          none: string
+          open: string
+          under_review: string
+          resolved: string
+        }
+      }
     }
     settlements: {
       title: string
@@ -520,6 +1447,8 @@ export type Dictionary = {
     preferences: {
       title: string
       description: string
+      onboardingDescription: string
+      onboardingBanner: string
       favoriteTitle: string
       favoriteDescription: string
       idolGroupLabel: string
@@ -532,6 +1461,14 @@ export type Dictionary = {
       notifyVacancyDescription: string
       notifyProgressLabel: string
       notifyProgressDescription: string
+      notifySettlementLabel: string
+      notifyMarketingLabel: string
+      seatAlertOffWarning: string
+      marketingLegalNotice: string
+      roleTitle: string
+      roleDescription: string
+      roleParticipant: string
+      roleLeader: string
       saveButton: string
       saving: string
       saveSuccess: string
@@ -542,6 +1479,7 @@ export type Dictionary = {
         recruiting: string
         payment_complete: string
         purchasing: string
+        opening: string
         shipping: string
         delivery_confirmed: string
       }
@@ -565,12 +1503,16 @@ export type Dictionary = {
       paymentMethodsDescription: string
       hostedDealsTitle: string
       hostedDealsDescription: string
+      createGroupDealTitle: string
+      createGroupDealDescription: string
       participationsTitle: string
       participationsDescription: string
       settlementsTitle: string
       settlementsDescription: string
       preferencesTitle: string
       preferencesDescription: string
+      bankAccountTitle: string
+      bankAccountDescription: string
     }
   }
   idol: {

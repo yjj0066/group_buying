@@ -21,8 +21,15 @@ module.exports = {
       },
       colors: {
         brand: {
-          pink: "#FF5C8D",
-          purple: "#8B5CF6",
+          pink: "#6B46E5",
+          purple: "#6B46E5",
+          "purple-deep": "#6B46E5",
+        },
+        bias: {
+          ink: "#1C1A2E",
+          mute: "#8B889C",
+          line: "#ECEAF3",
+          surface: "#F7F6FB",
         },
         grey: {
           0: "#FFFFFF",
@@ -45,6 +52,15 @@ module.exports = {
         rounded: "8px",
         large: "16px",
         circle: "9999px",
+        bb: "12px",
+        "bb-lg": "16px",
+        "bb-xl": "24px",
+      },
+      boxShadow: {
+        "bb-card": "0 4px 24px rgba(28, 26, 46, 0.06)",
+        "bb-card-hover": "0 8px 32px rgba(255, 92, 141, 0.14)",
+        "bb-btn": "0 8px 24px rgba(255, 92, 141, 0.32)",
+        "bb-shell": "0 12px 48px rgba(28, 26, 46, 0.12)",
       },
       maxWidth: {
         "8xl": "100rem",

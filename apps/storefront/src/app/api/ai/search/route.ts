@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-import { searchProductsViaAiEngine } from "@lib/data/ai-engine"
+import { searchProducts } from "@lib/data/flask-search"
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim()
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   const customerId = request.nextUrl.searchParams.get("customer_id")
-  const result = await searchProductsViaAiEngine(query, {
+  const result = await searchProducts(query, {
     customerId,
   })
 
@@ -21,18 +21,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         query,
-        source: "medusa",
+        source: "unavailable",
         results: [],
-        fallback: true,
+        items: [],
       },
-      { status: 200 }
+      { status: 503 }
     )
   }
 
   return NextResponse.json({
-    query,
+    query: result.query,
     source: result.source,
     model: result.model,
+    semantic_engine: result.semanticEngine,
+    synonym_expansion: result.synonymExpansion,
     product_ids: result.productIds,
+    results: result.items,
   })
 }

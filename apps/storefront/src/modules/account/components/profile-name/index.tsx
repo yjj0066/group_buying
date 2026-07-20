@@ -52,6 +52,7 @@ const ProfileName: React.FC<MyInformationProps> = ({ customer }) => {
         currentInfo={`${customer.first_name} ${customer.last_name}`}
         isSuccess={successState}
         isError={!!state?.error}
+        errorMessage={state.error ?? undefined}
         clearState={clearState}
         data-testid="account-name-editor"
       >

@@ -1,24 +1,24 @@
 "use server"
 
 import {
-  getAiEngineBaseUrl,
-  isAiEngineEnabled,
-} from "@lib/config/ai-engine"
+  getFlaskSearchApiUrl,
+  getFlaskRequestTimeoutMs,
+  isFlaskSearchEnabled,
+} from "@lib/config/flask-search"
+import { logSearchClick, searchProducts } from "@lib/data/flask-search"
 import type {
   AiEngineHealth,
   AiRecommendationsResponse,
-  AiSearchResponse,
   HybridSearchResult,
 } from "types/ai-engine"
-
-const REQUEST_TIMEOUT_MS = 2500
 
 const fetchWithTimeout = async (
   url: string,
   init?: RequestInit
 ): Promise<Response> => {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeoutMs = getFlaskRequestTimeoutMs()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     return await fetch(url, { ...init, signal: controller.signal })
@@ -28,7 +28,7 @@ const fetchWithTimeout = async (
 }
 
 export const checkAiEngineHealth = async (): Promise<AiEngineHealth> => {
-  const baseUrl = getAiEngineBaseUrl()
+  const baseUrl = getFlaskSearchApiUrl()
 
   if (!baseUrl) {
     return { ok: false }
@@ -56,61 +56,30 @@ export const searchProductsViaAiEngine = async (
   query: string,
   options?: { customerId?: string | null }
 ): Promise<HybridSearchResult | null> => {
-  if (!isAiEngineEnabled() || !query.trim()) {
+  const result = await searchProducts(query, options)
+
+  if (!result) {
     return null
   }
 
-  const baseUrl = getAiEngineBaseUrl()
-
-  if (!baseUrl) {
-    return null
-  }
-
-  const params = new URLSearchParams({ q: query.trim() })
-
-  if (options?.customerId) {
-    params.set("customer_id", options.customerId)
-  }
-
-  try {
-    const response = await fetchWithTimeout(
-      `${baseUrl}/api/v1/products/search?${params.toString()}`,
-      { cache: "no-store" }
-    )
-
-    if (!response.ok) {
-      return null
-    }
-
-    const body = (await response.json()) as AiSearchResponse
-    const productIds = (body.results ?? [])
-      .map((item) => item.medusa_product_id)
-      .filter(Boolean)
-
-    if (!productIds.length) {
-      return null
-    }
-
-    return {
-      productIds,
-      source: "ai",
-      model: body.model,
-    }
-  } catch (error) {
-    console.warn("[ai-engine] search fallback to Medusa:", error)
-    return null
+  return {
+    ...result,
+    source: "ai",
   }
 }
 
 export const getRecommendationsViaAiEngine = async (options?: {
   customerId?: string | null
   limit?: number
+  context?: import("types/ai-engine").AiRecommendationContext
+  productId?: string
+  favoriteIdolGroup?: string | null
 }): Promise<AiRecommendationsResponse | null> => {
-  if (!isAiEngineEnabled()) {
+  if (!isFlaskSearchEnabled()) {
     return null
   }
 
-  const baseUrl = getAiEngineBaseUrl()
+  const baseUrl = getFlaskSearchApiUrl()
 
   if (!baseUrl) {
     return null
@@ -124,13 +93,49 @@ export const getRecommendationsViaAiEngine = async (options?: {
     params.set("customer_id", options.customerId)
   }
 
+  if (options?.context) {
+    params.set("context", options.context)
+  }
+
+  if (options?.context === "landing") {
+    params.set("policy", "deadline_popularity")
+  }
+
+  if (options?.favoriteIdolGroup?.trim()) {
+    params.set("favorite_idol_group", options.favoriteIdolGroup.trim())
+  }
+
+  if (options?.productId) {
+    params.set("medusa_product_id", options.productId)
+  }
+
+  const recommendationUrl =
+    options?.context === "similar" && options.productId
+      ? `${baseUrl}/api/v1/products/similar?${params.toString()}`
+      : `${baseUrl}/api/v1/customer/recommendations?${params.toString()}`
+
   try {
-    const response = await fetchWithTimeout(
-      `${baseUrl}/api/v1/customer/recommendations?${params.toString()}`,
-      { cache: "no-store" }
-    )
+    const response = await fetchWithTimeout(recommendationUrl, {
+      cache: "no-store",
+    })
 
     if (!response.ok) {
+      if (options?.context === "similar" && options.productId) {
+        const fallbackParams = new URLSearchParams(params)
+        fallbackParams.set("context", "similar")
+
+        const fallbackResponse = await fetchWithTimeout(
+          `${baseUrl}/api/v1/customer/recommendations?${fallbackParams.toString()}`,
+          { cache: "no-store" }
+        )
+
+        if (!fallbackResponse.ok) {
+          return null
+        }
+
+        return (await fallbackResponse.json()) as AiRecommendationsResponse
+      }
+
       return null
     }
 
@@ -141,29 +146,4 @@ export const getRecommendationsViaAiEngine = async (options?: {
   }
 }
 
-export const logSearchClickViaAiEngine = async (payload: {
-  query: string
-  medusa_product_id: string
-  position?: number
-  customer_id?: string | null
-}): Promise<void> => {
-  if (!isAiEngineEnabled()) {
-    return
-  }
-
-  const baseUrl = getAiEngineBaseUrl()
-
-  if (!baseUrl) {
-    return
-  }
-
-  try {
-    await fetchWithTimeout(`${baseUrl}/api/v1/products/search/click`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-  } catch {
-    // Non-blocking analytics — swallow errors per Hybrid API rules
-  }
-}
+export const logSearchClickViaAiEngine = logSearchClick

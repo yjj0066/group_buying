@@ -1,36 +1,29 @@
-import type { GroupDeal, GroupDealOption } from "types/group-deal"
+import type { GroupDeal } from "types/group-deal"
 import {
-  getParticipationRate,
+  getDaysUntilDeadline,
+  getOptionRemainingQuantity,
   hasMemberVacancy,
-  isDealSoldOut,
-  isDepositSecured,
 } from "types/group-deal"
+import { isStoreVisibleDeal } from "@lib/util/normalize-group-deal"
+import {
+  matchesGoodsTypeFilter,
+  matchesIdolGroupFilter,
+} from "@lib/util/group-buying-filter-match"
+
+export const SEARCH_MIN_LENGTH = 2
 
 export type GroupDealFilterState = {
   query: string
   idolGroup: string
   member: string
   goodsType: string
+  sortBy: "deadline" | "newest"
   minPrice: number | null
   maxPrice: number | null
   favoriteMember: string
   vacantOnly: boolean
-  sortBy: "deadline" | "newest"
+  urgentOnly: boolean
 }
-
-export const DEFAULT_GROUP_DEAL_FILTERS: GroupDealFilterState = {
-  query: "",
-  idolGroup: "",
-  member: "",
-  goodsType: "",
-  minPrice: null,
-  maxPrice: null,
-  favoriteMember: "",
-  vacantOnly: false,
-  sortBy: "deadline",
-}
-
-export const SEARCH_MIN_LENGTH = 2
 
 export type GroupDealFilterFacets = {
   idolGroups: string[]
@@ -40,33 +33,44 @@ export type GroupDealFilterFacets = {
   maxPrice: number
 }
 
+export const DEFAULT_GROUP_DEAL_FILTERS: GroupDealFilterState = {
+  query: "",
+  idolGroup: "",
+  member: "",
+  goodsType: "",
+  sortBy: "deadline",
+  minPrice: null,
+  maxPrice: null,
+  favoriteMember: "",
+  vacantOnly: false,
+  urgentOnly: false,
+}
+
 export const extractGroupDealFacets = (
   deals: GroupDeal[]
 ): GroupDealFilterFacets => {
   const idolGroups = new Set<string>()
   const members = new Set<string>()
   const goodsTypes = new Set<string>()
-  let minPrice = Number.POSITIVE_INFINITY
+  let minPrice = Infinity
   let maxPrice = 0
 
   for (const deal of deals) {
-    const metadata = deal.metadata ?? {}
+    const group = deal.metadata?.idol_group
 
-    if (metadata.idol_group) {
-      idolGroups.add(String(metadata.idol_group))
+    if (typeof group === "string" && group) {
+      idolGroups.add(group)
     }
 
-    if (metadata.goods_type) {
-      goodsTypes.add(String(metadata.goods_type))
+    const goodsType = deal.metadata?.goods_type
+
+    if (typeof goodsType === "string" && goodsType) {
+      goodsTypes.add(goodsType)
     }
 
     for (const option of deal.options ?? []) {
       if (option.option_type === "member") {
         members.add(option.label)
-      }
-
-      if (option.option_type === "version" && !metadata.goods_type) {
-        goodsTypes.add(option.label)
       }
     }
 
@@ -75,104 +79,65 @@ export const extractGroupDealFacets = (
   }
 
   return {
-    idolGroups: [...idolGroups].sort(),
-    members: [...members].sort(),
-    goodsTypes: [...goodsTypes].sort(),
+    idolGroups: Array.from(idolGroups).sort(),
+    members: Array.from(members).sort(),
+    goodsTypes: Array.from(goodsTypes).sort(),
     minPrice: Number.isFinite(minPrice) ? minPrice : 0,
     maxPrice: maxPrice || 0,
   }
 }
 
-const matchesMetadata = (
-  deal: GroupDeal,
-  key: "idol_group" | "goods_type",
-  value: string
-): boolean => {
-  if (!value) {
-    return true
-  }
-
-  return String(deal.metadata?.[key] ?? "") === value
-}
-
-const matchesMember = (deal: GroupDeal, member: string): boolean => {
-  if (!member) {
-    return true
-  }
-
-  return (deal.options ?? []).some(
-    (option) => option.option_type === "member" && option.label === member
-  )
-}
-
 const matchesQuery = (deal: GroupDeal, query: string): boolean => {
-  if (!query.trim()) {
-    return true
-  }
-
   const normalized = query.trim().toLowerCase()
 
-  const memberLabels = (deal.options ?? [])
-    .filter((option) => option.option_type === "member")
-    .map((option) => option.label.toLowerCase())
-
-  const goodsType = String(deal.metadata?.goods_type ?? "").toLowerCase()
-
-  return (
-    deal.title.toLowerCase().includes(normalized) ||
-    (deal.description ?? "").toLowerCase().includes(normalized) ||
-    String(deal.metadata?.idol_group ?? "")
-      .toLowerCase()
-      .includes(normalized) ||
-    goodsType.includes(normalized) ||
-    memberLabels.some((label) => label.includes(normalized))
-  )
-}
-
-const sortGroupDeals = (
-  deals: GroupDeal[],
-  sortBy: GroupDealFilterState["sortBy"]
-): GroupDeal[] => {
-  const sorted = [...deals]
-
-  if (sortBy === "newest") {
-    return sorted.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
+  if (!normalized) {
+    return true
   }
 
-  return sorted.sort(
-    (a, b) => new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
-  )
+  if (normalized.length < SEARCH_MIN_LENGTH) {
+    return false
+  }
+
+  const haystack = [
+    deal.title,
+    deal.description ?? "",
+    String(deal.metadata?.idol_group ?? ""),
+    ...(deal.options ?? []).map((option) => option.label),
+  ]
+    .join(" ")
+    .toLowerCase()
+
+  return haystack.includes(normalized)
 }
 
 export const filterGroupDeals = (
   deals: GroupDeal[],
   filters: GroupDealFilterState
 ): GroupDeal[] => {
-  const query = filters.query.trim()
-  const shouldApplyQuery = query.length >= SEARCH_MIN_LENGTH
-
-  const filtered = deals.filter((deal) => {
-    if (!isDepositSecured(deal)) {
+  let result = deals.filter((deal) => {
+    if (!matchesQuery(deal, filters.query)) {
       return false
     }
 
-    if (shouldApplyQuery && !matchesQuery(deal, query)) {
+    if (!matchesIdolGroupFilter(deal.metadata?.idol_group, filters.idolGroup)) {
       return false
     }
 
-    if (!matchesMetadata(deal, "idol_group", filters.idolGroup)) {
+    if (
+      !matchesGoodsTypeFilter(deal.metadata?.goods_type, filters.goodsType)
+    ) {
       return false
     }
 
-    if (!matchesMetadata(deal, "goods_type", filters.goodsType)) {
-      return false
-    }
+    if (filters.member) {
+      const hasMember = (deal.options ?? []).some(
+        (option) =>
+          option.option_type === "member" && option.label === filters.member
+      )
 
-    if (!matchesMember(deal, filters.member)) {
-      return false
+      if (!hasMember) {
+        return false
+      }
     }
 
     if (filters.minPrice != null && deal.deal_price < filters.minPrice) {
@@ -183,14 +148,12 @@ export const filterGroupDeals = (
       return false
     }
 
-    if (filters.vacantOnly) {
-      const favorite = filters.favoriteMember || filters.member
+    if (filters.urgentOnly && !deal.is_urgent_fill) {
+      return false
+    }
 
-      if (favorite) {
-        if (!hasMemberVacancy(deal, favorite)) {
-          return false
-        }
-      } else if (isDealSoldOut(deal)) {
+    if (filters.vacantOnly && filters.favoriteMember) {
+      if (!hasMemberVacancy(deal, filters.favoriteMember)) {
         return false
       }
     }
@@ -198,33 +161,87 @@ export const filterGroupDeals = (
     return true
   })
 
-  return sortGroupDeals(filtered, filters.sortBy)
+  if (filters.sortBy === "deadline") {
+    result = [...result].sort(
+      (a, b) => new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
+    )
+  } else {
+    result = [...result].sort(
+      (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
+    )
+  }
+
+  return result
 }
 
-export const summarizeOptionVacancy = (
-  options: GroupDealOption[] = []
-): string[] => {
-  return options
-    .filter((option) => option.option_type === "member")
-    .map((option) => {
-      const remaining =
-        option.max_quantity == null
-          ? null
-          : Math.max(0, option.max_quantity - option.current_quantity)
+export const hasActiveFilters = (filters: GroupDealFilterState): boolean =>
+  filters.query.trim() !== "" ||
+  filters.idolGroup !== "" ||
+  filters.member !== "" ||
+  filters.goodsType !== "" ||
+  filters.minPrice != null ||
+  filters.maxPrice != null ||
+  filters.favoriteMember !== "" ||
+  filters.vacantOnly ||
+  filters.urgentOnly ||
+  filters.sortBy !== "deadline"
 
-      return `${option.label}:${remaining == null ? "∞" : remaining}`
+export const filterFavoriteVacancy = (
+  deals: GroupDeal[],
+  favoriteMember: string
+): GroupDeal[] =>
+  deals.filter((deal) => hasMemberVacancy(deal, favoriteMember))
+
+export const filterDeadlineSoon = (
+  deals: GroupDeal[],
+  withinHours = 72
+): GroupDeal[] =>
+  deals.filter((deal) => {
+    const hoursLeft = Math.ceil(
+      (new Date(deal.ends_at).getTime() - Date.now()) / (1000 * 60 * 60)
+    )
+    return hoursLeft >= 0 && hoursLeft <= withinHours
+  })
+
+export const filterUrgentVacancy = (deals: GroupDeal[]): GroupDeal[] =>
+  deals.filter((deal) => {
+    if (!deal.is_urgent_fill) {
+      return false
+    }
+
+    return (deal.options ?? []).some((option) => {
+      if (option.option_type !== "member") {
+        return false
+      }
+
+      const remaining = getOptionRemainingQuantity(option)
+      return remaining == null || remaining > 0
     })
+  })
+
+export const filterDepositSecured = (deals: GroupDeal[]): GroupDeal[] =>
+  deals.filter(isStoreVisibleDeal)
+
+export const filterStoreVisibleDeals = filterDepositSecured
+
+export const sortByDeadline = (deals: GroupDeal[]): GroupDeal[] =>
+  [...deals].sort(
+    (a, b) =>
+      getDaysUntilDeadline(a) - getDaysUntilDeadline(b) ||
+      new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
+  )
+
+type GroupBuyingPreferences = {
+  favorite_idol_group?: string | null
+  favorite_member?: string | null
 }
 
-export const hasActiveFilters = (filters: GroupDealFilterState): boolean => {
-  return (
-    filters.query.trim().length >= SEARCH_MIN_LENGTH ||
-    Boolean(filters.idolGroup) ||
-    Boolean(filters.member) ||
-    Boolean(filters.goodsType) ||
-    filters.minPrice != null ||
-    filters.maxPrice != null ||
-    Boolean(filters.favoriteMember) ||
-    filters.vacantOnly
-  )
-}
+export const buildInitialFiltersFromPreferences = (
+  preferences: GroupBuyingPreferences | null | undefined,
+  patch: Partial<GroupDealFilterState> = {}
+): GroupDealFilterState => ({
+  ...DEFAULT_GROUP_DEAL_FILTERS,
+  favoriteMember: preferences?.favorite_member ?? "",
+  idolGroup: preferences?.favorite_idol_group ?? "",
+  ...patch,
+})

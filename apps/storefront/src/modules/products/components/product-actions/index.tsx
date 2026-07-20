@@ -2,6 +2,7 @@
 
 import { addToCart } from "@lib/data/cart"
 import { useIntersection } from "@lib/hooks/use-in-view"
+import { trackAddToCart } from "@lib/util/flask-behavior-log"
 import { getProductPrice } from "@lib/util/get-product-price"
 import {
   calculateAchievementRate,
@@ -166,6 +167,13 @@ export default function ProductActions({
       variantId: selectedVariant.id,
       quantity: 1,
       countryCode,
+    })
+
+    trackAddToCart({
+      medusa_product_id: product.id,
+      variant_id: selectedVariant.id,
+      quantity: 1,
+      country_code: countryCode,
     })
 
     setIsAdding(false)

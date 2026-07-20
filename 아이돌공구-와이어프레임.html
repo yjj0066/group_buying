@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>아이돌공구 와이어프레임</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1C1A2E; --mute:#8B889C; --line:#D9D6E8; --bg:#EFEDF5;
+  --frame:#fff; --box:#E9E7F0; --box2:#F4F3F8; --pri:#6C4CE0;
+}
+body{font-family:'Pretendard','Malgun Gothic',-apple-system,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden;height:100vh}
+
+/* 상단바 */
+#top{position:fixed;top:0;left:0;right:0;height:48px;background:#fff;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:14px;padding:0 16px;z-index:100}
+#top b{font-size:14px}
+#top .sub{font-size:11.5px;color:var(--mute)}
+#top .sp{flex:1}
+.lg{display:flex;gap:10px;font-size:11px;color:#5a5870}
+.lg span{display:flex;align-items:center;gap:5px}
+.lg i{width:11px;height:11px;border-radius:3px;display:block}
+.zc{display:flex;gap:4px}
+.zc button{width:28px;height:26px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;font-size:13px;color:#5a5870}
+.zc button.w{width:auto;padding:0 9px;font-size:11px}
+.zc button:hover{background:#F4F3F8}
+
+/* 사이드 인덱스 */
+#side{position:fixed;top:48px;left:0;bottom:0;width:172px;background:#fff;border-right:1px solid var(--line);
+  overflow:auto;z-index:99;padding:8px 0 30px}
+#side .gh{font-size:10px;font-weight:800;color:#9a97ab;padding:9px 12px 4px;letter-spacing:.4px}
+#side a{display:block;padding:4px 12px;font-size:11.5px;color:#4a4860;cursor:pointer;text-decoration:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#side a:hover{background:#F4F3F8;color:var(--pri)}
+#side a b{font-family:ui-monospace,monospace;font-size:10px;color:#9a97ab;margin-right:5px}
+#side a.v{color:#9a97ab;font-style:italic}
+
+/* 캔버스 */
+#vp{position:fixed;top:48px;left:172px;right:0;bottom:0;overflow:hidden;cursor:grab}
+#vp.drag{cursor:grabbing}
+#cv{position:absolute;transform-origin:0 0;width:7200px;height:4000px}
+#svg{position:absolute;top:0;left:0;width:7200px;height:4000px;pointer-events:none;z-index:1}
+.lane{position:absolute;border:1px dashed #CFCADF;border-radius:14px;background:rgba(255,255,255,.35)}
+.lane b{position:absolute;top:-11px;left:16px;background:var(--bg);padding:0 8px;font-size:11.5px;color:#7c7994;letter-spacing:.3px}
+
+/* 프레임 */
+.fr{position:absolute;width:380px;background:var(--frame);border:1px solid var(--line);border-radius:10px;z-index:2;
+  box-shadow:0 1px 3px rgba(28,26,46,.05)}
+.fr.var{border-style:dashed;border-color:#C9C4DC}
+.fr .cap{position:absolute;top:-19px;left:2px;font-size:11px;color:#6b6880;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.fr .cap i{font-family:ui-monospace,monospace;font-weight:700;font-style:normal;font-size:10px;padding:1px 4px;border-radius:3px}
+.fr .cap em{font-style:normal;font-weight:700}
+.fr .cap s{text-decoration:none;font-size:9px;color:#9a97ab;border:1px solid #E0DDEA;border-radius:3px;padding:0 3px}
+.fr .body{padding:12px}
+.fr.hi{outline:2px solid var(--pri);outline-offset:2px}
+
+/* 와이어프레임 요소 */
+.wf{font-size:11px;line-height:1.45}
+.wf>*{margin-bottom:7px}
+.wf>*:last-child{margin-bottom:0}
+.nav{height:26px;background:var(--box);border-radius:4px;display:flex;align-items:center;padding:0 8px;color:var(--mute);font-size:10px}
+.tabbar{height:30px;background:var(--box);border-radius:4px;display:flex}
+.tabbar div{flex:1;border-right:1px solid #fff;font-size:9px;color:var(--mute);display:flex;align-items:center;justify-content:center}
+.tabbar div:last-child{border:0}
+.logo{height:44px;background:var(--box);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#9a97ab;font-size:13px}
+h4.wh{font-size:11.5px;font-weight:800;color:#3f3d55;margin:9px 0 5px}
+p.wp{font-size:10.5px;color:var(--mute)}
+.in{height:28px;border:1px solid var(--line);border-radius:5px;display:flex;align-items:center;padding:0 8px;color:#a9a6b8;font-size:10.5px;background:#FCFCFE}
+.ta{height:52px;border:1px solid var(--line);border-radius:5px;padding:6px 8px;color:#a9a6b8;font-size:10.5px;background:#FCFCFE}
+.btn{height:28px;border:1px solid var(--line);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5a5870;background:#F8F7FB}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.btn.sm{height:22px;font-size:9.5px;width:88px}
+.cta{height:34px;border-radius:6px;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.cta.off{background:#DFDCEA;color:#9a97ab}
+.divider{height:1px;background:var(--line);margin:9px 0}
+.chip{display:flex;gap:5px;flex-wrap:wrap}
+.chip span{border:1px solid var(--line);border-radius:11px;padding:2px 8px;font-size:9.5px;color:#5a5870;background:#fff}
+.links{display:flex;gap:10px;justify-content:center;font-size:10px;color:#7b78a0}
+.links span{text-decoration:underline}
+.note{font-size:9.5px;color:#9a97ab;background:#F7F6FB;border-left:2px solid #D9D6E8;padding:4px 7px;white-space:pre-line}
+.info{font-size:10px;color:#1e4f9c;background:#EDF4FF;border:1px solid #CFE0FA;border-radius:5px;padding:6px 8px;white-space:pre-line}
+.warn{font-size:10px;color:#8a5a00;background:#FFF8E8;border:1px solid #F0E2C2;border-radius:5px;padding:6px 8px;white-space:pre-line}
+.warnBox{font-size:10px;color:#791F1F;background:#FDF0F0;border:1px solid #F3D2D2;border-radius:5px;padding:6px 8px;white-space:pre-line;font-weight:600}
+.err{font-size:10px;color:#C42A57;background:#FFF0F4;border:1px solid #F7D3DF;border-radius:5px;padding:5px 8px}
+.alert{font-size:10.5px;color:#C42A57;background:#FFF0F4;border:1px solid #F7D3DF;border-radius:5px;padding:6px 8px;font-weight:700}
+.banner{height:26px;background:#F3F1F6;border:1px solid var(--line);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#7c7994;font-weight:700}
+.empty{text-align:center;color:var(--mute);font-size:11px;padding:16px 0;background:var(--box2);border-radius:6px}
+.empty2{text-align:center;color:#b8b5c6;font-size:9.5px;padding:8px 0;border:1px dashed var(--line);border-radius:5px}
+.ok{text-align:center;font-size:13px;font-weight:800;color:#0B6E53;padding:12px 0;background:#EAF8F3;border-radius:6px}
+.blank{}
+.img{background:var(--box2);border:1px dashed var(--line);border-radius:5px;display:flex;align-items:center;justify-content:center;color:#b8b5c6;font-size:10px}
+.card{height:52px;background:var(--box2);border:1px solid var(--line);border-radius:5px}
+.cards{display:flex;gap:6px}
+.cards div{flex:1;height:56px;background:var(--box2);border:1px solid var(--line);border-radius:5px}
+.kpi{display:flex;gap:5px}
+.kpi div{flex:1;height:40px;background:var(--box2);border:1px solid var(--line);border-radius:5px;font-size:9px;color:#5a5870;display:flex;align-items:center;justify-content:center;text-align:center}
+.kv{display:flex;flex-direction:column;gap:3px}
+.kv div{display:flex;justify-content:space-between;font-size:10.5px;padding:2px 0;border-bottom:1px dotted #E8E6F0}
+.kv div span:first-child{color:var(--mute)}
+.kv div span:last-child{font-weight:600}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs div{padding:5px 10px;font-size:10.5px;color:var(--mute)}
+.tabs div:first-child{color:var(--pri);font-weight:700;border-bottom:2px solid var(--pri)}
+.steps{display:flex;gap:4px;align-items:center;margin-bottom:8px}
+.steps div{flex:1;height:18px;background:var(--box);border-radius:9px;font-size:8.5px;color:var(--mute);display:flex;align-items:center;justify-content:center}
+.steps div.on{background:var(--pri);color:#fff;font-weight:700}
+.time{display:flex;gap:2px;align-items:center}
+.time div{flex:1;text-align:center;font-size:8px;color:var(--mute)}
+.time div i{display:block;height:5px;background:var(--box);border-radius:3px;margin-bottom:3px}
+.time div.on i{background:var(--pri)}
+.time div.on{color:var(--pri);font-weight:800}
+.time div.done i{background:#B9AAF0}
+.check{display:flex;flex-direction:column;gap:4px}
+.check div{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#5a5870}
+.check div i{width:12px;height:12px;border:1px solid var(--line);border-radius:3px;display:block}
+.sw{display:flex;flex-direction:column;gap:6px}
+.sw div{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;padding:4px 0;border-bottom:1px solid #F0EEF6}
+.sw div i{width:28px;height:16px;background:var(--pri);border-radius:9px;display:block}
+.toggle{display:flex;background:var(--box);border-radius:6px;padding:2px}
+.toggle div{flex:1;text-align:center;font-size:10px;padding:4px;border-radius:4px;color:var(--mute)}
+.toggle div:first-child{background:#fff;color:var(--ink);font-weight:700}
+.row2{display:flex;gap:6px}
+.row2 div{flex:1;height:44px;border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5a5870}
+.opt{display:flex;flex-direction:column;gap:5px}
+.opt div{border:1px solid var(--line);border-radius:5px;padding:7px 9px;font-size:10.5px;color:#5a5870}
+.menu{display:flex;flex-direction:column}
+.menu div{padding:8px 2px;font-size:11px;border-bottom:1px solid #F0EEF6;color:#4a4860;display:flex;justify-content:space-between}
+.menu div:after{content:'›';color:#c9c6d6}
+.tbl{border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.tbl .hd{display:flex;background:var(--box);font-size:9px;color:#5a5870;font-weight:700}
+.tbl .hd div{flex:1;padding:4px 5px;border-right:1px solid #fff}
+.tbl .rw{display:flex;border-top:1px solid #F0EEF6}
+.tbl .rw div{flex:1;padding:5px;border-right:1px solid #F4F3F8}
+.tbl .rw div i{display:block;height:7px;background:var(--box2);border-radius:2px}
+.rhead{font-size:12px;font-weight:800;color:#3f3d55;background:#F7F6FB;border-left:3px solid var(--pri);padding:7px 9px;border-radius:0 5px 5px 0}
+.hl{background:#F3EFFF;border:1px solid #DDD2FA;border-radius:5px;padding:7px 9px;font-size:10.5px;color:#432a86;font-weight:700}
+.seats{display:flex;flex-direction:column;gap:4px}
+.seats div{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:10.5px}
+.seats div.full{background:#F6F5F9;color:#b8b5c6}
+.seats div.hold{background:#FFF8E8;border-color:#F0E2C2;color:#8a5a00}
+.seats div em{font-style:normal;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--box);color:#5a5870}
+.seats div.free em{background:#E1F5EE;color:#0B6E53}
+.trust{border:1px solid var(--line);border-radius:6px;padding:8px;background:#FAFAFD}
+.trust .t1{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;margin-bottom:5px}
+.trust .t1 em{font-style:normal;background:#E1F5EE;color:#0B6E53;font-size:9px;padding:1px 5px;border-radius:3px}
+.trust .t2{font-size:9.5px;color:var(--mute);line-height:1.6}
+.lock{background:var(--box2);border:1px dashed var(--line);border-radius:5px;padding:10px;text-align:center;font-size:10px;color:#b8b5c6}
+.acct{background:#F3EFFF;border:1px solid #DDD2FA;border-radius:6px;padding:10px;text-align:center}
+.acct .a1{font-size:9.5px;color:#7b78a0}
+.acct .a2{font-family:ui-monospace,monospace;font-size:13px;font-weight:800;color:#432a86;margin:3px 0}
+.acct .a3{font-size:11px;font-weight:800;color:var(--ink)}
+.timer{background:#FFF8E8;border:1px solid #F0E2C2;border-radius:5px;padding:5px 8px;font-size:10px;color:#8a5a00;text-align:center;font-weight:700}
+.wait{background:var(--box2);border-radius:5px;padding:12px;text-align:center;font-size:10.5px;color:var(--mute)}
+.upload{border:2px dashed var(--line);border-radius:6px;padding:16px 8px;text-align:center;font-size:10px;color:#a9a6b8;background:#FCFCFE;white-space:pre-line}
+.extract{border:1px solid #CFE0FA;background:#F7FBFF;border-radius:6px;padding:8px}
+.extract .e{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px dotted #DCE8F8}
+.extract .e span:last-child{font-weight:700}
+.extract .e.low{background:#FFF8E8;margin:0 -4px;padding:3px 4px;border-radius:3px}
+.extract .e.low em{font-style:normal;font-size:8px;color:#8a5a00;border:1px solid #E8D5A8;border-radius:3px;padding:0 3px;margin-left:4px}
+.vf{display:flex;flex-direction:column;gap:3px}
+.vf div{display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 6px;border-radius:4px;background:#EAF8F3;color:#0B6E53}
+.vf div.no{background:#FDF0F0;color:#C42A57}
+.vf div b{font-size:9px;margin-left:auto;font-weight:600;opacity:.75}
+.mask{display:flex;gap:6px;align-items:center}
+.mask .m1{flex:1;height:56px;background:var(--box2);border:1px solid var(--line);border-radius:5px;position:relative;font-size:9px;color:#b8b5c6;display:flex;align-items:center;justify-content:center}
+.mask .m1 u{position:absolute;background:#3f3d55;border-radius:2px;text-decoration:none}
+.stepper{display:flex;flex-direction:column;gap:4px}
+.stepper div{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;padding:4px 6px;border:1px solid var(--line);border-radius:5px}
+.stepper div i{display:flex;gap:4px;align-items:center;font-size:9px;color:var(--mute)}
+.stepper div i b{width:18px;height:18px;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#5a5870}
+.cmp{border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.cmp .r{display:flex;font-size:10px;border-top:1px solid #F0EEF6}
+.cmp .r:first-child{border:0;background:var(--box);font-weight:700;font-size:9px}
+.cmp .r div{flex:1;padding:4px 6px;text-align:center}
+.cmp .r.no{background:#FDF0F0;color:#C42A57;font-weight:700}
+.ship{border:1px solid var(--line);border-radius:5px;overflow:hidden;font-size:9.5px}
+.ship .r{display:flex;border-top:1px solid #F0EEF6;align-items:center}
+.ship .r:first-child{border:0;background:var(--box);font-weight:700;font-size:9px}
+.ship .r div{flex:1;padding:4px 5px}
+.ship .r em{font-style:normal;font-size:8.5px;padding:1px 4px;border-radius:3px;background:#E1F5EE;color:#0B6E53}
+.ship .r.q em{background:#FFF8E8;color:#8a5a00}
+.cf{border:1px solid #F0E2C2;background:#FFFBEF;border-radius:6px;padding:8px;margin-bottom:7px}
+.cf .c1{font-size:10px;font-weight:700;color:#8a5a00;margin-bottom:4px}
+.cf .c2{font-size:9.5px;color:#5a5870;line-height:1.6;margin-bottom:6px}
+.cf .c3{display:flex;gap:5px}
+.cf .c3 span{flex:1;border:1px solid var(--line);background:#fff;border-radius:4px;padding:4px;text-align:center;font-size:9.5px;color:#5a5870}
+.cf .c3 span:first-child{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:700}
+.profile{display:flex;gap:10px;align-items:center;padding:6px 0}
+.profile i{width:44px;height:44px;border-radius:50%;background:var(--box);display:block}
+.profile div{flex:1}
+.profile .p1{font-size:12px;font-weight:800}
+.profile .p2{font-size:9.5px;color:var(--mute);margin-top:2px}
+.score{text-align:center;background:#FAFAFD;border:1px solid var(--line);border-radius:8px;padding:12px}
+.score .s1{font-size:24px;font-weight:800;color:var(--pri)}
+.score .s2{font-size:10px;color:var(--mute);margin-top:2px}
+.bars{display:flex;flex-direction:column;gap:5px}
+.bars div{display:flex;align-items:center;gap:6px;font-size:9.5px;color:#5a5870}
+.bars div i{flex:1;height:8px;background:var(--box);border-radius:4px;position:relative;overflow:hidden}
+.bars div i u{position:absolute;left:0;top:0;bottom:0;background:var(--pri);text-decoration:none}
+.bars div i u.r{background:#E24B4A}
+.rvw{border:1px solid var(--line);border-radius:5px;padding:7px;font-size:9.5px;color:#5a5870}
+.rvw b{display:block;color:#E0A93C;margin-bottom:3px}
+.gb{border:1px solid var(--line);border-radius:6px;padding:8px;background:#fff}
+.gb .g1{display:flex;gap:7px}
+.gb .g1 i{width:48px;height:48px;background:var(--box2);border:1px solid var(--line);border-radius:4px;display:block}
+.gb .g1 div{flex:1}
+.gb .t{font-size:10.5px;font-weight:700;margin-bottom:4px}
+.gb .m{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px}
+.gb .m span{font-size:8px;padding:1px 4px;border-radius:3px;background:#E1F5EE;color:#0B6E53}
+.gb .m span.x{background:#F0EEF6;color:#b8b5c6;text-decoration:line-through}
+.gb .b{display:flex;justify-content:space-between;font-size:9px;color:var(--mute);margin-top:5px;padding-top:5px;border-top:1px solid #F4F3F8}
+.gb .b em{font-style:normal;background:#F3EFFF;color:#432a86;padding:1px 4px;border-radius:3px;font-weight:700}
+.gbrow{border:1px solid var(--line);border-radius:5px;padding:7px 9px;font-size:10.5px;color:#4a4860}
+.jn{border:1px solid var(--line);border-radius:6px;padding:8px}
+.jn.hl{border-color:#F7D3DF;background:#FFFBFC}
+.jn .j1{font-size:10.5px;font-weight:700;margin-bottom:4px}
+.jn .j2{font-size:9.5px;color:var(--mute)}
+.stars{text-align:center;font-size:22px;color:#E0A93C;letter-spacing:3px}
+.modal{background:var(--box);border-radius:6px 6px 0 0;margin:-12px -12px 10px;padding:9px 12px;font-size:11.5px;font-weight:800;display:flex;justify-content:space-between}
+.modal:after{content:'✕';color:var(--mute);font-weight:400}
+.proof{border:1px solid #CFE0FA;background:#F7FBFF;border-radius:6px;padding:8px}
+.proof .p1{display:flex;justify-content:space-between;font-size:9.5px;padding:2px 0}
+.proof .p1 span:first-child{color:var(--mute)}
+.proof .ok{background:#EAF8F3;color:#0B6E53;font-size:9px;font-weight:700;border-radius:4px;padding:3px 6px;margin-top:5px;text-align:center}
+.proof .src{font-size:8.5px;color:#7b78a0;margin-top:4px;text-align:right}
+.opn{border:1px solid var(--line);border-radius:6px;padding:8px}
+.opn .o1{display:flex;gap:4px;margin-bottom:6px}
+.opn .o1 span{flex:1;background:var(--box2);border-radius:4px;padding:4px 2px;text-align:center;font-size:8.5px;color:#5a5870}
+.opn .o2{height:40px;background:var(--box2);border:1px dashed var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#b8b5c6;margin-bottom:5px}
+.opn .o3{font-size:10px;text-align:center;font-weight:700;color:#0B6E53;background:#EAF8F3;border-radius:4px;padding:4px}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <b>아이돌공구 · 웹 와이어프레임</b>
+  <span class="sub">40 프레임 (기본 34 + 상태 6) · 화면정의서 v3 기준</span>
+  <span class="sp"></span>
+  <span class="lg" id="lg"></span>
+  <span class="zc">
+    <button onclick="zoom(-1)">−</button>
+    <button onclick="zoom(1)">+</button>
+    <button class="w" onclick="fit()">전체 보기</button>
+    <button class="w" id="fb" onclick="toggleFlow()">흐름선 ON</button>
+  </span>
+</div>
+
+<div id="side"></div>
+
+<div id="vp">
+  <div id="cv">
+    <svg id="svg"></svg>
+  </div>
+</div>
+
+<script>
+// 화면 데이터 (화면정의서 v3 기준)
+const G = {
+  auth:  {name:'공통·인증', bg:'#E6DBFF', fg:'#432a86'},
+  home:  {name:'홈',        bg:'#DDEBFF', fg:'#173a6b'},
+  buyer: {name:'참여자',    bg:'#FFE7EE', fg:'#C42A57'},
+  seller:{name:'총대',      bg:'#E1F5EE', fg:'#0B6E53'},
+  my:    {name:'마이페이지', bg:'#EDEAF3', fg:'#4a4860'},
+};
+
+const SCREENS = [
+// ───────── 공통·인증 (y=0) ─────────
+{id:'SPL', name:'스플래시', g:'auth', p:'P0', x:0, y:0, c:[
+  {t:'blank', h:40},
+  {t:'logo', x:'아이돌공구'},
+  {t:'p', x:'로딩 인디케이터'},
+  {t:'note', x:'토큰 검증 → 유효:HOME / 만료:LGN'},
+]},
+{id:'LGN', name:'로그인', g:'auth', p:'P0', x:460, y:0, c:[
+  {t:'logo', x:'아이돌공구'},
+  {t:'in', x:'이메일'},
+  {t:'in', x:'비밀번호'},
+  {t:'btn', x:'로그인', pri:1},
+  {t:'err', x:'이메일 또는 비밀번호가 일치하지 않습니다'},
+  {t:'divider'},
+  {t:'btn', x:'카카오로 계속하기'},
+  {t:'btn', x:'Apple로 계속하기'},
+  {t:'links', x:['비밀번호 찾기','회원가입']},
+]},
+{id:'SGN', name:'회원가입 (3단계)', g:'auth', p:'P0', x:920, y:0, c:[
+  {t:'steps', x:['기본정보','관심 아이돌','역할'], cur:0},
+  {t:'in', x:'닉네임'}, {t:'btn', x:'중복확인', sm:1},
+  {t:'in', x:'이메일'},
+  {t:'in', x:'비밀번호'},
+  {t:'in', x:'비밀번호 확인'},
+  {t:'check', x:['[필수] 이용약관','[필수] 개인정보','[선택] 마케팅']},
+  {t:'divider'},
+  {t:'p', x:'2단계 · 관심 아이돌 (최소 1개)'},
+  {t:'in', x:'그룹·멤버 검색'},
+  {t:'chip', x:['카리나 ×','윈터 ×']},
+  {t:'divider'},
+  {t:'p', x:'3단계 · 시작 역할'},
+  {t:'row2', x:['참여자로 시작','총대로 시작']},
+  {t:'btn', x:'다음', pri:1},
+]},
+{id:'ACCT', name:'환급·정산 계좌 등록', g:'auth', p:'P0', x:1380, y:0, c:[
+  {t:'h', x:'계좌를 등록해 주세요'},
+  {t:'info', x:'카드 등록이 필요 없습니다. 입금은 전용 계좌로,\n환불·정산은 이 계좌로 받습니다.'},
+  {t:'in', x:'은행 선택 ▾'},
+  {t:'in', x:'계좌번호'},
+  {t:'in', x:'예금주명'},
+  {t:'btn', x:'등록', pri:1},
+  {t:'err', x:'예금주명이 계좌 정보와 다릅니다'},
+  {t:'links', x:['나중에 등록하기']},
+]},
+{id:'HOME', name:'홈', g:'home', p:'P0', x:1840, y:0, c:[
+  {t:'nav'},
+  {t:'toggle', x:['참여자','총대']},
+  {t:'in', x:'아이돌·굿즈 검색'},
+  {t:'h', x:'내 최애 빈자리'},
+  {t:'cards', n:2},
+  {t:'h', x:'마감 임박'},
+  {t:'cards', n:2},
+  {t:'h', x:'급구 공석'},
+  {t:'cards', n:1},
+  {t:'divider'},
+  {t:'p', x:'[총대 뷰] 지표 카드'},
+  {t:'kpi', x:['진행중 2','입금대기 3','공석 1','발송예정 0']},
+  {t:'tabbar'},
+]},
+
+// ───────── 참여자 (y=800) ─────────
+{id:'SRCH', name:'빈자리 검색', g:'buyer', p:'P0', x:0, y:800, c:[
+  {t:'nav'},
+  {t:'in', x:'아이돌·멤버·굿즈 검색'},
+  {t:'chip', x:['그룹 ▾','굿즈 ▾','가격 ▾','마감임박순 ▾']},
+  {t:'hl', x:'★ 최애 빈자리만 보기   [카리나 ▾]  ●'},
+  {t:'gbcard'},
+  {t:'gbcard'},
+  {t:'gbcard'},
+  {t:'p', x:'무한스크롤'},
+  {t:'tabbar'},
+]},
+{id:'SRCH-E', name:'검색 결과 없음', g:'buyer', p:'P0', x:460, y:800, v:1, c:[
+  {t:'nav'},
+  {t:'in', x:'에스파 시즌그리팅'},
+  {t:'chip', x:['그룹 ▾','굿즈 ▾','가격 ▾']},
+  {t:'blank', h:20},
+  {t:'empty', x:'조건에 맞는 공구가 없어요'},
+  {t:'btn', x:'자리 알림 받기', pri:1},
+  {t:'btn', x:'필터 초기화'},
+  {t:'tabbar'},
+]},
+{id:'ALRT', name:'자리 알림 대기등록 (팝업)', g:'buyer', p:'P0', x:920, y:800, c:[
+  {t:'modal', x:'자리 알림 받기'},
+  {t:'p', x:'자리가 열리면 즉시 알려드려요'},
+  {t:'in', x:'그룹·멤버 선택 ▾'},
+  {t:'in', x:'희망 가격 상한'},
+  {t:'check', x:['푸시 알림','이메일']},
+  {t:'btn', x:'대기 등록', pri:1},
+  {t:'divider'},
+  {t:'kv', x:[['내 대기 순번','3번'],['동일 조건 대기자','12명']]},
+  {t:'warn', x:'알림 도달 순서가 아니라\n홀드 획득 순서가 선착순 기준입니다'},
+  {t:'links', x:['대기 취소']},
+]},
+{id:'DETL', name:'공구 상세', g:'buyer', p:'P0', x:1380, y:800, c:[
+  {t:'nav'},
+  {t:'img', h:70, x:'굿즈 사진'},
+  {t:'h', x:'에스파 시즌그리팅 분철'},
+  {t:'kv', x:[['1차 판매처','위버스샵'],['마감','D-2'],['예상 발송','8/10'],['필요 앨범','5장']]},
+  {t:'h', x:'자리 선택'},
+  {t:'seats'},
+  {t:'h', x:'총대 신뢰 정보'},
+  {t:'trust'},
+  {t:'h', x:'구매 증빙'},
+  {t:'lock', x:'구매 완료 후 공개됩니다'},
+  {t:'h', x:'진행 현황'},
+  {t:'time', x:['개설','모집','입금','구매','개봉','발송','정산'], cur:1},
+  {t:'cta', x:'신청하기 · 18,500원'},
+]},
+{id:'DETL-C', name:'전 자리 마감', g:'buyer', p:'P0', x:1840, y:800, v:1, c:[
+  {t:'nav'},
+  {t:'banner', x:'마감된 공구입니다'},
+  {t:'img', h:60, x:'굿즈 사진'},
+  {t:'h', x:'에스파 시즌그리팅 분철'},
+  {t:'h', x:'자리 선택'},
+  {t:'seatsFull'},
+  {t:'btn', x:'자리 알림 받기', pri:1},
+  {t:'ctaOff', x:'신청하기'},
+]},
+{id:'APLY', name:'신청·배송정보 입력', g:'buyer', p:'P0', x:2300, y:800, c:[
+  {t:'nav'},
+  {t:'timer', x:'남은 시간 04:32 · 자리가 홀드되어 있습니다'},
+  {t:'h', x:'신청 자리'},
+  {t:'kv', x:[['멤버','윈터'],['수량','1'],['자리 가격','15,000원']]},
+  {t:'h', x:'배송정보'},
+  {t:'in', x:'받는분 이름'},
+  {t:'in', x:'연락처'},
+  {t:'in', x:'우편번호'}, {t:'btn', x:'주소 검색', sm:1},
+  {t:'in', x:'주소 / 상세주소'},
+  {t:'in', x:'배송 요청사항'},
+  {t:'check', x:['기본 배송지로 저장']},
+  {t:'h', x:'금액'},
+  {t:'kv', x:[['자리금액','15,000'],['플랫폼 이용료','500'],['배송비(고정)','3,000'],['총 입금금액','18,500']]},
+  {t:'info', x:'입금하실 금액이 최종 금액입니다. 추가 청구 없습니다.'},
+  {t:'cta', x:'입금 안내 받기'},
+]},
+{id:'CHKO', name:'입금 안내 (가상계좌)', g:'buyer', p:'P0', x:2760, y:800, c:[
+  {t:'nav'},
+  {t:'h', x:'아래 계좌로 입금해 주세요'},
+  {t:'acct'},
+  {t:'btn', x:'계좌번호 복사', pri:1},
+  {t:'info', x:'이 계좌는 회원님 신청 건 전용입니다.\n입금자명은 아무거나 상관없어요.'},
+  {t:'timer', x:'입금 기한 04:12 남음'},
+  {t:'wait', x:'입금을 기다리는 중…'},
+  {t:'p', x:'화면을 닫아도 입금하면 자동 확인됩니다'},
+]},
+{id:'CHKO-X', name:'입금 기한 만료', g:'buyer', p:'P0', x:3220, y:800, v:1, c:[
+  {t:'nav'},
+  {t:'blank', h:20},
+  {t:'empty', x:'입금 기한이 지나 자리가 해제되었습니다'},
+  {t:'p', x:'다른 분이 신청할 수 있는 상태로 돌아갔어요'},
+  {t:'btn', x:'다시 신청하기', pri:1},
+  {t:'divider'},
+  {t:'warn', x:'금액을 잘못 입금하신 경우\n고객센터로 문의해 주세요'},
+  {t:'links', x:['고객센터']},
+]},
+{id:'DONE', name:'신청 완료', g:'buyer', p:'P0', x:3680, y:800, c:[
+  {t:'blank', h:20},
+  {t:'ok', x:'신청이 완료되었습니다'},
+  {t:'kv', x:[['내 자리','윈터 1장'],['보관 금액','18,500원'],['예상 수령','8월 중순']]},
+  {t:'info', x:'아직 구매 전입니다.\n전원 입금이 끝나면 총대가 앨범을 구매합니다.'},
+  {t:'btn', x:'내 리포트 보기', pri:1},
+  {t:'btn', x:'홈으로'},
+]},
+{id:'MYJN', name:'내 참여 현황 (목록)', g:'buyer', p:'P0', x:4140, y:800, c:[
+  {t:'nav'},
+  {t:'tabs', x:['진행중 2','완료 5']},
+  {t:'alert', x:'수령 확인이 필요한 공구가 있어요'},
+  {t:'jncard', hl:1},
+  {t:'jncard'},
+  {t:'empty2', x:'아직 참여한 공구가 없어요 → [빈자리 찾기]'},
+  {t:'tabbar'},
+]},
+{id:'RPTB', name:'공구 리포트 (참여자)', g:'buyer', p:'P0', x:4600, y:800, c:[
+  {t:'nav'},
+  {t:'rhead', x:'에스파 시즌그리팅 분철 · 내 자리: 윈터'},
+  {t:'p', x:'현재 단계: 발송 · 최종 갱신 3분 전 (자동)'},
+  {t:'time', x:['개설','모집','입금','구매','개봉','발송','정산'], cur:5},
+  {t:'h', x:'구매 증빙'},
+  {t:'proof'},
+  {t:'h', x:'개봉·배정'},
+  {t:'open'},
+  {t:'h', x:'배송'},
+  {t:'kv', x:[['택배사','CJ대한통운'],['송장','1234-5678-9012'],['상태','배송완료']]},
+  {t:'btn', x:'배송 조회', sm:1},
+  {t:'h', x:'금액'},
+  {t:'kv', x:[['내 입금액','18,500원'],['보관 상태','플랫폼 보관 중']]},
+  {t:'cta', x:'수령 확인 · 자동확정까지 5일'},
+  {t:'links', x:['분쟁 신고','리포트 공유']},
+]},
+{id:'RVEW', name:'후기·평점 작성 (팝업)', g:'buyer', p:'P1', x:5060, y:800, c:[
+  {t:'modal', x:'후기 작성'},
+  {t:'stars'},
+  {t:'kv', x:[['발송 속도','★★★★★'],['소통','★★★★☆'],['포장','★★★★★']]},
+  {t:'ta', x:'후기를 남겨주세요'},
+  {t:'img', h:40, x:'사진 첨부 (선택)'},
+  {t:'btn', x:'등록', pri:1},
+  {t:'p', x:'수령확인 완료 건만 · 1회만 작성 가능'},
+]},
+{id:'CLAM', name:'분쟁 신고 (팝업)', g:'buyer', p:'P1', x:5520, y:800, c:[
+  {t:'modal', x:'분쟁 신고'},
+  {t:'in', x:'유형 선택 ▾'},
+  {t:'p', x:'누락 / 하자 / 미발송 / 총대 잠수 / 배정 이의 / 기타'},
+  {t:'ta', x:'상세 내용'},
+  {t:'img', h:40, x:'증빙 사진 (필수)'},
+  {t:'btn', x:'신고 접수', pri:1},
+  {t:'warn', x:'접수 시 자동확정·정산이 정지됩니다'},
+]},
+
+// ───────── 총대 (y=2000) ─────────
+{id:'CRTE', name:'공구 개설 (4단계)', g:'seller', p:'P0', x:0, y:2000, c:[
+  {t:'steps', x:['공구 정보','자리·가격','앨범 수량','보증금'], cur:0},
+  {t:'in', x:'아이돌·그룹 ▾'},
+  {t:'in', x:'굿즈명 / 유형 ▾'},
+  {t:'in', x:'공구 제목'},
+  {t:'img', h:40, x:'상품 사진'},
+  {t:'in', x:'1차 판매처'},
+  {t:'note', x:'오픈 후 수정 불가 · 영수증 검증 기준'},
+  {t:'in', x:'모집 마감일 / 예상 발송일'},
+  {t:'in', x:'예상 총 배송비'},
+  {t:'divider'},
+  {t:'p', x:'2단계 · 멤버 자리·가격'},
+  {t:'seatEdit'},
+  {t:'kv', x:[['총 자리수','10'],['총 모집금액','185,000원']]},
+  {t:'divider'},
+  {t:'p', x:'3단계 · 필요 앨범 수량'},
+  {t:'in', x:'5  (권장 5장)'},
+  {t:'note', x:'영수증 자동 검증의 기준값'},
+  {t:'btn', x:'다음', pri:1},
+]},
+{id:'CRTE-D', name:'보증금 예치 (4단계)', g:'seller', p:'P0', x:460, y:2000, v:1, c:[
+  {t:'steps', x:['공구 정보','자리·가격','앨범 수량','보증금'], cur:3},
+  {t:'h', x:'보증금 예치'},
+  {t:'kv', x:[['모집액','185,000원'],['요율','10%'],['기본 보증금','30,000원'],['내 등급','실버 (7%)'],['감면 후','30,000원']]},
+  {t:'acct'},
+  {t:'btn', x:'계좌번호 복사', pri:1},
+  {t:'warnBox', x:'정상 이행 시 전액 반환\n잠수·미이행 시 몰수 → 참여자 보상'},
+  {t:'check', x:['위 몰수 조건에 동의합니다']},
+  {t:'wait', x:'입금 확인 시 자동으로 공구가 열립니다'},
+  {t:'p', x:'입금 전까지 초안 · 검색 노출 안 됨'},
+]},
+{id:'DASH', name:'총대 대시보드', g:'seller', p:'P0', x:920, y:2000, c:[
+  {t:'nav'},
+  {t:'in', x:'에스파 시즌그리팅 분철 ▾'},
+  {t:'alert', x:'D-2 · 공석 1자리 → 급구 필요'},
+  {t:'kpi', x:['채움 7/10','입금 7/7','공석 1','D-2']},
+  {t:'h', x:'주문 현황 (자동 취합)'},
+  {t:'table', x:['닉네임','멤버','금액','입금','배송지'], n:3},
+  {t:'btn', x:'엑셀 다운로드', sm:1},
+  {t:'h', x:'입금 현황 (자동 확인)'},
+  {t:'note', x:'가상계좌 자동 확인 · 총대 확인 액션 없음'},
+  {t:'h', x:'자리 채움·공석'},
+  {t:'bars'},
+  {t:'ctaOff', x:'포장 취합표 생성 (전원 입금 후 활성)'},
+  {t:'tabbar'},
+]},
+{id:'RPTG', name:'공구 리포트 (총대)', g:'seller', p:'P0', x:1380, y:2000, c:[
+  {t:'nav'},
+  {t:'rhead', x:'에스파 시즌그리팅 분철'},
+  {t:'p', x:'현재 단계: 발송 · 진행률 80% · 자동 갱신'},
+  {t:'h', x:'모집·입금'},
+  {t:'kv', x:[['채움','10/10'],['입금완료','10건'],['총 보관액','185,000원']]},
+  {t:'h', x:'구매 증빙 (자동 편입)'},
+  {t:'verify'},
+  {t:'h', x:'개봉·배정'},
+  {t:'kv', x:[['개봉 총량','12장'],['배정','9자리'],['미배정','1자리 (환불)']]},
+  {t:'h', x:'발송'},
+  {t:'kv', x:[['매칭 완료','8건'],['확인 필요','2건'],['미입력','0건']]},
+  {t:'h', x:'정산'},
+  {t:'kv', x:[['예상 정산액','142,000원'],['보증금','예치중'],['정산 가능','수령확인 대기 2건']]},
+]},
+{id:'QFIL', name:'공석 급구', g:'seller', p:'P0', x:1840, y:2000, c:[
+  {t:'nav'},
+  {t:'h', x:'공석 급구'},
+  {t:'check', x:['윈터 1자리']},
+  {t:'in', x:'급구 사유 (선택)'},
+  {t:'check', x:['한시 인하 적용']},
+  {t:'btn', x:'급구 등록', pri:1},
+  {t:'divider'},
+  {t:'h', x:'매칭 현황'},
+  {t:'kv', x:[['대기자','12명'],['푸시 발송','12건'],['채워진 자리','0/1']]},
+  {t:'note', x:'동시 신청은 홀드 배타 락으로 선착순 1명'},
+  {t:'warn', x:'대기자 0명이면 가격 인하를 검토하세요'},
+]},
+{id:'SEAT', name:'공석 처리', g:'seller', p:'P0', x:2300, y:2000, c:[
+  {t:'nav'},
+  {t:'alert', x:'마감까지 6시간 · 공석 1자리'},
+  {t:'h', x:'어떻게 할까요?'},
+  {t:'opt', x:['급구 재시도','가격 인하','공구 취소']},
+  {t:'divider'},
+  {t:'h', x:'공구 취소 시'},
+  {t:'kv', x:[['환불 대상','9명'],['환불 총액','166,500원'],['보증금','전액 반환']]},
+  {t:'info', x:'정원 미달은 총대 귀책이 아니므로\n보증금은 전액 반환됩니다'},
+  {t:'btn', x:'취소 확정', pri:1},
+]},
+{id:'PACK', name:'포장 취합표', g:'seller', p:'P0', x:2760, y:2000, c:[
+  {t:'nav'},
+  {t:'h', x:'포장 취합표 (자동 생성)'},
+  {t:'table', x:['참여자','멤버','수량','배송지'], n:4},
+  {t:'h', x:'멤버별 합계'},
+  {t:'kv', x:[['카리나','3장'],['윈터','2장'],['닝닝','2장'],['지젤','3장']]},
+  {t:'btn', x:'인쇄', sm:1}, {t:'btn', x:'엑셀 다운로드', sm:1},
+  {t:'note', x:'이 단계부터 배송지 마스킹 해제'},
+  {t:'cta', x:'1차 구매 진행하기'},
+]},
+{id:'PURC', name:'1차 구매·영수증 인증', g:'seller', p:'P0', x:3220, y:2000, c:[
+  {t:'nav'},
+  {t:'kv', x:[['선언 앨범 수량','5장'],['1차 판매처','위버스샵'],['총 보관액','185,000원'],['경과','D+1 (정상)']]},
+  {t:'h', x:'영수증 캡처 업로드'},
+  {t:'upload', x:'주문내역 캡처를 올려주세요\n모바일 캡처·다크모드·스크롤 캡처 가능'},
+  {t:'h', x:'자동 추출 결과'},
+  {t:'extract'},
+  {t:'h', x:'자동 검증'},
+  {t:'verify'},
+  {t:'h', x:'마스킹 미리보기'},
+  {t:'mask'},
+  {t:'cta', x:'증빙 공개하고 다음 단계'},
+]},
+{id:'PURC-F', name:'검증 실패·소명 요청', g:'seller', p:'P0', x:3680, y:2000, v:1, c:[
+  {t:'nav'},
+  {t:'banner', x:'D+7 · 소명이 필요합니다'},
+  {t:'h', x:'자동 검증 결과'},
+  {t:'verifyFail'},
+  {t:'h', x:'소명 제출'},
+  {t:'ta', x:'사유를 입력해 주세요 (품절·천재지변 등)'},
+  {t:'img', h:40, x:'증빙 첨부'},
+  {t:'timer', x:'소명 기한 47:12 남음'},
+  {t:'btn', x:'소명 제출', pri:1},
+  {t:'warnBox', x:'무응답·반려 시 보증금 몰수\n→ 참여자 전원 환불·위약보상'},
+]},
+{id:'OPEN', name:'개봉·배정', g:'seller', p:'P0', x:4140, y:2000, c:[
+  {t:'nav'},
+  {t:'h', x:'개봉 결과 입력'},
+  {t:'note', x:'문서 AI 아님 · 총대 직접 입력'},
+  {t:'stepper'},
+  {t:'kv', x:[['입력 총량','12장'],['구매 앨범','5장']]},
+  {t:'h', x:'개봉 인증샷'},
+  {t:'img', h:50, x:'전체 포카가 한 장에 보이게'},
+  {t:'note', x:'참여자가 사진과 숫자를 육안 대조'},
+  {t:'h', x:'배정'},
+  {t:'compare'},
+  {t:'opt', x:['선착순 배정','랜덤 배정']},
+  {t:'cta', x:'배정 실행'},
+]},
+{id:'OPEN-S', name:'수량 부족·미배정', g:'seller', p:'P0', x:4600, y:2000, v:1, c:[
+  {t:'nav'},
+  {t:'alert', x:'윈터 1장 부족 · 1자리 미배정'},
+  {t:'h', x:'배정 비교'},
+  {t:'compareShort'},
+  {t:'h', x:'미배정 처리'},
+  {t:'table', x:['참여자','멤버','환불액'], n:1},
+  {t:'info', x:'해당 참여자는 등록 계좌로 자동 환불되고\n다음 공구 우선권을 받습니다'},
+  {t:'note', x:'총대 귀책 아님 · 보증금·신뢰도 영향 없음'},
+  {t:'btn', x:'미배정 확정', pri:1},
+]},
+{id:'SHIP', name:'발송 관리', g:'seller', p:'P0', x:5060, y:2000, c:[
+  {t:'nav'},
+  {t:'h', x:'송장 캡처 업로드'},
+  {t:'upload', x:'택배사 앱 접수내역 캡처\n여러 장·스크롤 캡처 가능'},
+  {t:'h', x:'자동 매칭 결과'},
+  {t:'shipTable'},
+  {t:'kv', x:[['매칭 완료','8건'],['확인 필요','2건'],['미매칭','0건']]},
+  {t:'divider'},
+  {t:'h', x:'수동 입력'},
+  {t:'in', x:'송장번호 직접 입력'},
+  {t:'note', x:'인식 실패해도 항상 열려 있는 경로'},
+  {t:'cta', x:'발송 확정'},
+]},
+{id:'SHIP-C', name:'매칭 확인 필요', g:'seller', p:'P0', x:5520, y:2000, v:1, c:[
+  {t:'nav'},
+  {t:'alert', x:'확인이 필요한 송장 2건'},
+  {t:'note', x:'택배사 캡처는 받는분이 "김*지"로\n이미 마스킹돼 있어 주소로 매칭합니다'},
+  {t:'confirm'},
+  {t:'confirm'},
+  {t:'p', x:'확인 필요 건만 표시 · 전체 재입력 없음'},
+]},
+{id:'STLM', name:'정산', g:'seller', p:'P0', x:5980, y:2000, c:[
+  {t:'nav'},
+  {t:'h', x:'정산 내역'},
+  {t:'kv', x:[['총 모집금액','185,000'],['1차 구매비','-185,000'],['배송비 실제','-28,000'],['플랫폼 수수료','-5,000'],['미배정 환불','-18,500'],['최종 정산액','142,000']]},
+  {t:'h', x:'보증금'},
+  {t:'kv', x:[['예치액','30,000원'],['상태','반환 예정']]},
+  {t:'h', x:'입금 계좌'},
+  {t:'p', x:'국민 ***1234 (홍*동)'},
+  {t:'cta', x:'정산 받기'},
+  {t:'warn', x:'분쟁 미해결 건이 있으면 해당 금액은 유보됩니다'},
+]},
+
+// ───────── 마이페이지 (y=3200) ─────────
+{id:'MYPG', name:'마이페이지 홈', g:'my', p:'P0', x:0, y:3200, c:[
+  {t:'nav'},
+  {t:'profile'},
+  {t:'menu', x:['계좌 관리','내 공구 관리','내 참여 관리','정산·환불 내역','신뢰도·후기','내 정보 관리','알림 설정','고객센터']},
+  {t:'tabbar'},
+]},
+{id:'MACC', name:'계좌 관리', g:'my', p:'P1', x:460, y:3200, c:[
+  {t:'nav'},
+  {t:'h', x:'등록 계좌'},
+  {t:'kv', x:[['은행','국민은행'],['계좌','***1234'],['예금주','홍*동'],['등록일','2026.07.01']]},
+  {t:'btn', x:'변경'},
+  {t:'warn', x:'진행 중인 공구가 있어 변경할 수 없습니다'},
+]},
+{id:'MGBY', name:'내 공구 관리 (총대)', g:'my', p:'P1', x:920, y:3200, c:[
+  {t:'nav'},
+  {t:'tabs', x:['초안 1','모집중 1','진행중 1','완료 4']},
+  {t:'gbrow', x:'에스파 시즌그리팅 · 7/10 · 보증금 예치중'},
+  {t:'gbrow', x:'아이브 포카 · 초안'},
+  {t:'note', x:'오픈 후 수정 범위 제한(인하·추가·연장만)'},
+]},
+{id:'MJPT', name:'내 참여 관리 (참여자)', g:'my', p:'P1', x:1380, y:3200, c:[
+  {t:'nav'},
+  {t:'tabs', x:['진행중 2','완료 5','취소·환불 1']},
+  {t:'gbrow', x:'에스파 시즌그리팅 · 윈터 · 배송중'},
+  {t:'gbrow', x:'아이브 시즌 · 원영 · 완료'},
+]},
+{id:'MSTL', name:'정산·환불 내역', g:'my', p:'P1', x:1840, y:3200, c:[
+  {t:'nav'},
+  {t:'table', x:['일자','구분','공구명','금액'], n:5},
+  {t:'p', x:'정산 / 환불 / 미배정 환불 / 보증금 반환 / 보증금 몰수'},
+  {t:'warn', x:'몰수 건은 사유·이의신청 경로 표시'},
+]},
+{id:'MTRS', name:'신뢰도·후기 관리', g:'my', p:'P2', x:2300, y:3200, c:[
+  {t:'nav'},
+  {t:'score'},
+  {t:'h', x:'항목별 기여도'},
+  {t:'bars2'},
+  {t:'h', x:'받은 후기 (12)'},
+  {t:'review'},
+  {t:'review'},
+  {t:'note', x:'총대는 후기를 삭제할 수 없음'},
+]},
+{id:'MINF', name:'내 정보 관리', g:'my', p:'P1', x:2760, y:3200, c:[
+  {t:'nav'},
+  {t:'img', h:40, x:'프로필 이미지'},
+  {t:'in', x:'닉네임'},
+  {t:'in', x:'이메일 (변경 시 재인증)'},
+  {t:'chip', x:['카리나 ×','윈터 ×','+ 추가']},
+  {t:'btn', x:'저장', pri:1},
+  {t:'divider'},
+  {t:'links', x:['비밀번호 변경','로그아웃','회원 탈퇴']},
+  {t:'warn', x:'진행 중 공구가 있으면 탈퇴 불가'},
+]},
+{id:'MALM', name:'알림 설정', g:'my', p:'P1', x:3220, y:3200, c:[
+  {t:'nav'},
+  {t:'sw', x:['자리 알림','공구 진행 알림','입금·정산 알림','마케팅 알림']},
+  {t:'warn', x:'자리 알림 OFF 시\n대기 등록해도 알림을 받을 수 없어요'},
+  {t:'note', x:'마케팅 동의는 동의일시 기록(법적 요건)'},
+]},
+{id:'MCS', name:'고객센터·분쟁', g:'my', p:'P1', x:3680, y:3200, c:[
+  {t:'nav'},
+  {t:'in', x:'무엇이 궁금하신가요?'},
+  {t:'menu', x:['입금이 안 됐어요','금액을 잘못 입금했어요','공구 진행 문의','환불·정산 문의']},
+  {t:'btn', x:'1:1 문의'},
+  {t:'btn', x:'분쟁 신고', pri:1},
+  {t:'note', x:'분쟁은 정산 보류 트리거로 별도 라우팅'},
+]},
+];
+
+const FLOWS = [
+  ['SPL','LGN',''], ['LGN','SGN','계정 없음'], ['SGN','ACCT',''], ['ACCT','HOME',''], ['LGN','HOME','로그인 성공'],
+  ['HOME','SRCH',''], ['HOME','CRTE',''], ['HOME','MYPG',''], ['HOME','MYJN',''],
+  ['SRCH','SRCH-E','0건'], ['SRCH-E','ALRT',''], ['SRCH','DETL',''], ['DETL','DETL-C','전 자리 마감'], ['DETL-C','ALRT',''],
+  ['DETL','APLY','5분 홀드'], ['APLY','CHKO',''], ['CHKO','DONE','입금 자동확인'], ['CHKO','CHKO-X','기한 만료'],
+  ['CHKO-X','DETL','자리 복귀',1],
+  ['DONE','RPTB',''], ['MYJN','RPTB',''], ['RPTB','RVEW','수령확인 후'], ['RPTB','CLAM','문제 발생'],
+  ['CRTE','CRTE-D',''], ['CRTE-D','DASH','보증금 입금 확인'],
+  ['DASH','RPTG',''], ['DASH','QFIL','공석'], ['DASH','SEAT',''], ['SEAT','QFIL','급구 재시도'], ['DASH','PACK','전원 입금'],
+  ['PACK','PURC',''], ['PURC','PURC-F','검증 실패'], ['PURC','OPEN','검증 통과'], ['OPEN','OPEN-S','수량 부족'],
+  ['OPEN','SHIP',''], ['OPEN-S','SHIP',''], ['SHIP','SHIP-C','매칭 충돌'], ['SHIP','STLM',''], ['SHIP-C','STLM',''],
+  ['QFIL','ALRT','자리 열림 알림',1],
+  ['PURC','RPTB','증빙 자동 공개',1],
+  ['OPEN','RPTB','개봉·배정 공개',1],
+  ['SHIP','RPTB','배송상태 공유',1],
+  ['OPEN-S','RPTB','미배정 환불 안내',1],
+  ['RPTB','STLM','수령확인 → 정산',1],
+  ['STLM','MSTL',''],
+  ['MYPG','MACC',''], ['MYPG','MGBY',''], ['MYPG','MJPT',''], ['MYPG','MSTL',''],
+  ['MYPG','MTRS',''], ['MYPG','MINF',''], ['MYPG','MALM',''], ['MYPG','MCS',''],
+  ['MCS','CLAM',''], ['MGBY','DASH',''], ['MJPT','RPTB',''], ['MACC','ACCT',''],
+];
+
+</script>
+<script>
+/* ══ 와이어프레임 렌더러 ══ */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const R = {
+  blank:  e => `<div class="blank" style="height:${e.h}px"></div>`,
+  logo:   e => `<div class="logo">${esc(e.x)}</div>`,
+  nav:    () => `<div class="nav">☰　아이돌공구　　　　　　　🔔　👤</div>`,
+  tabbar: () => `<div class="tabbar"><div>홈</div><div>검색</div><div>개설</div><div>내 참여</div><div>MY</div></div>`,
+  h:      e => `<h4 class="wh">${esc(e.x)}</h4>`,
+  p:      e => `<p class="wp">${esc(e.x)}</p>`,
+  note:   e => `<div class="note">${esc(e.x)}</div>`,
+  info:   e => `<div class="info">${esc(e.x)}</div>`,
+  warn:   e => `<div class="warn">${esc(e.x)}</div>`,
+  warnBox:e => `<div class="warnBox">${esc(e.x)}</div>`,
+  err:    e => `<div class="err">⚠ ${esc(e.x)}</div>`,
+  alert:  e => `<div class="alert">⚠ ${esc(e.x)}</div>`,
+  banner: e => `<div class="banner">${esc(e.x)}</div>`,
+  empty:  e => `<div class="empty">${esc(e.x)}</div>`,
+  empty2: e => `<div class="empty2">${esc(e.x)}</div>`,
+  ok:     e => `<div class="ok">✓ ${esc(e.x)}</div>`,
+  in:     e => `<div class="in">${esc(e.x)}</div>`,
+  ta:     e => `<div class="ta">${esc(e.x)}</div>`,
+  btn:    e => `<div class="btn${e.pri?' pri':''}${e.sm?' sm':''}">${esc(e.x)}</div>`,
+  cta:    e => `<div class="cta">${esc(e.x)}</div>`,
+  ctaOff: e => `<div class="cta off">${esc(e.x)}</div>`,
+  divider:() => `<div class="divider"></div>`,
+  img:    e => `<div class="img" style="height:${e.h}px">${esc(e.x||'이미지')}</div>`,
+  card:   () => `<div class="card"></div>`,
+  cards:  e => `<div class="cards">${'<div></div>'.repeat(e.n)}</div>`,
+  kpi:    e => `<div class="kpi">${e.x.map(v=>`<div>${esc(v)}</div>`).join('')}</div>`,
+  kv:     e => `<div class="kv">${e.x.map(([k,v])=>`<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}</div>`,
+  chip:   e => `<div class="chip">${e.x.map(v=>`<span>${esc(v)}</span>`).join('')}</div>`,
+  links:  e => `<div class="links">${e.x.map(v=>`<span>${esc(v)}</span>`).join('')}</div>`,
+  tabs:   e => `<div class="tabs">${e.x.map(v=>`<div>${esc(v)}</div>`).join('')}</div>`,
+  steps:  e => `<div class="steps">${e.x.map((v,i)=>`<div class="${i===e.cur?'on':''}">${i+1}. ${esc(v)}</div>`).join('')}</div>`,
+  time:   e => `<div class="time">${e.x.map((v,i)=>`<div class="${i===e.cur?'on':(i<e.cur?'done':'')}"><i></i>${esc(v)}</div>`).join('')}</div>`,
+  check:  e => `<div class="check">${e.x.map(v=>`<div><i></i>${esc(v)}</div>`).join('')}</div>`,
+  sw:     e => `<div class="sw">${e.x.map(v=>`<div><span>${esc(v)}</span><i></i></div>`).join('')}</div>`,
+  toggle: e => `<div class="toggle">${e.x.map(v=>`<div>${esc(v)}</div>`).join('')}</div>`,
+  row2:   e => `<div class="row2">${e.x.map(v=>`<div>${esc(v)}</div>`).join('')}</div>`,
+  opt:    e => `<div class="opt">${e.x.map(v=>`<div>◯　${esc(v)}</div>`).join('')}</div>`,
+  menu:   e => `<div class="menu">${e.x.map(v=>`<div>${esc(v)}</div>`).join('')}</div>`,
+  hl:     e => `<div class="hl">${esc(e.x)}</div>`,
+  rhead:  e => `<div class="rhead">${esc(e.x)}</div>`,
+  stars:  () => `<div class="stars">★★★★★</div>`,
+  modal:  e => `<div class="modal">${esc(e.x)}</div>`,
+  timer:  e => `<div class="timer">⏱ ${esc(e.x)}</div>`,
+  wait:   e => `<div class="wait">◌ ${esc(e.x)}</div>`,
+  upload: e => `<div class="upload">⬆<br>${esc(e.x)}</div>`,
+  acct:   () => `<div class="acct"><div class="a1">국민은행 (예금주: 아이돌공구)</div><div class="a2">123-4567-89012345</div><div class="a3">18,500원</div></div>`,
+  table:  e => `<div class="tbl"><div class="hd">${e.x.map(v=>`<div>${esc(v)}</div>`).join('')}</div>${
+                  Array(e.n).fill(0).map(()=>`<div class="rw">${e.x.map(()=>`<div><i></i></div>`).join('')}</div>`).join('')}</div>`,
+  seats:  () => `<div class="seats">
+      <div class="free"><span>카리나</span><span>15,000원 <em>빈자리</em></span></div>
+      <div class="hold"><span>윈터</span><span>15,000원 <em>신청 중</em></span></div>
+      <div class="full"><span>닝닝</span><span>15,000원 <em>마감</em></span></div>
+      <div class="free"><span>지젤</span><span>12,000원 <em>빈자리</em></span></div></div>`,
+  seatsFull:()=> `<div class="seats">
+      <div class="full"><span>카리나</span><span><em>마감</em></span></div>
+      <div class="full"><span>윈터</span><span><em>마감</em></span></div>
+      <div class="full"><span>닝닝</span><span><em>마감</em></span></div>
+      <div class="full"><span>지젤</span><span><em>마감</em></span></div></div>`,
+  seatEdit:()=> `<div class="seats">
+      <div><span>카리나　[15,000]</span><span>＋ ／ －</span></div>
+      <div><span>윈터　　[15,000]</span><span>＋ ／ －</span></div>
+      <div><span>닝닝　　[12,000]</span><span>＋ ／ －</span></div></div>`,
+  trust:  () => `<div class="trust"><div class="t1">신뢰도 82 <em>실버</em> <em>보증금 예치</em></div>
+      <div class="t2">완료 7건 · 평균 발송 4일 · 후기 12건 (4.6) · 신고 0건</div></div>`,
+  lock:   e => `<div class="lock">🔒 ${esc(e.x)}</div>`,
+  gbcard: () => `<div class="gb"><div class="g1"><i></i><div>
+      <div class="t">에스파 시즌그리팅 분철</div>
+      <div class="m"><span>카리나</span><span class="x">윈터</span><span>닝닝</span><span class="x">지젤</span></div>
+      <div class="wp" style="font-size:9.5px">12,000원~ · 7/10 · D-2</div></div></div>
+      <div class="b"><span>신뢰도 82 · 실버</span><em>보증금 예치</em></div></div>`,
+  jncard: e => `<div class="jn${e.hl?' hl':''}"><div class="j1">에스파 시즌그리팅 분철 · 윈터</div>
+      <div class="j2">발송 완료 · 보관 18,500원 · 총대 신뢰도 82</div></div>`,
+  gbrow:  e => `<div class="gbrow">${esc(e.x)}</div>`,
+  bars:   () => `<div class="bars">
+      <div>카리나<i><u style="width:100%"></u></i>3/3</div>
+      <div>윈터　<i><u class="r" style="width:50%"></u></i>1/2</div>
+      <div>닝닝　<i><u style="width:100%"></u></i>2/2</div>
+      <div>지젤　<i><u style="width:100%"></u></i>3/3</div></div>`,
+  bars2:  () => `<div class="bars">
+      <div>완료건수<i><u style="width:70%"></u></i></div>
+      <div>후기평점<i><u style="width:92%"></u></i></div>
+      <div>발송속도<i><u style="width:80%"></u></i></div>
+      <div>신고이력<i><u style="width:100%"></u></i></div></div>`,
+  score:  () => `<div class="score"><div class="s1">82</div><div class="s2">실버 · 완료 7건 · 평균 발송 4일</div></div>`,
+  review: () => `<div class="rvw"><b>★★★★★</b>포장 꼼꼼하고 발송 빨랐어요</div>`,
+  profile:() => `<div class="profile"><i></i><div><div class="p1">분철요정</div>
+      <div class="p2">총대 · 신뢰도 82 (실버) · 카리나, 윈터</div></div></div>`,
+  extract:() => `<div class="extract">
+      <div class="e"><span>판매처</span><span>위버스샵</span></div>
+      <div class="e"><span>주문번호</span><span>20260715-8891</span></div>
+      <div class="e"><span>주문일시</span><span>2026-07-15 14:22</span></div>
+      <div class="e low"><span>앨범 수량</span><span>5장 <em>확인 필요</em></span></div>
+      <div class="e"><span>결제금액</span><span>185,000원</span></div></div>`,
+  verify: () => `<div class="vf">
+      <div>✓ 주문번호 유니크<b>재사용 없음</b></div>
+      <div>✓ 판매처 일치<b>위버스샵 = 위버스샵</b></div>
+      <div>✓ 주문일시<b>전원 입금 이후</b></div>
+      <div>✓ 앨범 수량<b>선언 5 ≤ 영수증 5</b></div></div>`,
+  verifyFail:()=>`<div class="vf">
+      <div>✓ 주문번호 유니크<b>재사용 없음</b></div>
+      <div>✓ 판매처 일치<b>위버스샵</b></div>
+      <div class="no">✕ 주문일시<b>전원 입금 이전 주문</b></div>
+      <div class="no">✕ 앨범 수량<b>선언 5 > 영수증 3</b></div></div>`,
+  mask:   () => `<div class="mask"><div class="m1">영수증 (원본)</div>
+      <div class="m1">마스킹 완료<u style="left:14px;top:14px;width:60px;height:7px"></u>
+      <u style="left:14px;top:26px;width:80px;height:7px"></u>
+      <u style="left:14px;top:38px;width:44px;height:7px"></u></div></div>`,
+  stepper:()=> `<div class="stepper">
+      <div><span>카리나</span><i><b>−</b>3<b>＋</b></i></div>
+      <div><span>윈터</span><i><b>−</b>2<b>＋</b></i></div>
+      <div><span>닝닝</span><i><b>−</b>3<b>＋</b></i></div>
+      <div><span>지젤</span><i><b>−</b>4<b>＋</b></i></div></div>`,
+  compare:()=> `<div class="cmp">
+      <div class="r"><div>멤버</div><div>나온 수량</div><div>자리 수</div><div>결과</div></div>
+      <div class="r"><div>카리나</div><div>3</div><div>3</div><div>충족</div></div>
+      <div class="r"><div>윈터</div><div>2</div><div>2</div><div>충족</div></div>
+      <div class="r"><div>닝닝</div><div>3</div><div>2</div><div>충족</div></div></div>`,
+  compareShort:()=>`<div class="cmp">
+      <div class="r"><div>멤버</div><div>나온 수량</div><div>자리 수</div><div>부족</div></div>
+      <div class="r"><div>카리나</div><div>3</div><div>3</div><div>0</div></div>
+      <div class="r no"><div>윈터</div><div>1</div><div>2</div><div>-1</div></div>
+      <div class="r"><div>닝닝</div><div>3</div><div>2</div><div>0</div></div></div>`,
+  shipTable:()=>`<div class="ship">
+      <div class="r"><div>받는분</div><div>송장번호</div><div>상태</div></div>
+      <div class="r"><div>김*지</div><div>1234-5678</div><div><em>완료</em></div></div>
+      <div class="r q"><div>이*연</div><div>2345-6789</div><div><em>확인 필요</em></div></div>
+      <div class="r"><div>박*수</div><div>3456-7890</div><div><em>완료</em></div></div></div>`,
+  confirm:()=> `<div class="cf"><div class="c1">이*연 · 서울 강남구 ***</div>
+      <div class="c2">송장 2345-6789 · 후보가 2명입니다<br>동일 주소에 동명이인이 있어요</div>
+      <div class="c3"><span>이서연 (윈터)</span><span>이수연 (닝닝)</span></div></div>`,
+  proof:  () => `<div class="proof">
+      <div class="p1"><span>판매처</span><span>위버스샵</span></div>
+      <div class="p1"><span>주문일시</span><span>2026-07-15 14:22</span></div>
+      <div class="p1"><span>앨범 수량</span><span>5장</span></div>
+      <div class="ok">✓ 자동 검증 4항목 통과</div>
+      <div class="src">시스템 자동 추출값</div></div>`,
+  open:   () => `<div class="opn"><div class="o1"><span>카리나 3</span><span>윈터 2</span><span>닝닝 3</span><span>지젤 4</span></div>
+      <div class="o2">개봉 인증샷</div>
+      <div class="o3">내 자리(윈터) 배정 완료</div></div>`,
+};
+
+/* ══ 렌더 ══ */
+const cv = document.getElementById('cv'), svg = document.getElementById('svg');
+const LANES = [
+  {y:-40,  h:560,  x:-40, w:2320, t:'공통·인증 → 홈'},
+  {y:760,  h:1120, x:-40, w:6060, t:'참여자 흐름'},
+  {y:1960, h:1120, x:-40, w:6520, t:'총대 흐름'},
+  {y:3160, h:560,  x:-40, w:4180, t:'마이페이지'},
+];
+LANES.forEach(l=>{
+  const d = document.createElement('div');
+  d.className='lane'; d.style.cssText=`left:${l.x}px;top:${l.y}px;width:${l.w}px;height:${l.h}px`;
+  d.innerHTML=`<b>${l.t}</b>`; cv.appendChild(d);
+});
+
+SCREENS.forEach(s=>{
+  const g = G[s.g];
+  const d = document.createElement('div');
+  d.className = 'fr' + (s.v?' var':''); d.id='fr-'+s.id;
+  d.style.cssText = `left:${s.x}px;top:${s.y}px`;
+  d.innerHTML = `<div class="cap"><i style="background:${g.bg};color:${g.fg}">${s.id}</i>
+      <em>${s.name}</em><s>${s.p}</s>${s.v?'<s>상태</s>':''}</div>
+    <div class="body"><div class="wf">${s.c.map(e=>(R[e.t]||(()=>''))(e)).join('')}</div></div>`;
+  cv.appendChild(d);
+});
+
+/* 범례 */
+document.getElementById('lg').innerHTML = Object.values(G).map(g=>
+  `<span><i style="background:${g.bg};border:1px solid ${g.fg}33"></i>${g.name}</span>`).join('')
+  + `<span><i style="background:#fff;border:1px dashed #C9C4DC"></i>예외 상태</span>`;
+
+/* 사이드 인덱스 */
+const side = document.getElementById('side');
+let curG = null;
+SCREENS.forEach(s=>{
+  if(s.g !== curG){ curG=s.g;
+    const h=document.createElement('div'); h.className='gh'; h.textContent=G[s.g].name; side.appendChild(h); }
+  const a = document.createElement('a');
+  a.className = s.v?'v':''; a.innerHTML = `<b>${s.id}</b>${s.name}`;
+  a.onclick = () => center(s.id);
+  side.appendChild(a);
+});
+
+/* ══ 흐름선 ══ */
+const NS='http://www.w3.org/2000/svg';
+function mk(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+const defs = mk('defs');
+[['ah','#8B7FD4'],['ah2','#C0BBD6']].forEach(([id,c])=>{
+  const m = mk('marker',{id,markerWidth:8,markerHeight:8,refX:7,refY:3,orient:'auto'});
+  m.appendChild(mk('path',{d:'M0,0 L7,3 L0,6 Z',fill:c})); defs.appendChild(m);
+});
+svg.appendChild(defs);
+
+function drawFlows(){
+  [...svg.querySelectorAll('g')].forEach(g=>g.remove());
+  const g = mk('g'); svg.appendChild(g);
+  FLOWS.forEach(([a,b,label,dotted])=>{
+    const A = document.getElementById('fr-'+a), B = document.getElementById('fr-'+b);
+    if(!A||!B) return;
+    const ax=A.offsetLeft, ay=A.offsetTop, aw=A.offsetWidth, ah=A.offsetHeight;
+    const bx=B.offsetLeft, by=B.offsetTop, bw=B.offsetWidth, bh=B.offsetHeight;
+    let x1,y1,x2,y2,c1,c2;
+    if(bx > ax+aw-40){ x1=ax+aw; y1=ay+Math.min(ah/2,120); x2=bx; y2=by+Math.min(bh/2,120);
+      const d=Math.max(28,(x2-x1)*0.4); c1=`${x1+d},${y1}`; c2=`${x2-d},${y2}`; }
+    else if(bx+bw < ax+40){ x1=ax; y1=ay+Math.min(ah/2,120); x2=bx+bw; y2=by+Math.min(bh/2,120);
+      const d=Math.max(28,(x1-x2)*0.4); c1=`${x1-d},${y1}`; c2=`${x2+d},${y2}`; }
+    else { x1=ax+aw/2; y1=(by>ay)?ay+ah:ay; x2=bx+bw/2; y2=(by>ay)?by:by+bh;
+      const d=Math.max(30,Math.abs(y2-y1)*0.4); c1=`${x1},${y1+(by>ay?d:-d)}`; c2=`${x2},${y2-(by>ay?d:-d)}`; }
+    const col = dotted?'#C0BBD6':'#8B7FD4';
+    g.appendChild(mk('path',{d:`M${x1},${y1} C${c1} ${c2} ${x2},${y2}`,fill:'none',stroke:col,
+      'stroke-width':dotted?1.2:1.6,'stroke-dasharray':dotted?'5,4':'none','marker-end':`url(#${dotted?'ah2':'ah'})`,opacity:.9}));
+    if(label){
+      const mx=(x1+x2)/2, my=(y1+y2)/2 - 6;
+      const t = mk('text',{x:mx,y:my,'text-anchor':'middle','font-size':10,fill:dotted?'#9a97ab':'#6B5FB8','font-weight':600,'font-family':'Malgun Gothic,sans-serif'});
+      t.textContent = label;
+      const r = mk('rect',{x:mx-label.length*5.2-4,y:my-10,width:label.length*10.4+8,height:14,rx:3,fill:'#EFEDF5',opacity:.95});
+      g.appendChild(r); g.appendChild(t);
+    }
+  });
+}
+setTimeout(drawFlows, 60);
+
+let showFlow = true;
+function toggleFlow(){ showFlow=!showFlow; svg.style.display=showFlow?'block':'none';
+  document.getElementById('fb').textContent = '흐름선 '+(showFlow?'ON':'OFF'); }
+
+/* ══ 팬 & 줌 ══ */
+const vp = document.getElementById('vp');
+let sc=1, tx=40, ty=40, dragging=false, sx, sy;
+function apply(){ cv.style.transform = `translate(${tx}px,${ty}px) scale(${sc})`; }
+vp.addEventListener('mousedown', e=>{ if(e.button!==0) return; dragging=true; vp.classList.add('drag'); sx=e.clientX-tx; sy=e.clientY-ty; });
+addEventListener('mousemove', e=>{ if(!dragging) return; tx=e.clientX-sx; ty=e.clientY-sy; apply(); });
+addEventListener('mouseup', ()=>{ dragging=false; vp.classList.remove('drag'); });
+vp.addEventListener('wheel', e=>{ e.preventDefault();
+  const r=vp.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  const ns = Math.min(2.2, Math.max(0.06, sc * (e.deltaY<0?1.12:0.89)));
+  tx = mx - (mx-tx)*(ns/sc); ty = my - (my-ty)*(ns/sc); sc=ns; apply();
+}, {passive:false});
+function zoom(d){ const r=vp.getBoundingClientRect(), mx=r.width/2, my=r.height/2;
+  const ns=Math.min(2.2,Math.max(0.06, sc*(d>0?1.25:0.8)));
+  tx=mx-(mx-tx)*(ns/sc); ty=my-(my-ty)*(ns/sc); sc=ns; apply(); }
+function fit(){ const r=vp.getBoundingClientRect();
+  sc = Math.min(r.width/6700, r.height/3900) * 0.94; tx=30; ty=30; apply(); }
+function center(id){
+  const el=document.getElementById('fr-'+id); if(!el) return;
+  document.querySelectorAll('.fr.hi').forEach(x=>x.classList.remove('hi'));
+  el.classList.add('hi');
+  const r=vp.getBoundingClientRect(); sc=0.95;
+  tx = r.width/2 - (el.offsetLeft+190)*sc; ty = 90 - el.offsetTop*sc; apply();
+}
+apply(); setTimeout(fit, 100);
+</script>
+</body>
+</html>

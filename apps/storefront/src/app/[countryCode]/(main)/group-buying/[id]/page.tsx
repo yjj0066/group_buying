@@ -74,6 +74,7 @@ export default async function GroupDealDetailPage(props: {
     <GroupDealDetailTemplate
       groupDeal={enrichedDeal}
       heroImageUrl={heroImageUrl}
+      countryCode={params.countryCode}
     />
   )
 }

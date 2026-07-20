@@ -1,18 +1,26 @@
 "use client"
 
 import { useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 
 import { updateGroupBuyingPreferences } from "@lib/data/account-group-deals"
+import { setGroupBuyingModeCookie } from "@lib/data/group-buying-mode"
 import { useDictionary } from "@i18n/provider"
 import { Button, Input, Label, Text } from "@modules/common/components/ui"
 import type { GroupBuyingPreferences } from "types/account-group-deals"
 
 type PreferencesFormProps = {
   initialPreferences: GroupBuyingPreferences
+  isOnboarding?: boolean
 }
 
-const PreferencesForm = ({ initialPreferences }: PreferencesFormProps) => {
+const PreferencesForm = ({
+  initialPreferences,
+  isOnboarding = false,
+}: PreferencesFormProps) => {
   const t = useDictionary()
+  const router = useRouter()
+  const { countryCode } = useParams() as { countryCode: string }
   const [preferences, setPreferences] = useState(initialPreferences)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -26,7 +34,12 @@ const PreferencesForm = ({ initialPreferences }: PreferencesFormProps) => {
     try {
       const updated = await updateGroupBuyingPreferences(preferences)
       setPreferences(updated)
+      await setGroupBuyingModeCookie(updated.preferred_role)
       setSuccess(true)
+
+      if (isOnboarding) {
+        router.push(`/${countryCode}/account/bank-account?onboarding=1`)
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t.account.preferences.saveError
@@ -111,6 +124,41 @@ const PreferencesForm = ({ initialPreferences }: PreferencesFormProps) => {
               }))
             }
           />
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-ui-border-base p-5">
+        <Text className="font-medium">{t.account.preferences.roleTitle}</Text>
+        <Text className="mt-1 text-sm text-ui-fg-subtle">
+          {t.account.preferences.roleDescription}
+        </Text>
+
+        <div className="mt-4 inline-flex rounded-lg border border-ui-border-base p-1">
+          {(["participant", "leader"] as const).map((option) => {
+            const active = preferences.preferred_role === option
+
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() =>
+                  setPreferences((current) => ({
+                    ...current,
+                    preferred_role: option,
+                  }))
+                }
+                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-brand-pink text-white"
+                    : "text-ui-fg-subtle hover:text-ui-fg-base"
+                }`}
+              >
+                {option === "participant"
+                  ? t.account.preferences.roleParticipant
+                  : t.account.preferences.roleLeader}
+              </button>
+            )
+          })}
         </div>
       </section>
 

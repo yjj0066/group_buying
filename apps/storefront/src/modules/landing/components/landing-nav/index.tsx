@@ -55,29 +55,29 @@ const LandingNav = ({ isLoggedIn = false }: LandingNavProps) => {
           >
             {t.landing.nav.groupBuys}
           </LocalizedClientLink>
-          <a
-            href="#categories"
+          <LocalizedClientLink
+            href="/#categories"
             className="text-sm font-medium text-neutral-600 transition-colors hover:text-brand-pink"
           >
             {t.landing.nav.categories}
-          </a>
-          <a
-            href="#why-us"
+          </LocalizedClientLink>
+          <LocalizedClientLink
+            href="/#why-us"
             className="text-sm font-medium text-neutral-600 transition-colors hover:text-brand-pink"
           >
             {t.landing.nav.whyUs}
-          </a>
+          </LocalizedClientLink>
         </nav>
 
         <div className="flex items-center gap-3">
           <LocalizedClientLink
-            href="/account"
+            href={isLoggedIn ? "/my" : "/account"}
             className="hidden text-sm font-medium text-neutral-600 small:inline"
           >
             {accountLabel}
           </LocalizedClientLink>
           <LocalizedClientLink
-            href="/group-buying"
+            href="/account/group-deals/create"
             className="landing-cta-btn rounded-full px-5 py-2.5 text-sm font-semibold text-white"
           >
             {t.landing.nav.startGroupBuy}

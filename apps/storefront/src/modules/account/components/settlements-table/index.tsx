@@ -1,6 +1,6 @@
 import { Badge, Table, Text } from "@modules/common/components/ui"
 import { convertToLocale } from "@lib/util/money"
-import type { SettlementRecord } from "types/account-group-deals"
+import type { SettlementRecord, SettlementType } from "types/account-group-deals"
 
 type SettlementsTableProps = {
   settlements: SettlementRecord[]
@@ -9,6 +9,11 @@ type SettlementsTableProps = {
     typeDepositRefund: string
     typeEscrowRelease: string
     typeParticipantRefund: string
+    typeSettlement: string
+    typeRefund: string
+    typeUnallocatedRefund: string
+    typeDepositReturn: string
+    typeDepositForfeiture: string
     statusCompleted: string
     statusPending: string
     statusFailed: string
@@ -31,14 +36,18 @@ const SettlementsTable = ({ settlements, labels }: SettlementsTableProps) => {
     )
   }
 
-  const typeLabel = (type: SettlementRecord["type"]) => {
+  const typeLabel = (type: SettlementType) => {
     switch (type) {
       case "deposit_refund":
-        return labels.typeDepositRefund
+        return labels.typeDepositReturn || labels.typeDepositRefund
       case "escrow_release":
-        return labels.typeEscrowRelease
+        return labels.typeSettlement || labels.typeEscrowRelease
+      case "unallocated_refund":
+        return labels.typeUnallocatedRefund
+      case "deposit_forfeiture":
+        return labels.typeDepositForfeiture
       default:
-        return labels.typeParticipantRefund
+        return labels.typeRefund || labels.typeParticipantRefund
     }
   }
 

@@ -22,14 +22,9 @@ export const GET = async (
     GROUP_BUYING_MODULE
   )
 
-  const participants = await groupBuyingService.listGroupDealParticipants(
-    {
-      customer_id: customerId,
-    },
-    {
-      order: { created_at: "DESC" },
-    }
-  )
+  const participants = await groupBuyingService.listGroupDealParticipants({
+    customer_id: customerId,
+  })
 
   const participations = await Promise.all(
     participants.map(async (participant) => {
@@ -44,7 +39,5 @@ export const GET = async (
     })
   )
 
-  res.json({
-    participations,
-  })
+  res.json({ participations })
 }

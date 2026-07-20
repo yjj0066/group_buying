@@ -1,6 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { GROUP_BUYING_MODULE } from "../../../../../modules/group-buying"
+import GroupBuyingModuleService from "../../../../../modules/group-buying/service"
 import { prepareGroupDealCheckoutWorkflow } from "../../../../../workflows/group-deals"
+import { generateVirtualAccount } from "../../../../../utils/virtual-account"
 import {
   resolveGroupDealPaymentProviderId,
   resolveGroupDealPaymentProviderKind,
@@ -68,21 +71,69 @@ export const POST = async (
     },
   })
 
+  const groupBuyingService: GroupBuyingModuleService = req.scope.resolve(
+    GROUP_BUYING_MODULE
+  )
+  const participantRecord = result.participant as unknown as Record<
+    string,
+    unknown
+  >
+  const dealRecord = result.group_deal as unknown as Record<string, unknown>
+  const participantId = String(participantRecord.id)
+  const dealMetadata =
+    (dealRecord.metadata as Record<string, unknown> | null) ?? {}
+  const existingAccounts =
+    (dealMetadata.participant_virtual_accounts as Record<string, unknown>) ??
+    {}
+
+  const virtualAccount = generateVirtualAccount({
+    reference_id: participantId,
+    amount: Number(result.first_payment_amount ?? 0),
+    currency_code: String(dealRecord.currency_code ?? "krw"),
+    hold_minutes: 5,
+  })
+
+  await groupBuyingService.updateGroupDeals({
+    id: req.params.id,
+    metadata: {
+      ...dealMetadata,
+      payment_model: "virtual_account",
+      participant_virtual_accounts: {
+        ...existingAccounts,
+        [participantId]: virtualAccount,
+      },
+    },
+  })
+
+  const paymentDeadline = new Date(virtualAccount.expires_at)
+
+  await groupBuyingService.updateGroupDealParticipants({
+    id: participantId,
+    payment_deadline: paymentDeadline,
+  })
+
+  const updatedParticipant =
+    await groupBuyingService.retrieveGroupDealParticipant(participantId)
+  const updatedDeal = await groupBuyingService.retrieveGroupDeal(req.params.id)
+
   res.status(201).json({
     cart_id: result.cart_id,
     participant: serializeStoreGroupDealParticipant(
-      result.participant as unknown as Record<string, unknown>
+      updatedParticipant as unknown as Record<string, unknown>,
+      (updatedDeal.metadata as Record<string, unknown> | null) ?? null
     ),
     group_deal: serializeStoreGroupDeal(
-      result.group_deal as unknown as Record<string, unknown>
+      updatedDeal as unknown as Record<string, unknown>
     ),
     first_payment_amount: result.first_payment_amount,
-    checkout_path: "/checkout",
+    virtual_account: virtualAccount,
+    checkout_path: `/group-buying/${req.params.id}/deposit?participant=${participantId}`,
     payment_hints: {
+      payment_model: "virtual_account",
       provider_id: paymentProviderId,
       provider_kind: paymentProviderKind,
-      billing_mode: result.billing_mode,
-      auto_billing_context: true,
+      billing_mode: "virtual_account",
+      auto_billing_context: false,
     },
   })
 }

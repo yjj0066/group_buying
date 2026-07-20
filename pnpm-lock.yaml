@@ -54,6 +54,9 @@ importers:
       '@medusajs/icons':
         specifier: 2.17.2
         version: 2.17.2(react@18.3.1)
+      '@medusajs/js-sdk':
+        specifier: 2.17.2
+        version: 2.17.2
       '@medusajs/medusa':
         specifier: 2.17.2
         version: 2.17.2(@medusajs/admin-sdk@2.17.2)(@medusajs/cli@2.17.2(@types/node@20.19.26))(@medusajs/dashboard@2.17.2(@types/react-dom@19.0.5(@types/react@19.0.5))(@types/react@19.0.5)(typescript@5.9.3))(@medusajs/framework@2.17.2(@medusajs/cli@2.17.2(@types/node@20.19.26))(@types/node@20.19.26)(ioredis@5.8.2)(vite@5.4.21(@types/node@20.19.26)(terser@5.44.1))(zod@4.2.0))(@medusajs/icons@2.17.2(react@18.3.1))(@medusajs/test-utils@2.17.2)(@medusajs/ui@4.1.19(@types/react-dom@19.0.5(@types/react@19.0.5))(@types/react@19.0.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3))(@swc/core@1.15.3(@swc/helpers@0.5.17))(@types/node@20.19.26)(@types/react-dom@19.0.5(@types/react@19.0.5))(@types/react@19.0.5)(awilix@8.0.1)(posthog-node@5.17.2)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(terser@5.44.1)(typescript@5.9.3)(yalc@1.0.0-pre.53)
@@ -69,6 +72,9 @@ importers:
       react-router-dom:
         specifier: 6.30.4
         version: 6.30.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      stripe:
+        specifier: ^15.5.0
+        version: 15.12.0
       zod:
         specifier: 4.2.0
         version: 4.2.0
@@ -142,6 +148,9 @@ importers:
       '@stripe/stripe-js':
         specifier: ^8.2.0
         version: 8.5.3
+      '@tosspayments/payment-widget-sdk':
+        specifier: ^0.12.1
+        version: 0.12.2(typescript@5.9.3)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -4168,6 +4177,34 @@ packages:
 
   '@tanstack/virtual-core@3.13.13':
     resolution: {integrity: sha512-uQFoSdKKf5S8k51W5t7b2qpfkyIbdHMzAn+AMQvHPxKUPeo1SsGaA4JRISQT87jm28b7z8OEqPcg1IOZagQHcA==}
+
+  '@tosspayments/brandpay-types@0.2.6':
+    resolution: {integrity: sha512-FY8aOm/2rqtXjYux9ZdNTL6GC5+VNIw8eOQ7TP01dS2uGWSzAtR6uuw9HVsgkmJtSyJgmo97tjmbio5oyeyFlg==}
+    peerDependencies:
+      typescript: ^4.1.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@tosspayments/payment-widget-sdk@0.12.2':
+    resolution: {integrity: sha512-11On0JQ9FNWbx/J0+jxXc1khg+aTePvn16RUtC2gNuONkfH/cDA0X7pD8XeWnq2cBoA5wzMDFuKy28SMFIpyJA==}
+
+  '@tosspayments/payment-widget-types@0.0.5':
+    resolution: {integrity: sha512-Daaui9u7aRPzJhw4omJIUAbYBSmNAFNjWWkuUnX9uHxzE3gtjcJHIpGrjlzmCFm+j3ZH4rgyrgv4pkazVYH3OQ==}
+    peerDependencies:
+      typescript: ^4.7.4
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@tosspayments/payment-widget__types@1.1.0':
+    resolution: {integrity: sha512-1yVQIDNwgjzpm/n8ppsAk3Q0IKha+vOTuRIP6INzL9AkzCsrVjhHr5/eT0fe+tjyekSRL902Uq0TuRyG2sjsWw==}
+
+  '@tosspayments/payment__types@1.69.1':
+    resolution: {integrity: sha512-QX9WSPiIke9VPch1zA80VFBSu7yKNuv/UnKy1V9B+YkC6sPN+sBcq/sl2fhj5tadTvkuYXDv139iR5TFwU2ayw==}
+
+  '@tosspayments/sdk-constants@1.2.2':
+    resolution: {integrity: sha512-6WxRHaiycSfz8gY9R/+StdkX5bprHyJ/rf2ak+b8YgBorxUwns8Ev+oyViNBmsPoE77RusaVFNv1kuiJpSNoDA==}
 
   '@tsconfig/node10@1.0.12':
     resolution: {integrity: sha512-UCYBaeFvM11aU2y3YPZ//O5Rhj+xKyzy7mvcIoAjASbigy8mHMryP5cK7dgjlz2hWxh1g5pLw084E0a/wlUSFQ==}
@@ -14353,6 +14390,34 @@ snapshots:
   '@tanstack/table-core@8.20.5': {}
 
   '@tanstack/virtual-core@3.13.13': {}
+
+  '@tosspayments/brandpay-types@0.2.6(typescript@5.9.3)':
+    optionalDependencies:
+      typescript: 5.9.3
+
+  '@tosspayments/payment-widget-sdk@0.12.2(typescript@5.9.3)':
+    dependencies:
+      '@tosspayments/payment-widget__types': 1.1.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - typescript
+
+  '@tosspayments/payment-widget-types@0.0.5(typescript@5.9.3)':
+    optionalDependencies:
+      typescript: 5.9.3
+
+  '@tosspayments/payment-widget__types@1.1.0(typescript@5.9.3)':
+    dependencies:
+      '@tosspayments/brandpay-types': 0.2.6(typescript@5.9.3)
+      '@tosspayments/payment-widget-types': 0.0.5(typescript@5.9.3)
+      '@tosspayments/payment__types': 1.69.1
+    transitivePeerDependencies:
+      - typescript
+
+  '@tosspayments/payment__types@1.69.1':
+    dependencies:
+      '@tosspayments/sdk-constants': 1.2.2
+
+  '@tosspayments/sdk-constants@1.2.2': {}
 
   '@tsconfig/node10@1.0.12': {}
 

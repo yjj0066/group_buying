@@ -21,10 +21,15 @@
     "seed:regions": "medusa exec ./src/scripts/seed-currency-regions.ts",
     "seed:korea-toss": "medusa exec ./src/scripts/seed-korea-toss-payment.ts",
     "seed:stripe": "medusa exec ./src/scripts/seed-stripe-payment.ts",
+    "seed:publishable-key": "medusa exec ./src/scripts/seed-publishable-key.ts",
+    "seed:group-buy-demo-product": "medusa exec ./src/scripts/seed-group-buy-demo-product.ts",
     "lint": "medusa lint",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
     "test:integration:modules": "TEST_TYPE=integration:modules NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
-    "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
+    "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit",
+    "test:unit:win": "node ./scripts/run-jest-unit.mjs --silent",
+    "test:smoke": "medusa exec ./src/scripts/group-buying-smoke-test.ts",
+    "test:smoke:unit": "node ./scripts/run-jest-unit.mjs src/utils/__tests__/group-buying-smoke.spec.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.17.2",
@@ -35,6 +40,7 @@
     "@medusajs/draft-order": "2.17.2",
     "@medusajs/framework": "2.17.2",
     "@medusajs/icons": "2.17.2",
+    "@medusajs/js-sdk": "2.17.2",
     "@medusajs/medusa": "2.17.2",
     "@medusajs/ui": "4.1.19",
     "@tanstack/react-query": "5.64.2",

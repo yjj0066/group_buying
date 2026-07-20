@@ -1,17 +1,27 @@
 "use client"
 
+import { FormEvent } from "react"
+import { useParams, useRouter } from "next/navigation"
+
 import {
   DEFAULT_GROUP_DEAL_FILTERS,
   extractGroupDealFacets,
   filterGroupDeals,
   hasActiveFilters,
-  SEARCH_MIN_LENGTH,
   type GroupDealFilterFacets,
   type GroupDealFilterState,
 } from "@lib/util/group-deal-filters"
+import { GOODS_TYPE_OPTIONS, IDOL_GROUP_SUGGESTIONS } from "@lib/constants/group-buying-catalog"
+import { buildStoreSearchPath } from "@lib/util/product-search-navigation"
 import { useDictionary } from "@i18n/provider"
-import { Button, Input, Label, Text } from "@modules/common/components/ui"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import {
+  BbButton,
+  BbCard,
+  BbHighlightBanner,
+  BbSearchInput,
+} from "@modules/design-system"
+import { Label, Text } from "@modules/common/components/ui"
+import PriceRangeFilter from "@modules/group-buying/components/price-range-filter"
 import type { GroupDeal } from "types/group-deal"
 
 type GroupDealFiltersProps = {
@@ -19,152 +29,171 @@ type GroupDealFiltersProps = {
   filters: GroupDealFilterState
   facets: GroupDealFilterFacets
   onChange: (next: GroupDealFilterState) => void
+  onApply?: () => void
+  onReset?: () => void
 }
 
 const GroupDealFilters = ({
   filters,
   facets,
   onChange,
+  onApply,
+  onReset,
 }: GroupDealFiltersProps) => {
   const t = useDictionary()
+  const router = useRouter()
+  const { countryCode } = useParams() as { countryCode: string }
 
   const update = (patch: Partial<GroupDealFilterState>) => {
     onChange({ ...filters, ...patch })
   }
 
-  const queryTooShort =
-    filters.query.trim().length > 0 &&
-    filters.query.trim().length < SEARCH_MIN_LENGTH
+  const navigateToStoreSearch = () => {
+    router.push(buildStoreSearchPath(countryCode, filters.query))
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (onApply) {
+      onApply()
+      return
+    }
+
+    navigateToStoreSearch()
+  }
 
   return (
-    <aside className="flex flex-col gap-y-5 rounded-xl border border-ui-border-base bg-ui-bg-base p-5">
-      <div>
-        <Text className="text-sm font-semibold text-ui-fg-base">
-          {t.groupBuying.filtersTitle}
-        </Text>
-        <Input
+    <BbCard padding="md" className="h-fit">
+      <Text className="text-sm font-black text-[var(--bb-ink)]">
+        {t.groupBuying.filtersTitle}
+      </Text>
+
+      <form className="mt-3 flex gap-2" onSubmit={handleSubmit}>
+        <BbSearchInput
           value={filters.query}
           onChange={(event) => update({ query: event.target.value })}
+          onSearch={onApply ?? navigateToStoreSearch}
           placeholder={t.groupBuying.searchPlaceholder}
-          className="mt-2"
-          aria-describedby={queryTooShort ? "search-min-hint" : undefined}
+          className="min-w-0 flex-1"
         />
-        {queryTooShort && (
-          <Text
-            id="search-min-hint"
-            className="mt-1 text-xs text-amber-600"
-          >
-            {t.groupBuying.searchMinLengthHint}
-          </Text>
-        )}
-      </div>
+        <BbButton type="submit" variant="primary" className="shrink-0 px-4">
+          {t.groupBuying.searchApply}
+        </BbButton>
+      </form>
 
-      <FilterSelect
-        label={t.groupBuying.filterIdolGroup}
-        value={filters.idolGroup}
-        options={facets.idolGroups}
-        onChange={(value) => update({ idolGroup: value })}
-        allLabel={t.groupBuying.filterAll}
-      />
-
-      <FilterSelect
-        label={t.groupBuying.filterMember}
-        value={filters.member}
-        options={facets.members}
-        onChange={(value) => update({ member: value })}
-        allLabel={t.groupBuying.filterAll}
-      />
-
-      <FilterSelect
-        label={t.groupBuying.filterGoodsType}
-        value={filters.goodsType}
-        options={facets.goodsTypes}
-        onChange={(value) => update({ goodsType: value })}
-        allLabel={t.groupBuying.filterAll}
-      />
-
-      <FilterSelect
-        label={t.groupBuying.filterSort}
-        value={filters.sortBy}
-        options={["deadline", "newest"]}
-        optionLabels={{
-          deadline: t.groupBuying.sortDeadline,
-          newest: t.groupBuying.sortNewest,
-        }}
-        onChange={(value) =>
-          update({ sortBy: value as GroupDealFilterState["sortBy"] })
-        }
-        allLabel={t.groupBuying.sortDeadline}
-        hideAllOption
-      />
-
-      <div className="flex flex-col gap-y-2">
-        <Label>{t.groupBuying.filterPriceRange}</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            type="number"
-            min={0}
-            placeholder={String(facets.minPrice)}
-            value={filters.minPrice ?? ""}
-            onChange={(event) =>
-              update({
-                minPrice: event.target.value
-                  ? Number(event.target.value)
-                  : null,
-              })
-            }
+      <div className="mt-5 flex flex-col gap-y-5">
+        <div className="flex flex-col gap-y-2">
+          <Label>{t.groupBuying.filterIdolGroup}</Label>
+          <input
+            type="search"
+            list="group-deal-idol-group-suggestions"
+            value={filters.idolGroup}
+            onChange={(event) => update({ idolGroup: event.target.value })}
+            placeholder={t.groupBuying.filterIdolGroupSearchPlaceholder}
+            className="bb-input h-10 w-full"
           />
-          <Input
-            type="number"
-            min={0}
-            placeholder={String(facets.maxPrice)}
-            value={filters.maxPrice ?? ""}
-            onChange={(event) =>
-              update({
-                maxPrice: event.target.value
-                  ? Number(event.target.value)
-                  : null,
-              })
-            }
+          <datalist id="group-deal-idol-group-suggestions">
+            {Array.from(
+              new Set([...IDOL_GROUP_SUGGESTIONS, ...facets.idolGroups])
+            ).map((group) => (
+              <option key={group} value={group} />
+            ))}
+          </datalist>
+        </div>
+
+        <FilterSelect
+          label={t.groupBuying.filterMember}
+          value={filters.member}
+          options={facets.members}
+          onChange={(value) => update({ member: value })}
+          allLabel={t.groupBuying.filterAll}
+        />
+
+        <FilterSelect
+          label={t.groupBuying.filterGoodsType}
+          value={filters.goodsType}
+          options={[...GOODS_TYPE_OPTIONS]}
+          onChange={(value) => update({ goodsType: value })}
+          allLabel={t.groupBuying.filterAll}
+        />
+
+        <FilterSelect
+          label={t.groupBuying.filterSort}
+          value={filters.sortBy}
+          options={["deadline", "newest"]}
+          optionLabels={{
+            deadline: t.groupBuying.sortDeadline,
+            newest: t.groupBuying.sortNewest,
+          }}
+          onChange={(value) =>
+            update({ sortBy: value as GroupDealFilterState["sortBy"] })
+          }
+          allLabel={t.groupBuying.sortDeadline}
+          hideAllOption
+        />
+
+        <div className="flex flex-col gap-y-2">
+          <Label>{t.groupBuying.filterPriceRange}</Label>
+          <PriceRangeFilter
+            minBound={facets.minPrice}
+            maxBound={Math.max(facets.maxPrice, facets.minPrice + 1000)}
+            minValue={filters.minPrice}
+            maxValue={filters.maxPrice}
+            onChange={(next) => update(next)}
           />
         </div>
-      </div>
 
-      <div className="flex flex-col gap-y-2 border-t border-ui-border-base pt-4">
-        <Label>{t.groupBuying.favoriteMember}</Label>
-        <select
-          className="h-10 rounded-md border border-ui-border-base bg-ui-bg-base px-3 text-sm"
-          value={filters.favoriteMember}
-          onChange={(event) => update({ favoriteMember: event.target.value })}
-        >
-          <option value="">{t.groupBuying.favoriteMemberPlaceholder}</option>
-          {facets.members.map((member) => (
-            <option key={member} value={member}>
-              {member}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-y-3 border-t border-[var(--bb-line)] pt-4">
+          {filters.vacantOnly && filters.favoriteMember && (
+            <BbHighlightBanner>
+              ★ {t.groupBuying.vacantOnlyToggle} · {filters.favoriteMember}
+            </BbHighlightBanner>
+          )}
 
-        <label className="mt-2 flex items-center gap-2 text-sm text-ui-fg-base">
-          <input
-            type="checkbox"
-            checked={filters.vacantOnly}
-            onChange={(event) => update({ vacantOnly: event.target.checked })}
-            className="h-4 w-4 rounded border-ui-border-base"
+          <FilterSelect
+            label={t.groupBuying.favoriteMember}
+            value={filters.favoriteMember}
+            options={facets.members}
+            onChange={(value) => update({ favoriteMember: value })}
+            allLabel={t.groupBuying.favoriteMemberPlaceholder}
           />
-          {t.groupBuying.vacantOnlyToggle}
-        </label>
-      </div>
 
-      {hasActiveFilters(filters) && (
-        <Button
-          variant="secondary"
-          onClick={() => onChange({ ...DEFAULT_GROUP_DEAL_FILTERS })}
-        >
-          {t.groupBuying.resetFilters}
-        </Button>
-      )}
-    </aside>
+          <label className="flex items-center gap-2 text-sm font-medium text-[var(--bb-ink)]">
+            <input
+              type="checkbox"
+              checked={filters.vacantOnly}
+              onChange={(event) => update({ vacantOnly: event.target.checked })}
+              className="h-4 w-4 rounded border-[var(--bb-line)] text-brand-purple focus:ring-brand-purple/30"
+            />
+            {t.groupBuying.vacantOnlyToggle}
+          </label>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-[var(--bb-ink)]">
+            <input
+              type="checkbox"
+              checked={filters.urgentOnly}
+              onChange={(event) => update({ urgentOnly: event.target.checked })}
+              className="h-4 w-4 rounded border-[var(--bb-line)] text-brand-purple focus:ring-brand-purple/30"
+            />
+            {t.groupBuying.urgentOnlyToggle}
+          </label>
+        </div>
+
+        {hasActiveFilters(filters) && (
+          <BbButton
+            type="button"
+            variant="secondary"
+            fullWidth
+            onClick={() =>
+              onReset ? onReset() : onChange({ ...DEFAULT_GROUP_DEAL_FILTERS })
+            }
+          >
+            {t.groupBuying.resetFilters}
+          </BbButton>
+        )}
+      </div>
+    </BbCard>
   )
 }
 
@@ -188,7 +217,7 @@ const FilterSelect = ({
   <div className="flex flex-col gap-y-2">
     <Label>{label}</Label>
     <select
-      className="h-10 rounded-md border border-ui-border-base bg-ui-bg-base px-3 text-sm"
+      className="bb-input h-10 cursor-pointer appearance-none"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >

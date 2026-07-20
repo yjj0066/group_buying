@@ -130,6 +130,10 @@ export default async function ProductPage(props: Props) {
   const heroImageUrl = resolveProductHeroImage(groupDeal, pricedProduct)
 
   return (
-    <GroupDealDetailTemplate groupDeal={groupDeal} heroImageUrl={heroImageUrl} />
+    <GroupDealDetailTemplate
+      groupDeal={groupDeal}
+      heroImageUrl={heroImageUrl}
+      countryCode={params.countryCode}
+    />
   )
 }

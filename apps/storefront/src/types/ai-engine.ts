@@ -1,15 +1,9 @@
-export type AiSearchResultItem = {
-  medusa_product_id: string
-  title?: string
-  score?: number
-  handle?: string
-}
-
-export type AiSearchResponse = {
-  query: string
-  model?: string
-  results: AiSearchResultItem[]
-}
+export type {
+  FlaskSearchResultItem as AiSearchResultItem,
+  FlaskSearchResponse as AiSearchResponse,
+  FlaskSearchSynonymExpansionRaw as AiSearchSynonymExpansion,
+  FlaskSynonymExpansion,
+} from "types/flask-search"
 
 export type AiRecommendationItem = {
   medusa_product_id: string
@@ -17,6 +11,8 @@ export type AiRecommendationItem = {
   score?: number
   reason?: string
 }
+
+export type AiRecommendationContext = "landing" | "similar"
 
 export type AiRecommendationsResponse = {
   policy?: string
@@ -30,6 +26,10 @@ export type AiEngineHealth = {
 
 export type HybridSearchResult = {
   productIds: string[]
-  source: "ai" | "medusa"
+  items: import("types/flask-search").FlaskSearchResultItem[]
+  source: "ai" | "flask"
   model?: string
+  query: string
+  synonymExpansion?: import("types/flask-search").FlaskSynonymExpansion
+  semanticEngine?: string
 }

@@ -1,58 +1,70 @@
+import { FetchError } from "@medusajs/js-sdk"
+
+import { sdk } from "./sdk"
+
 type FetchOptions = {
   method?: string
   body?: unknown
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof FetchError) {
+    if (error.message?.trim()) {
+      return error.message
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
+  return fallback
 }
 
 export const adminFetch = async <T>(
   path: string,
   options: FetchOptions = {}
 ): Promise<T> => {
-  const response = await fetch(path, {
-    method: options.method ?? "GET",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  })
+  try {
+    return await sdk.client.fetch<T>(path, {
+      method: options.method ?? "GET",
+      body: options.body,
+    })
+  } catch (error) {
+    const fallback =
+      error instanceof FetchError && error.status === 401
+        ? "Unauthorized — Admin에 다시 로그인해 주세요."
+        : `Request failed${
+            error instanceof FetchError && error.status
+              ? ` (${error.status})`
+              : ""
+          }`
 
-  if (!response.ok) {
-    let message = `Request failed (${response.status})`
-
-    try {
-      const payload = await response.json()
-      message = payload.message ?? payload.error ?? message
-    } catch {
-      // ignore parse errors
-    }
-
-    throw new Error(message)
+    throw new Error(getErrorMessage(error, fallback))
   }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return response.json() as Promise<T>
 }
 
 export const adminDownload = async (path: string, filename: string) => {
-  const response = await fetch(path, {
-    method: "GET",
-    credentials: "include",
-  })
+  try {
+    const response = await sdk.client.fetch<Response>(path, {
+      method: "GET",
+      headers: { accept: "text/csv" },
+    })
 
-  if (!response.ok) {
-    throw new Error(`Download failed (${response.status})`)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = filename
+    anchor.click()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    const fallback = `Download failed${
+      error instanceof FetchError && error.status ? ` (${error.status})` : ""
+    }`
+
+    throw new Error(getErrorMessage(error, fallback))
   }
-
-  const blob = await response.blob()
-  const url = window.URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  window.URL.revokeObjectURL(url)
 }
 
 const readFileAsDataUrl = (file: File): Promise<string> => {

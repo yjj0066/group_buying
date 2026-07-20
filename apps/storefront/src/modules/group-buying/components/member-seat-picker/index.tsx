@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { useDictionary } from "@i18n/provider"
+import { BbMemberSeatCard, BbSectionHeader, BbTimerBanner } from "@modules/design-system"
 import { Text } from "@modules/common/components/ui"
 import { convertToLocale } from "@lib/util/money"
 import type { GroupDeal, GroupDealOption } from "types/group-deal"
 import { getOptionRemainingQuantity } from "types/group-deal"
+import type { BbMemberSeatStatus } from "@modules/design-system"
 
 const HOLD_SECONDS = 5 * 60
 
@@ -99,61 +101,69 @@ const MemberSeatPicker = ({
   const holdTime =
     holdSecondsLeft != null ? formatHold(holdSecondsLeft) : null
 
-  return (
-    <section className="flex flex-col gap-y-3">
-      <Text className="text-sm font-semibold text-ui-fg-base">
-        {t.groupBuying.memberSeatsTitle}
-      </Text>
+  const resolveStatus = (option: GroupDealOption): BbMemberSeatStatus => {
+    const remaining = getOptionRemainingQuantity(option)
+    const isVacant = remaining == null || remaining > 0
 
-      <div className="grid grid-cols-2 gap-2 small:grid-cols-3">
+    if (selectedSeat?.optionId === option.id) {
+      return "selected"
+    }
+
+    if (!isVacant) {
+      return "full"
+    }
+
+    return "vacant"
+  }
+
+  return (
+    <section className="flex flex-col gap-y-4">
+      <BbSectionHeader title={t.groupBuying.memberSeatsTitle} />
+
+      <div className="flex flex-col gap-2">
         {memberOptions.map((option) => {
           const remaining = getOptionRemainingQuantity(option)
-          const isVacant = remaining == null || remaining > 0
-          const isSelected = selectedSeat?.optionId === option.id
+          const status = resolveStatus(option)
           const price = option.deal_price ?? deal.deal_price
 
+          const statusLabel =
+            status === "full"
+              ? t.groupBuying.seatClosed
+              : status === "selected"
+                ? t.groupBuying.seatVacant
+                : t.groupBuying.seatVacant
+
           return (
-            <button
+            <BbMemberSeatCard
               key={option.id}
-              type="button"
-              disabled={!isVacant}
+              member={option.label}
+              priceLabel={convertToLocale({
+                amount: price,
+                currency_code: deal.currency_code,
+              })}
+              status={status}
+              statusLabel={statusLabel}
+              remaining={remaining}
               onClick={() => selectSeat(option)}
-              className={`rounded-xl border p-3 text-left transition-colors ${
-                isSelected
-                  ? "border-brand-pink bg-brand-pink/5 ring-2 ring-brand-pink/30"
-                  : isVacant
-                    ? "border-ui-border-base hover:border-brand-pink/40"
-                    : "cursor-not-allowed border-ui-border-base bg-ui-bg-subtle opacity-60"
-              }`}
-            >
-              <Text className="text-sm font-semibold">{option.label}</Text>
-              <Text className="mt-1 text-xs text-ui-fg-subtle">
-                {convertToLocale({
-                  amount: price,
-                  currency_code: deal.currency_code,
-                })}
-              </Text>
-              <Text
-                className={`mt-2 text-[10px] font-medium ${
-                  isVacant ? "text-sky-700" : "text-ui-fg-muted"
-                }`}
-              >
-                {isVacant
-                  ? remaining == null
-                    ? t.groupBuying.seatVacant
-                    : `${t.groupBuying.seatVacant} (${remaining})`
-                  : t.groupBuying.seatClosed}
-              </Text>
-            </button>
+            />
           )
         })}
       </div>
 
       {holdTime && selectedSeat && (
-        <Text className="text-sm font-semibold text-brand-pink">
+        <BbTimerBanner>
           {t.groupBuying.seatHoldActive
             .replace("{minutes}", holdTime.minutes)
             .replace("{seconds}", holdTime.seconds)}
+        </BbTimerBanner>
+      )}
+
+      {selectedSeat && (
+        <Text className="text-sm text-[var(--bb-mute)]">
+          {t.groupBuying.selectedSeatSummary.replace(
+            "{member}",
+            selectedSeat.label
+          )}
         </Text>
       )}
     </section>

@@ -1,11 +1,24 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 
+import { confirmParticipantDelivery } from "@lib/data/account-group-deals"
+import { gbAppRoutes } from "@lib/wireframe/routes"
+import {
+  canShowPurchaseConfirm,
+  resolveParticipationCardStatusLabel,
+} from "@lib/util/participation-status"
+import PurchaseConfirmButton from "@modules/group-buying/components/purchase-confirm-button"
+import {
+  BbAlert,
+  BbBadge,
+  BbButton,
+  BbCard,
+  BbTabs,
+} from "@modules/design-system"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import ConfirmDeliveryButton from "@modules/account/components/confirm-delivery-button"
-import ParticipationTimeline from "@modules/account/components/participation-timeline"
-import { Button, Text } from "@modules/common/components/ui"
+import { Text } from "@modules/common/components/ui"
 import type { AccountParticipation } from "types/account-group-deals"
 import { resolveParticipationTab } from "types/account-group-deals"
 
@@ -19,181 +32,267 @@ type ParticipationsListLabels = {
   emptyCompleted: string
   emptyCancelled: string
   autoDeliveryConfirmHint: string
+  deliveryConfirmNeededAlert: string
   quantity: string
   viewDeal: string
   viewDetail: string
+  memberLabel: string
+  memberFallback: string
+  statusCancelled: string
+  statusRefunded: string
   tracking: string
   confirmDelivery: string
   confirmingDelivery: string
   deliveryConfirmed: string
   confirmDeliveryError: string
+  confirmPurchase: string
+  confirmPurchaseTitle: string
+  confirmPurchaseMessage: string
+  confirmPurchaseConfirm: string
+  confirmPurchaseCancel: string
+  progressStages?: Record<string, string>
 }
 
 type ParticipationsListProps = {
   participations: AccountParticipation[]
   labels: ParticipationsListLabels
+  stageLabels?: Record<string, string>
 }
 
-type ParticipationTab = "active" | "completed" | "cancelled"
+const isActiveParticipation = (participation: AccountParticipation) =>
+  resolveParticipationTab(participation) === "active"
+
+const isCompletedParticipation = (participation: AccountParticipation) =>
+  resolveParticipationTab(participation) === "completed"
+
+const isCancelledParticipation = (participation: AccountParticipation) =>
+  resolveParticipationTab(participation) === "cancelled"
+
+const resolveStatusBadgeVariant = (
+  participation: AccountParticipation
+): "success" | "danger" | "purple" => {
+  const tab = resolveParticipationTab(participation)
+
+  if (tab === "cancelled") {
+    return "danger"
+  }
+
+  if (tab === "completed") {
+    return "success"
+  }
+
+  return "purple"
+}
 
 const ParticipationsList = ({
   participations,
   labels,
+  stageLabels = {},
 }: ParticipationsListProps) => {
-  const [tab, setTab] = useState<ParticipationTab>("active")
+  const { countryCode } = useParams() as { countryCode: string }
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState<
+    "active" | "completed" | "cancelled"
+  >("active")
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
 
-  const grouped = useMemo(() => {
-    const active: AccountParticipation[] = []
-    const completed: AccountParticipation[] = []
-    const cancelled: AccountParticipation[] = []
+  const activeItems = useMemo(
+    () => participations.filter(isActiveParticipation),
+    [participations]
+  )
+  const completedItems = useMemo(
+    () => participations.filter(isCompletedParticipation),
+    [participations]
+  )
+  const cancelledItems = useMemo(
+    () => participations.filter(isCancelledParticipation),
+    [participations]
+  )
 
-    for (const item of participations) {
-      const bucket = resolveParticipationTab(item)
+  const needsDeliveryConfirm = activeItems.some(
+    (item) => item.stage === "shipping" && !item.delivery_confirmed_at
+  )
 
-      if (bucket === "completed") {
-        completed.push(item)
-      } else if (bucket === "cancelled") {
-        cancelled.push(item)
-      } else {
-        active.push(item)
-      }
+  const visibleItems =
+    activeTab === "active"
+      ? activeItems
+      : activeTab === "completed"
+        ? completedItems
+        : cancelledItems
+
+  const handleConfirmDelivery = async (participantId: string) => {
+    setConfirmingId(participantId)
+    setConfirmError(null)
+
+    try {
+      await confirmParticipantDelivery(participantId)
+      router.refresh()
+    } catch {
+      setConfirmError(labels.confirmDeliveryError)
+    } finally {
+      setConfirmingId(null)
     }
+  }
 
-    return { active, completed, cancelled }
-  }, [participations])
+  const purchaseConfirmLabels = {
+    button: labels.confirmPurchase,
+    dialogTitle: labels.confirmPurchaseTitle,
+    dialogMessage: labels.confirmPurchaseMessage,
+    dialogConfirm: labels.confirmPurchaseConfirm,
+    dialogCancel: labels.confirmPurchaseCancel,
+  }
 
-  const currentItems = grouped[tab]
-
-  const emptyMessage =
-    tab === "active"
-      ? labels.emptyActive
-      : tab === "completed"
-        ? labels.emptyCompleted
-        : labels.emptyCancelled
-
-  if (!participations.length) {
-    return (
-      <div className="rounded-xl border border-dashed border-ui-border-base p-10 text-center">
-        <Text className="text-ui-fg-subtle">{labels.empty}</Text>
-        <LocalizedClientLink href="/group-buying">
-          <Button variant="secondary" className="mt-4">
-            {labels.emptyActiveCta}
-          </Button>
-        </LocalizedClientLink>
-      </div>
-    )
+  const cardStatusLabels = {
+    progressStages: labels.progressStages ?? {},
+    stageLabels,
+    statusCancelled: labels.statusCancelled,
+    statusRefunded: labels.statusRefunded,
   }
 
   return (
-    <div className="flex flex-col gap-y-6">
-      <div className="flex flex-wrap gap-2 border-b border-ui-border-base pb-4">
-        {(
-          [
-            ["active", labels.tabActive, grouped.active.length],
-            ["completed", labels.tabCompleted, grouped.completed.length],
-            ["cancelled", labels.tabCancelled, grouped.cancelled.length],
-          ] as const
-        ).map(([key, label, count]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-              tab === key
-                ? "bg-brand-pink text-white"
-                : "bg-ui-bg-subtle text-ui-fg-subtle hover:text-ui-fg-base"
-            }`}
-          >
-            {label} ({count})
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col gap-4">
+      <BbTabs
+        activeId={activeTab}
+        onChange={(id) =>
+          setActiveTab(id as "active" | "completed" | "cancelled")
+        }
+        items={[
+          {
+            id: "active",
+            label: labels.tabActive,
+            count: activeItems.length,
+          },
+          {
+            id: "completed",
+            label: labels.tabCompleted,
+            count: completedItems.length,
+          },
+          {
+            id: "cancelled",
+            label: labels.tabCancelled,
+            count: cancelledItems.length,
+          },
+        ]}
+      />
 
-      {currentItems.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-ui-border-base p-10 text-center">
-          <Text className="text-ui-fg-subtle">{emptyMessage}</Text>
-          {tab === "active" && (
-            <LocalizedClientLink href="/group-buying">
-              <Button variant="secondary" className="mt-4">
-                {labels.emptyActiveCta}
-              </Button>
-            </LocalizedClientLink>
+      {needsDeliveryConfirm && activeTab === "active" && (
+        <BbAlert variant="warn">{labels.deliveryConfirmNeededAlert}</BbAlert>
+      )}
+
+      {confirmError && <BbAlert variant="error">{confirmError}</BbAlert>}
+
+      {visibleItems.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--bb-line)] px-4 py-8 text-center text-sm text-[var(--bb-mute)]">
+          {activeTab === "active"
+            ? labels.emptyActive
+            : activeTab === "completed"
+              ? labels.emptyCompleted
+              : labels.emptyCancelled}
+          {activeTab === "active" && (
+            <>
+              {" → "}
+              <LocalizedClientLink
+                href={gbAppRoutes.search(countryCode)}
+                className="font-bold text-brand-purple underline"
+              >
+                [{labels.emptyActiveCta}]
+              </LocalizedClientLink>
+            </>
           )}
         </div>
       ) : (
-        <ul className="flex flex-col gap-y-4">
-          {currentItems.map((participation) => {
-            const canConfirmDelivery =
+        <div className="flex flex-col gap-3">
+          {visibleItems.map((participation, index) => {
+            const deal = participation.group_deal
+            const memberLabel =
+              participation.member_label ?? labels.memberFallback
+            const statusLabel = resolveParticipationCardStatusLabel(
+              participation,
+              cardStatusLabels
+            )
+            const highlighted =
+              activeTab === "active" &&
               participation.stage === "shipping" &&
-              !participation.delivery_confirmed_at &&
-              participation.status === "confirmed"
+              !participation.delivery_confirmed_at
+            const showPurchaseConfirm = canShowPurchaseConfirm(participation)
 
             return (
-              <li
+              <LocalizedClientLink
                 key={participation.participant_id}
-                className="rounded-xl border border-ui-border-base bg-ui-bg-base p-5"
+                href={gbAppRoutes.participationDetail(
+                  countryCode,
+                  participation.participant_id
+                )}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <Text className="text-base font-semibold text-ui-fg-base">
-                      {participation.group_deal.title}
-                    </Text>
-                    <Text className="mt-1 text-sm text-ui-fg-subtle">
-                      {labels.quantity.replace(
-                        "{count}",
-                        String(participation.quantity)
-                      )}
-                    </Text>
-                    {participation.tracking_number && (
-                      <Text className="mt-1 text-xs text-ui-fg-subtle">
-                        {labels.tracking.replace(
-                          "{number}",
-                          participation.tracking_number
-                        )}
+                <BbCard
+                  padding="md"
+                  className={
+                    highlighted || showPurchaseConfirm
+                      ? "border-[#FCA5A5] bg-[#FEF2F2] transition-colors hover:border-[#F87171]"
+                      : "transition-colors hover:border-[#D1D5DB]"
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EB] pb-3">
+                    <div className="min-w-0 flex-1">
+                      <Text className="line-clamp-2 text-sm font-bold text-[#111827]">
+                        {deal.title}
                       </Text>
-                    )}
+                      <Text className="mt-1 text-xs text-[#6B7280]">
+                        {labels.memberLabel.replace("{member}", memberLabel)}
+                      </Text>
+                      {activeTab === "active" && (
+                        <Text className="mt-0.5 text-[10px] text-[#9CA3AF]">
+                          {labels.quantity.replace(
+                            "{count}",
+                            String(participation.quantity)
+                          )}
+                        </Text>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <BbBadge variant={resolveStatusBadgeVariant(participation)}>
+                        {statusLabel}
+                      </BbBadge>
+                      <span className="text-[#6B46E5]">›</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {canConfirmDelivery && (
-                      <ConfirmDeliveryButton
-                        participantId={participation.participant_id}
-                        labels={{
-                          confirm: labels.confirmDelivery,
-                          confirming: labels.confirmingDelivery,
-                          confirmed: labels.deliveryConfirmed,
-                          error: labels.confirmDeliveryError,
-                        }}
-                      />
-                    )}
-                    <LocalizedClientLink
-                      href={`/account/group-deals/participations/${participation.participant_id}`}
-                    >
-                      <Button variant="secondary" size="small">
-                        {labels.viewDetail}
-                      </Button>
-                    </LocalizedClientLink>
-                    <LocalizedClientLink
-                      href={`/group-buying/${participation.group_deal.id}`}
-                    >
-                      <Button variant="secondary" size="small">
-                        {labels.viewDeal}
-                      </Button>
-                    </LocalizedClientLink>
-                  </div>
-                </div>
 
-                <div className="mt-4">
-                  <ParticipationTimeline stage={participation.stage} />
-                </div>
+                  {showPurchaseConfirm && (
+                    <PurchaseConfirmButton
+                      participation={participation}
+                      countryCode={countryCode}
+                      className="mt-3"
+                      labels={purchaseConfirmLabels}
+                    />
+                  )}
 
-                <Text className="mt-3 text-xs text-ui-fg-muted">
-                  {labels.autoDeliveryConfirmHint}
-                </Text>
-              </li>
+                  {highlighted && index === 0 && !showPurchaseConfirm && (
+                    <BbButton
+                      className="mt-3"
+                      fullWidth
+                      isLoading={confirmingId === participation.participant_id}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void handleConfirmDelivery(participation.participant_id)
+                      }}
+                    >
+                      {confirmingId === participation.participant_id
+                        ? labels.confirmingDelivery
+                        : labels.confirmDelivery}
+                    </BbButton>
+                  )}
+                </BbCard>
+              </LocalizedClientLink>
             )
           })}
-        </ul>
+        </div>
       )}
+
+      <Text className="text-xs text-[var(--bb-mute)]">
+        {labels.autoDeliveryConfirmHint}
+      </Text>
     </div>
   )
 }

@@ -48,6 +48,7 @@ export default async function PageLayout(props: {
         regions={regions}
         currentLocale={currentLocale}
         dictionary={dictionary}
+        isLoggedIn={Boolean(customer)}
       />
       {customer && cart && (
         <CartMismatchBanner customer={customer} cart={cart} />

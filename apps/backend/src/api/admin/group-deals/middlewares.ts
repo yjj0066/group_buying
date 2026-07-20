@@ -1,6 +1,5 @@
 import {
-  AuthenticatedMedusaRequest,
-  MedusaResponse,
+  authenticate,
   validateAndTransformBody,
 } from "@medusajs/framework/http"
 import type { MiddlewareRoute } from "@medusajs/framework/http"
@@ -14,7 +13,13 @@ import {
   PostAdminUpdateGroupDeal,
 } from "./validators"
 
-export default [
+export const adminGroupDealRoutesMiddlewares: MiddlewareRoute[] = [
+  {
+    matcher: "/admin/group-deals*",
+    middlewares: [
+      authenticate("user", ["session", "bearer", "api-key"]),
+    ],
+  },
   {
     matcher: "/admin/group-deals",
     method: "POST",
@@ -45,4 +50,4 @@ export default [
     method: "POST",
     middlewares: [validateAndTransformBody(PostAdminGroupDealTracking)],
   },
-] as MiddlewareRoute[]
+]

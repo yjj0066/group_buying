@@ -2,6 +2,7 @@
 
 import { MagnifyingGlassMini } from "@medusajs/icons"
 import { useDictionary } from "@i18n/provider"
+import { buildGroupBuyingSearchPath } from "@lib/util/group-deal-filter-url"
 import { SEARCH_QUERY_KEY } from "@lib/util/product-filters"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { FormEvent, useEffect, useState } from "react"
@@ -29,21 +30,7 @@ const ProductSearch = ({
     event.preventDefault()
 
     const countryCode = params.countryCode as string
-    const nextParams = new URLSearchParams(searchParams.toString())
-    const trimmed = query.trim()
-
-    if (trimmed) {
-      nextParams.set(SEARCH_QUERY_KEY, trimmed)
-    } else {
-      nextParams.delete(SEARCH_QUERY_KEY)
-    }
-
-    nextParams.delete("page")
-
-    const queryString = nextParams.toString()
-    router.push(
-      `/${countryCode}/store${queryString ? `?${queryString}` : ""}`
-    )
+    router.push(buildGroupBuyingSearchPath(countryCode, query))
   }
 
   const isSidebar = variant === "sidebar"

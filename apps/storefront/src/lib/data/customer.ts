@@ -44,7 +44,9 @@ export const retrieveCustomer =
   async (): Promise<HttpTypes.StoreCustomer | null> => {
     const authHeaders = await getAuthHeaders()
 
-    if (!authHeaders) return null
+    if (!("authorization" in authHeaders) || !authHeaders.authorization) {
+      return null
+    }
 
     const headers = {
       ...authHeaders,
@@ -58,11 +60,11 @@ export const retrieveCustomer =
       .fetch<{ customer: HttpTypes.StoreCustomer }>(`/store/customers/me`, {
         method: "GET",
         query: {
-          fields: "*orders",
+          fields: "*orders,*metadata",
         },
         headers,
         next,
-        cache: "force-cache",
+        cache: "no-store",
       })
       .then(({ customer }) => customer)
       .catch(() => null)
@@ -79,7 +81,10 @@ export const updateCustomer = async (body: HttpTypes.StoreUpdateCustomer) => {
     .catch(medusaError)
 
   const cacheTag = await getCacheTag("customers")
-  revalidateTag(cacheTag)
+
+  if (cacheTag) {
+    revalidateTag(cacheTag)
+  }
 
   return updateRes
 }
@@ -244,6 +249,39 @@ export async function confirmEmailVerification(
     return { success: true }
   } catch (error) {
     return { success: false, error: String(error) }
+  }
+}
+
+export async function requestCustomerEmailVerification(
+  email: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers = await getAuthHeaders()
+
+    if (!headers.authorization) {
+      return {
+        ok: false,
+        error: "로그인이 필요합니다. 계정에 로그인한 뒤 다시 시도해 주세요.",
+      }
+    }
+
+    await sdk.auth.verification.request(
+      {
+        entity_id: email,
+        entity_type: "email",
+      },
+      headers
+    )
+
+    return { ok: true }
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "인증 메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+    }
   }
 }
 

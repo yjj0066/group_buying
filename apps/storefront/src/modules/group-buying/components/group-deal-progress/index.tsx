@@ -1,8 +1,8 @@
 "use client"
 
-import { getParticipationRate, GroupDeal } from "types/group-deal"
 import { useDictionary } from "@i18n/provider"
-import { Text } from "@modules/common/components/ui"
+import type { GroupDeal } from "types/group-deal"
+import { getDealFillProgress } from "types/group-deal"
 
 type GroupDealProgressProps = {
   deal: GroupDeal
@@ -10,24 +10,22 @@ type GroupDealProgressProps = {
 
 const GroupDealProgress = ({ deal }: GroupDealProgressProps) => {
   const t = useDictionary()
-  const rate = getParticipationRate(deal)
-  const target = deal.target_quantity || deal.min_participants || 1
-  const current = deal.current_participants ?? deal.current_quantity ?? 0
+  const { filled, total, percent } = getDealFillProgress(deal)
 
   return (
-    <div className="flex flex-col gap-y-2">
-      <div className="flex items-center justify-between text-xs text-ui-fg-subtle">
-        <Text>
-          {t.groupBuying.participants
-            .replace("{current}", String(current))
-            .replace("{target}", String(target))}
-        </Text>
-        <Text>{rate}%</Text>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-xs text-[var(--bb-mute)]">
+        <span>
+          {t.groupBuying.targetAndCurrent
+            .replace("{target}", String(total))
+            .replace("{current}", String(filled))}
+        </span>
+        <span>{Math.round(percent)}%</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-ui-bg-subtle">
+      <div className="h-2 overflow-hidden rounded-full bg-[#F3F4F6]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-brand-pink to-brand-purple transition-all duration-500"
-          style={{ width: `${rate}%` }}
+          className="h-full rounded-full bg-[#6B46E5] transition-all duration-500"
+          style={{ width: `${Math.min(100, percent)}%` }}
         />
       </div>
     </div>

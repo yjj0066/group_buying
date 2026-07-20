@@ -628,6 +628,94 @@ class GroupBuyingModuleService extends MedusaService({
     )
   }
 
+  async confirmVirtualAccountDeposit(input: {
+    group_deal_id: string
+    participant_id: string
+  }) {
+    const participant = await this.retrieveGroupDealParticipant(
+      input.participant_id
+    )
+
+    if (String(participant.group_deal_id) !== input.group_deal_id) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_FOUND,
+        `Participant ${input.participant_id} does not belong to group deal ${input.group_deal_id}`
+      )
+    }
+
+    if (participant.status === GroupDealParticipantStatus.CONFIRMED) {
+      return participant
+    }
+
+    if (participant.status !== GroupDealParticipantStatus.PENDING) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Only pending participants can confirm virtual account deposits"
+      )
+    }
+
+    const deal = await this.retrieveGroupDeal(input.group_deal_id)
+    const metadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+    const virtualAccounts =
+      (metadata.participant_virtual_accounts as Record<string, unknown> | null) ??
+      {}
+
+    if (!virtualAccounts[input.participant_id]) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "No virtual account was issued for this participant"
+      )
+    }
+
+    const updatedParticipant = await this.updateGroupDealParticipants({
+      id: input.participant_id,
+      status: GroupDealParticipantStatus.CONFIRMED,
+      captured_at: new Date(),
+      capture_payment_key: `va_stub_${input.participant_id}`,
+    })
+
+    await this.recalculateDealMetrics(input.group_deal_id)
+
+    return updatedParticipant
+  }
+
+  async autoConfirmOverdueDeliveries(now: Date = new Date()) {
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+    const participants = await this.listGroupDealParticipants({
+      status: GroupDealParticipantStatus.CONFIRMED,
+    })
+    const confirmedIds: string[] = []
+
+    for (const participant of participants) {
+      if (participant.delivery_confirmed_at || !participant.tracking_updated_at) {
+        continue
+      }
+
+      const trackingAt = new Date(participant.tracking_updated_at as string | Date)
+
+      if (now.getTime() - trackingAt.getTime() < sevenDaysMs) {
+        continue
+      }
+
+      const deal = await this.retrieveGroupDeal(String(participant.group_deal_id))
+      const metadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+      const { hasOpenParticipantDisputesForParticipant } = await import(
+        "../utils/group-deal-disputes"
+      )
+
+      if (
+        hasOpenParticipantDisputesForParticipant(metadata, String(participant.id))
+      ) {
+        continue
+      }
+
+      await this.confirmParticipantDelivery(String(participant.id))
+      confirmedIds.push(String(participant.id))
+    }
+
+    return confirmedIds
+  }
+
   async confirmParticipantDelivery(participantId: string) {
     const participant = await this.retrieveGroupDealParticipant(participantId)
 

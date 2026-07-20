@@ -8,6 +8,7 @@ import GroupDealTimeline from "@modules/group-buying/components/group-deal-timel
 import DealJoinSection from "@modules/group-buying/components/deal-join-section"
 import PurchaseReceiptPanel from "@modules/group-buying/components/purchase-receipt-panel"
 import LeaderTrustPanel from "@modules/group-buying/components/leader-trust-panel"
+import AiRecommendationSlider from "@modules/products/components/ai-recommendation-slider"
 import { Heading, Text } from "@modules/common/components/ui"
 import type { GroupDeal } from "types/group-deal"
 import { getDealDiscountPercent, isDealAtCapacity } from "types/group-deal"
@@ -15,11 +16,13 @@ import { getDealDiscountPercent, isDealAtCapacity } from "types/group-deal"
 type GroupDealDetailTemplateProps = {
   groupDeal: GroupDeal
   heroImageUrl?: string | null
+  countryCode?: string
 }
 
 const GroupDealDetailTemplate = async ({
   groupDeal,
   heroImageUrl = null,
+  countryCode = "kr",
 }: GroupDealDetailTemplateProps) => {
   const t = await getServerDictionary()
   const originalPrice = groupDeal.original_price ?? 0
@@ -134,6 +137,21 @@ const GroupDealDetailTemplate = async ({
           <DealJoinSection deal={groupDeal} />
         </div>
       </div>
+
+      {groupDeal.product_id && !groupDeal.product_id.startsWith("demo-") && (
+        <div className="mt-16 border-t border-ui-border-base pt-12">
+          <AiRecommendationSlider
+            context="similar"
+            countryCode={countryCode}
+            productId={groupDeal.product_id}
+            title={t.products.relatedProducts}
+            subtitle={t.products.relatedProductsDescription}
+            viewAllHref="/group-buying"
+            viewAllLabel={t.groupBuying.title}
+            limit={8}
+          />
+        </div>
+      )}
     </div>
   )
 }

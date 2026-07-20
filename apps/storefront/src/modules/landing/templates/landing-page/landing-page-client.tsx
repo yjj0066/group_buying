@@ -4,6 +4,7 @@ import GroupBuyCard from "@modules/landing/components/group-buy-card"
 import DemoDataBanner from "@modules/landing/components/demo-data-banner"
 import LandingHero from "@modules/landing/components/landing-hero"
 import LiveTicker from "@modules/landing/components/live-ticker"
+import AiRecommendationSlider from "@modules/products/components/ai-recommendation-slider"
 import ScrollReveal from "@modules/landing/components/scroll-reveal"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useDictionary } from "@i18n/provider"
@@ -13,6 +14,10 @@ import { useState } from "react"
 
 type LandingPageClientProps = {
   data: LandingHomeData
+  countryCode: string
+  customerId?: string | null
+  favoriteIdolGroup?: string | null
+  isLoggedIn?: boolean
 }
 
 const CATEGORY_KEYS: LandingDealCategory[] = [
@@ -59,7 +64,13 @@ const SectionHeader = ({
   </div>
 )
 
-const LandingPageClient = ({ data }: LandingPageClientProps) => {
+const LandingPageClient = ({
+  data,
+  countryCode,
+  customerId = null,
+  favoriteIdolGroup = null,
+  isLoggedIn = false,
+}: LandingPageClientProps) => {
   const t = useDictionary()
   const [activeCategory, setActiveCategory] = useState<LandingDealCategory | "all">(
     "all"
@@ -80,6 +91,73 @@ const LandingPageClient = ({ data }: LandingPageClientProps) => {
       <DemoDataBanner visible={data.dataSource === "mock"} />
       <LandingHero featured={data.featured} liveCount={liveCount} />
       <LiveTicker />
+
+      {isLoggedIn && (
+        <section className="mx-auto max-w-7xl px-4 py-10 small:px-6">
+          <div className="rounded-3xl border border-brand-pink/20 bg-gradient-to-br from-rose-50/80 to-violet-50/50 p-6 small:p-8">
+            <h2 className="text-2xl font-black tracking-tight text-neutral-900">
+              {t.landing.hub.title}
+            </h2>
+            <p className="mt-2 text-sm text-neutral-500">{t.landing.hub.subtitle}</p>
+            <div className="mt-6 grid grid-cols-1 gap-4 small:grid-cols-3">
+              <LocalizedClientLink
+                href="/group-buying?vacant=1"
+                className="rounded-2xl border border-white/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-pink hover:shadow-md"
+              >
+                <p className="text-lg font-bold text-neutral-900">
+                  {t.landing.hub.searchVacant}
+                </p>
+                <p className="mt-2 text-sm text-neutral-500">
+                  {t.landing.hub.searchVacantDescription}
+                </p>
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/account/group-deals/create"
+                className="rounded-2xl border border-white/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-purple hover:shadow-md"
+              >
+                <p className="text-lg font-bold text-neutral-900">
+                  {t.landing.hub.createDeal}
+                </p>
+                <p className="mt-2 text-sm text-neutral-500">
+                  {t.landing.hub.createDealDescription}
+                </p>
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/account"
+                className="rounded-2xl border border-white/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-pink hover:shadow-md"
+              >
+                <p className="text-lg font-bold text-neutral-900">
+                  {t.landing.hub.myPage}
+                </p>
+                <p className="mt-2 text-sm text-neutral-500">
+                  {t.landing.hub.myPageDescription}
+                </p>
+              </LocalizedClientLink>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="mx-auto max-w-7xl px-4 py-12 small:px-6">
+        {favoriteIdolGroup && (
+          <p className="mb-4 text-sm text-neutral-500">
+            {t.landing.aiRecommendationsForIdol.replace(
+              "{idol}",
+              favoriteIdolGroup
+            )}
+          </p>
+        )}
+        <AiRecommendationSlider
+          context="landing"
+          countryCode={countryCode}
+          customerId={customerId}
+          favoriteIdolGroup={favoriteIdolGroup}
+          title={t.landing.aiRecommendationsTitle}
+          subtitle={t.landing.aiRecommendationsSubtitle}
+          viewAllHref="/store"
+          viewAllLabel={t.landing.viewAllProducts}
+        />
+      </section>
 
       {/* Popular */}
       <section className="mx-auto max-w-7xl px-4 py-20 small:px-6">

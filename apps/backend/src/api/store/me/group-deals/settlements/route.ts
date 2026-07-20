@@ -22,14 +22,12 @@ export const GET = async (
     GROUP_BUYING_MODULE
   )
 
-  const [hostedDeals, participants] = await Promise.all([
-    groupBuyingService.listGroupDeals({
-      leader_customer_id: customerId,
-    }),
-    groupBuyingService.listGroupDealParticipants({
-      customer_id: customerId,
-    }),
-  ])
+  const hostedDeals = await groupBuyingService.listGroupDeals({
+    leader_customer_id: customerId,
+  })
+  const participants = await groupBuyingService.listGroupDealParticipants({
+    customer_id: customerId,
+  })
 
   const participations = await Promise.all(
     participants.map(async (participant) => {
@@ -44,10 +42,10 @@ export const GET = async (
     })
   )
 
-  res.json({
-    settlements: buildSettlementRecords({
-      hostedDeals: hostedDeals as unknown as Record<string, unknown>[],
-      participations,
-    }),
+  const settlements = buildSettlementRecords({
+    hostedDeals: hostedDeals as unknown as Record<string, unknown>[],
+    participations,
   })
+
+  res.json({ settlements })
 }

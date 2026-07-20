@@ -22,8 +22,9 @@ const PurchaseReceiptPanel = ({ deal }: PurchaseReceiptPanelProps) => {
         ? deal.purchase_receipt_url
         : null
 
+  const structured = deal.purchase_receipt_structured
   const isVerified = deal.purchase_receipt_status === "verified"
-  const canView = isVerified && receiptUrl
+  const canView = isVerified && (receiptUrl || structured)
 
   return (
     <section className="rounded-xl border border-ui-border-base bg-ui-bg-base p-4">
@@ -51,6 +52,46 @@ const PurchaseReceiptPanel = ({ deal }: PurchaseReceiptPanelProps) => {
           </Button>
         )}
       </div>
+
+      {structured && isVerified && (
+        <dl className="mt-4 grid gap-2 rounded-lg bg-ui-bg-subtle p-3 text-xs">
+          <Text className="font-semibold text-ui-fg-base">
+            {t.groupBuying.receiptStructuredTitle}
+          </Text>
+          {structured.seller && (
+            <div>
+              <dt className="text-ui-fg-muted">{t.groupBuying.receiptFieldSeller}</dt>
+              <dd className="font-medium">{structured.seller}</dd>
+            </div>
+          )}
+          {structured.order_number && (
+            <div>
+              <dt className="text-ui-fg-muted">
+                {t.groupBuying.receiptFieldOrderNumber}
+              </dt>
+              <dd className="font-medium">{structured.order_number}</dd>
+            </div>
+          )}
+          {structured.album_quantity != null && (
+            <div>
+              <dt className="text-ui-fg-muted">
+                {t.groupBuying.receiptFieldAlbumQuantity}
+              </dt>
+              <dd className="font-medium">{structured.album_quantity}</dd>
+            </div>
+          )}
+          {structured.ordered_at && (
+            <div>
+              <dt className="text-ui-fg-muted">
+                {t.groupBuying.receiptFieldOrderedAt}
+              </dt>
+              <dd className="font-medium">
+                {new Date(structured.ordered_at).toLocaleString()}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       {open && receiptUrl && (
         <div

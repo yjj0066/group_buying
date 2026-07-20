@@ -22,6 +22,10 @@ import {
   linkSalesChannelsToApiKeyWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
 } from "@medusajs/medusa/core-flows";
+import {
+  DEMO_GROUP_BUY_PRODUCT_ID,
+  DEMO_GROUP_BUY_VARIANT_ID,
+} from "../constants/group-buying-demo-product";
 
 export default async function initial_data_seed({
   container,
@@ -937,6 +941,54 @@ export default async function initial_data_seed({
                 {
                   amount: 13000,
                   currency_code: "krw",
+                },
+              ],
+            },
+          ],
+          sales_channels: [
+            {
+              id: defaultSalesChannel.id,
+            },
+          ],
+        },
+        {
+          id: DEMO_GROUP_BUY_PRODUCT_ID,
+          title: "Group Buy Placeholder Product",
+          category_ids: [
+            categoryResult.find((cat) => cat.name === "Merch")!.id,
+          ],
+          description:
+            "Placeholder catalog product for hosted group-buy deal creation.",
+          handle: "group-buy-placeholder",
+          weight: 100,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          options: [
+            {
+              title: "Type",
+              values: ["Default"],
+            },
+          ],
+          variants: [
+            {
+              id: DEMO_GROUP_BUY_VARIANT_ID,
+              title: "Default",
+              sku: "GB-PLACEHOLDER",
+              options: {
+                Type: "Default",
+              },
+              prices: [
+                {
+                  amount: 10000,
+                  currency_code: "krw",
+                },
+                {
+                  amount: 10,
+                  currency_code: "eur",
+                },
+                {
+                  amount: 10,
+                  currency_code: "usd",
                 },
               ],
             },

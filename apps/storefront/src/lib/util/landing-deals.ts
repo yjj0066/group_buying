@@ -1,4 +1,5 @@
 import { listGroupDeals } from "@lib/data/group-deals"
+import { resolveMediaUrl } from "@lib/util/product-group-deal"
 import type { GroupDeal } from "types/group-deal"
 import type {
   LandingDealCard,
@@ -33,6 +34,12 @@ const resolveCategory = (
   if (goodsType.includes("access")) return "accessories"
 
   return "albums"
+}
+
+export const getGroupDealFallbackImageUrl = (deal: GroupDeal): string => {
+  const category = resolveCategory(deal)
+
+  return CATEGORY_IMAGES[category]
 }
 
 const resolveGroupName = (deal: GroupDeal) => {
@@ -164,9 +171,11 @@ export const mapGroupDealToLandingCard = (deal: GroupDeal): LandingDealCard => {
     groupName: resolveGroupName(deal),
     title: deal.title,
     imageUrl:
-      typeof deal.metadata?.image_url === "string"
-        ? deal.metadata.image_url
-        : CATEGORY_IMAGES[category],
+      resolveMediaUrl(
+        typeof deal.metadata?.image_url === "string"
+          ? deal.metadata.image_url
+          : null
+      ) ?? CATEGORY_IMAGES[category],
     category,
     originalPrice: deal.original_price,
     currentPrice: deal.deal_price,
@@ -280,7 +289,27 @@ export const getMockLandingDealById = (
   id: string
 ): LandingDealCard | undefined => MOCK_DEALS.find((deal) => deal.id === id)
 
-export const getLandingHomeData = async (): Promise<LandingHomeData> => {
+const prioritizeByIdol = (
+  cards: LandingDealCard[],
+  favoriteIdolGroup?: string | null
+) => {
+  const idol = favoriteIdolGroup?.trim().toLowerCase()
+
+  if (!idol) {
+    return cards
+  }
+
+  return [...cards].sort((a, b) => {
+    const aMatch = a.groupName.toLowerCase().includes(idol) ? 1 : 0
+    const bMatch = b.groupName.toLowerCase().includes(idol) ? 1 : 0
+
+    return bMatch - aMatch
+  })
+}
+
+export const getLandingHomeData = async (options?: {
+  favoriteIdolGroup?: string | null
+}): Promise<LandingHomeData> => {
   const { group_deals: deals } = await listGroupDeals()
   const openDeals = deals.filter((deal) =>
     ["open", "minimum_reached", "active"].includes(deal.status)
@@ -291,7 +320,12 @@ export const getLandingHomeData = async (): Promise<LandingHomeData> => {
       ? openDeals.map(mapGroupDealToLandingCard)
       : MOCK_DEALS
 
-  const sortedByParticipants = [...cards].sort(
+  const prioritizedCards = prioritizeByIdol(
+    cards,
+    options?.favoriteIdolGroup
+  )
+
+  const sortedByParticipants = [...prioritizedCards].sort(
     (a, b) => b.currentParticipants - a.currentParticipants
   )
 
@@ -301,11 +335,14 @@ export const getLandingHomeData = async (): Promise<LandingHomeData> => {
   }))
 
   const now = Date.now()
-  const endingSoon = cards
-    .filter((card) => new Date(card.endsAt).getTime() - now <= 1000 * 60 * 60 * 24)
-    .sort(
-      (a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime()
-    )
+  const endingSoon = prioritizeByIdol(
+    cards
+      .filter((card) => new Date(card.endsAt).getTime() - now <= 1000 * 60 * 60 * 24)
+      .sort(
+        (a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime()
+      ),
+    options?.favoriteIdolGroup
+  )
 
   const newlyOpened = cards
     .filter((card) => card.isNew)
@@ -324,8 +361,9 @@ export const getLandingHomeData = async (): Promise<LandingHomeData> => {
     trending: trending.length ? trending : popular.slice(0, 4),
     newlyOpened: newlyOpened.length ? newlyOpened : cards.slice(0, 4),
     fanFavorites,
-    allDeals: cards,
+    allDeals: prioritizedCards,
     endingSoon: endingSoon.length ? endingSoon : cards.slice(0, 3),
+    favoriteIdolGroup: options?.favoriteIdolGroup ?? null,
   }
 }
 

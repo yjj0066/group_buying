@@ -8,6 +8,8 @@ import OnboardingCta from "@modules/order/components/onboarding-cta"
 import OrderDetails from "@modules/order/components/order-details"
 import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
+import FlaskGroupBuyPaymentLogger from "@modules/common/components/flask-behavior-logger"
+import { extractGroupDealContextFromOrder } from "@lib/util/group-deal-order-context"
 import { HttpTypes } from "@medusajs/types"
 
 type OrderCompletedTemplateProps = {
@@ -20,9 +22,21 @@ export default async function OrderCompletedTemplate({
   const cookies = await nextCookies()
 
   const isOnboarding = cookies.get("_medusa_onboarding")?.value === "true"
+  const groupDealContext = extractGroupDealContextFromOrder(order)
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
+      {groupDealContext && (
+        <FlaskGroupBuyPaymentLogger
+          group_deal_id={groupDealContext.group_deal_id}
+          participant_id={groupDealContext.participant_id}
+          medusa_product_id={groupDealContext.medusa_product_id}
+          order_id={order.id}
+          payment_method={groupDealContext.payment_method ?? "billing_reservation"}
+          amount={order.total}
+          currency_code={order.currency_code}
+        />
+      )}
       <div className="content-container flex flex-col justify-center items-center gap-y-10 max-w-4xl h-full w-full">
         {isOnboarding && <OnboardingCta orderId={order.id} />}
         <div

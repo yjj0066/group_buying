@@ -5,6 +5,9 @@ export const PutStoreMePreferences = z.object({
   favorite_member: z.string().nullable().optional(),
   notify_vacancy: z.boolean().optional(),
   notify_progress: z.boolean().optional(),
+  payment_settlement_alerts: z.boolean().optional(),
+  marketing_alerts: z.boolean().optional(),
+  preferred_role: z.enum(["participant", "leader"]).optional(),
 })
 
 export type PutStoreMePreferencesType = z.infer<typeof PutStoreMePreferences>

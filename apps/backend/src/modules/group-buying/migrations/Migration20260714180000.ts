@@ -12,6 +12,9 @@ export class Migration20260714180000 extends Migration {
       `alter table if exists "group_deal" add column if not exists "deposit_amount" numeric null;`
     )
     this.addSql(
+      `alter table if exists "group_deal" add column if not exists "raw_deposit_amount" jsonb null;`
+    )
+    this.addSql(
       `alter table if exists "group_deal" add column if not exists "deposit_payment_key" text null;`
     )
     this.addSql(
@@ -82,6 +85,9 @@ export class Migration20260714180000 extends Migration {
     )
     this.addSql(
       `alter table if exists "group_deal" drop column if exists "deposit_payment_key";`
+    )
+    this.addSql(
+      `alter table if exists "group_deal" drop column if exists "raw_deposit_amount";`
     )
     this.addSql(
       `alter table if exists "group_deal" drop column if exists "deposit_amount";`

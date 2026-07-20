@@ -2,7 +2,6 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
 import { GROUP_BUYING_MODULE } from "../../../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../../../modules/group-buying/service"
@@ -23,17 +22,12 @@ export const GET = async (
     GROUP_BUYING_MODULE
   )
 
-  const deals = await groupBuyingService.listGroupDeals(
-    {
-      leader_customer_id: customerId,
-    },
-    {
-      order: { created_at: "DESC" },
-    }
-  )
+  const hostedDeals = await groupBuyingService.listGroupDeals({
+    leader_customer_id: customerId,
+  })
 
   res.json({
-    group_deals: deals.map((deal) =>
+    group_deals: hostedDeals.map((deal) =>
       serializeAccountGroupDeal(deal as unknown as Record<string, unknown>)
     ),
   })

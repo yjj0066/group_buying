@@ -21,11 +21,11 @@ const GroupDealTimeline = ({ deal }: GroupDealTimelineProps) => {
   const currentIndex = getDealTimelineStageIndex(currentStage)
 
   const getStageLabel = (stageId: GroupDealTimelineStage) =>
-    t.groupBuying.dealTimelineStages[stageId]
+    t.groupBuying.dealTimelineStages?.[stageId] ?? stageId
 
   return (
     <section
-      className="w-full rounded-2xl border border-neutral-100 bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] small:p-6"
+      className="bb-card p-5 small:p-6"
       aria-label={t.groupBuying.dealTimelineTitle}
     >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -49,7 +49,7 @@ const GroupDealTimeline = ({ deal }: GroupDealTimelineProps) => {
           }}
         />
 
-        <ol className="relative grid grid-cols-3 gap-3 small:grid-cols-6">
+        <ol className="relative grid grid-cols-4 gap-2 small:grid-cols-7">
           {DEAL_TIMELINE_STAGES.map((stage, index) => {
             const isCompleted = index < currentIndex
             const isCurrent = index === currentIndex

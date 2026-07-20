@@ -32,7 +32,7 @@ const AccountLayout: React.FC<AccountLayoutProps> = ({
             <span className="txt-medium">{t.account.layout.helpDescription}</span>
           </div>
           <div>
-            <UnderlineLink href="/customer-service">
+            <UnderlineLink href="/account/customer-service">
               {t.account.layout.customerService}
             </UnderlineLink>
           </div>

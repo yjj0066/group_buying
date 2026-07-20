@@ -15,16 +15,25 @@ import LanguageSwitcherSlot from "../language-switcher/slot"
 type SideMenuProps = {
   regions: HttpTypes.StoreRegion[] | null
   currentLocale: string | null
+  isLoggedIn?: boolean
 }
 
-const SideMenu = ({ regions, currentLocale }: SideMenuProps) => {
+const SideMenu = ({
+  regions,
+  currentLocale,
+  isLoggedIn = false,
+}: SideMenuProps) => {
   const countryToggleState = useToggleState()
   const t = useDictionary()
+
+  const accountLabel = isLoggedIn
+    ? t.landing.nav.myPage
+    : t.landing.nav.signIn
 
   const sideMenuItems = [
     { name: t.sideMenu.home, href: "/" },
     { name: t.sideMenu.store, href: "/store" },
-    { name: t.sideMenu.account, href: "/account" },
+    { name: accountLabel, href: "/account" },
     { name: t.sideMenu.cart, href: "/cart" },
   ]
 

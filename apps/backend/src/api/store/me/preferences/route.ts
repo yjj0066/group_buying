@@ -5,13 +5,10 @@ import {
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
 import {
-  PutStoreMePreferences,
-  PutStoreMePreferencesType,
-} from "../validators"
-import {
   readGroupBuyingPreferences,
-  GroupBuyingPreferences,
+  type GroupBuyingPreferences,
 } from "../../../../utils/group-deal-account"
+import { PutStoreMePreferences } from "../validators"
 
 const resolveCustomer = async (
   req: AuthenticatedMedusaRequest
@@ -47,11 +44,12 @@ export const GET = async (
 
   res.json({
     preferences: readGroupBuyingPreferences(metadata),
+    onboarding_completed: metadata?.gb_app_onboarding_completed === true,
   })
 }
 
 export const PUT = async (
-  req: AuthenticatedMedusaRequest<PutStoreMePreferencesType>,
+  req: AuthenticatedMedusaRequest,
   res: MedusaResponse
 ) => {
   const customer = await resolveCustomer(req)
@@ -68,7 +66,6 @@ export const PUT = async (
       unknown
     >),
   }
-
   const current = readGroupBuyingPreferences(metadata)
   const next: GroupBuyingPreferences = {
     favorite_idol_group:
@@ -87,18 +84,41 @@ export const PUT = async (
       body.notify_progress !== undefined
         ? body.notify_progress
         : current.notify_progress,
+    payment_settlement_alerts:
+      body.payment_settlement_alerts !== undefined
+        ? body.payment_settlement_alerts
+        : current.payment_settlement_alerts,
+    marketing_alerts:
+      body.marketing_alerts !== undefined
+        ? body.marketing_alerts
+        : current.marketing_alerts,
+    preferred_role:
+      body.preferred_role !== undefined
+        ? body.preferred_role
+        : current.preferred_role,
   }
 
+  const onboardingCompleted =
+    Boolean(next.favorite_idol_group?.trim()) ||
+    metadata.gb_app_onboarding_completed === true
+
   const customerModule = req.scope.resolve(Modules.CUSTOMER)
+  const nextMetadata: Record<string, unknown> = {
+    ...metadata,
+    group_buying_preferences: next,
+    ...(onboardingCompleted ? { gb_app_onboarding_completed: true } : {}),
+  }
+
+  if (body.marketing_alerts !== undefined) {
+    nextMetadata.marketing_opt_in = body.marketing_alerts
+  }
 
   await customerModule.updateCustomers(String(customer.id), {
-    metadata: {
-      ...metadata,
-      group_buying_preferences: next,
-    },
+    metadata: nextMetadata,
   })
 
   res.json({
     preferences: next,
+    onboarding_completed: onboardingCompleted,
   })
 }

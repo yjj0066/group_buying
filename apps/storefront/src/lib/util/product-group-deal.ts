@@ -2,6 +2,37 @@ import type { HttpTypes } from "@medusajs/types"
 
 import type { GroupDeal } from "types/group-deal"
 
+const getBackendUrl = () =>
+  process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
+
+export const resolveMediaUrl = (
+  url: string | null | undefined
+): string | null => {
+  if (typeof url !== "string") {
+    return null
+  }
+
+  const trimmed = url.trim()
+
+  if (!trimmed) {
+    return null
+  }
+
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`
+  }
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed
+  }
+
+  if (trimmed.startsWith("/")) {
+    return `${getBackendUrl().replace(/\/$/, "")}${trimmed}`
+  }
+
+  return trimmed
+}
+
 const DEFAULT_MIN_PARTICIPANTS = 10
 const DEFAULT_TARGET_QUANTITY = 100
 
@@ -62,11 +93,15 @@ export const buildGroupDealFromProduct = (
     ends_at: endsAt.toISOString(),
     metadata: {
       is_product_preview: true,
-      image_url: product.thumbnail ?? product.images?.[0]?.url ?? null,
+      image_url: resolveMediaUrl(
+        product.thumbnail ?? product.images?.[0]?.url ?? null
+      ),
       idol_group: metadata.idol_group ?? metadata.group_name ?? null,
       goods_type: metadata.goods_type ?? null,
     },
     leader_customer_id: null,
+    leader_role_number: 1,
+    is_first_time_leader: true,
     deposit_status: "pending",
     deposit_amount: null,
     purchase_receipt_status: "pending",
@@ -84,10 +119,15 @@ export const enrichGroupDealFromProduct = (
   const productMetadata = (product.metadata ?? {}) as Record<string, unknown>
   const dealMetadata = { ...(deal.metadata ?? {}) }
 
-  if (!dealMetadata.image_url) {
-    dealMetadata.image_url =
-      product.thumbnail ?? product.images?.[0]?.url ?? null
-  }
+  const productImageUrl = resolveMediaUrl(
+    product.thumbnail ?? product.images?.[0]?.url ?? null
+  )
+
+  dealMetadata.image_url = resolveMediaUrl(
+    typeof dealMetadata.image_url === "string"
+      ? dealMetadata.image_url
+      : productImageUrl
+  ) ?? productImageUrl
 
   if (!dealMetadata.idol_group && productMetadata.idol_group) {
     dealMetadata.idol_group = productMetadata.idol_group
@@ -115,13 +155,43 @@ export const resolveProductHeroImage = (
   deal: GroupDeal,
   product?: HttpTypes.StoreProduct
 ) => {
-  if (typeof deal.metadata?.image_url === "string") {
-    return deal.metadata.image_url
+  const fromMetadata = resolveMediaUrl(
+    typeof deal.metadata?.image_url === "string" ? deal.metadata.image_url : null
+  )
+
+  if (fromMetadata) {
+    return fromMetadata
   }
 
   if (!product) {
     return null
   }
 
-  return product.thumbnail ?? product.images?.[0]?.url ?? null
+  return resolveMediaUrl(product.thumbnail ?? product.images?.[0]?.url ?? null)
+}
+
+export const resolveGroupDealThumbnailUrl = (deal: GroupDeal): string | null =>
+  resolveMediaUrl(
+    typeof deal.metadata?.image_url === "string" ? deal.metadata.image_url : null
+  )
+
+export const enrichGroupDealsWithProducts = (
+  deals: GroupDeal[],
+  products: HttpTypes.StoreProduct[]
+): GroupDeal[] => {
+  const productsById = new Map(products.map((product) => [product.id, product]))
+
+  return deals.map((deal) => {
+    if (!deal.product_id || deal.product_id.startsWith("demo-")) {
+      return deal
+    }
+
+    const product = productsById.get(deal.product_id)
+
+    if (!product) {
+      return deal
+    }
+
+    return enrichGroupDealFromProduct(deal, product)
+  })
 }

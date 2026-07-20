@@ -3,11 +3,14 @@
 import { useActionState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { login } from "@lib/data/customer"
+import { resolvePostLoginRedirect } from "@lib/data/gb-app-auth-flow"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import Input from "@modules/common/components/input"
 import { useDictionary } from "@i18n/provider"
+import SocialLoginButtons from "@modules/account/components/social-login-buttons"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -20,10 +23,14 @@ const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useActionState(login, null)
 
   useEffect(() => {
-    if (message?.state === "success") {
-      router.refresh()
-      router.push(`/${countryCode}/account`)
+    if (message?.state !== "success") {
+      return
     }
+
+    void resolvePostLoginRedirect(countryCode).then((destination) => {
+      router.replace(destination)
+      router.refresh()
+    })
   }, [message?.state, countryCode, router])
 
   return (
@@ -71,21 +78,26 @@ const Login = ({ setCurrentView }: Props) => {
         />
         <SubmitButton
           data-testid="sign-in-button"
-          variant="transparent"
-          className="landing-cta-btn mt-6 w-full rounded-full !text-white"
+          variant="primary"
+          className="mt-6 h-12 w-full rounded-full font-bold"
         >
           {t.account.login.submit}
         </SubmitButton>
       </form>
+
+      <SocialLoginButtons />
+
+      <LocalizedClientLink
+        href="/account/forgot-password"
+        className="mt-4 text-sm text-ui-fg-subtle underline"
+      >
+        {t.account.login.forgotPassword}
+      </LocalizedClientLink>
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
         {t.account.login.notMember}{" "}
-        <button
-          onClick={() => setCurrentView(LOGIN_VIEW.REGISTER)}
-          className="underline"
-          data-testid="register-button"
-        >
+        <LocalizedClientLink href="/auth/signup" className="underline">
           {t.account.login.joinUs}
-        </button>
+        </LocalizedClientLink>
         .
       </span>
     </div>

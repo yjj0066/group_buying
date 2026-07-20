@@ -72,6 +72,8 @@ export const landingKo: Dictionary["landing"] = {
   demoDataNotice:
     "현재 데모 공구 데이터를 표시 중입니다. 실제 등록 공구는 빈자리 검색에서 확인하세요.",
   aiRecommendationsTitle: "AI 추천 상품",
+  aiRecommendationsSubtitle: "마감 임박·인기도 기반 하이브리드 추천",
+  aiRecommendationsForIdol: "관심 아이돌 {idol} 기준으로 추천·인기 공구를 우선 노출합니다",
   why: {
     title: "왜 BiasBuy인가요?",
     authentic: {
@@ -121,6 +123,16 @@ export const landingKo: Dictionary["landing"] = {
     securePayment: "안전 결제 안내",
     authenticGoods: "정품 굿즈 정책",
     copyright: "© 2026 BiasBuy. All rights reserved.",
+  },
+  hub: {
+    title: "홈",
+    subtitle: "빈자리 검색, 공구 개설, 마이페이지로 바로 이동하세요.",
+    searchVacant: "빈자리 검색",
+    searchVacantDescription: "최애 멤버 빈자리만 골라 공구를 찾아보세요.",
+    createDeal: "공구 개설",
+    createDealDescription: "총대로 새 공동구매를 개설합니다.",
+    myPage: "마이페이지",
+    myPageDescription: "계좌, 참여, 정산, 알림을 관리합니다.",
   },
 }
 
@@ -196,6 +208,9 @@ export const landingEn: Dictionary["landing"] = {
   demoDataNotice:
     "Showing demo group-buy data. Live deals are available in group-buy search.",
   aiRecommendationsTitle: "AI picks for you",
+  aiRecommendationsSubtitle: "Hybrid picks by deadline urgency and popularity",
+  aiRecommendationsForIdol:
+    "Prioritizing deals and recommendations for {idol}",
   why: {
     title: "Why BiasBuy?",
     authentic: {
@@ -245,5 +260,15 @@ export const landingEn: Dictionary["landing"] = {
     securePayment: "Secure payment",
     authenticGoods: "Authentic goods policy",
     copyright: "© 2026 BiasBuy. All rights reserved.",
+  },
+  hub: {
+    title: "Home",
+    subtitle: "Jump to vacancy search, start a deal, or open my page.",
+    searchVacant: "Find open seats",
+    searchVacantDescription: "Filter deals with vacancies for your favorite member.",
+    createDeal: "Start a group deal",
+    createDealDescription: "Open a new group buy as host.",
+    myPage: "My page",
+    myPageDescription: "Manage accounts, participations, settlements, and alerts.",
   },
 }

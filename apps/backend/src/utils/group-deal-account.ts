@@ -1,7 +1,10 @@
 import {
   GroupDealDepositStatus,
+  GroupDealDisputeStatus,
+  GroupDealDocumentAiStatus,
   GroupDealParticipantStatus,
   GroupDealReceiptStatus,
+  GroupDealReportStage,
   GroupDealStatus,
 } from "../types/group-buying"
 
@@ -9,6 +12,7 @@ export type GroupDealParticipationStage =
   | "recruiting"
   | "payment_complete"
   | "purchasing"
+  | "opening"
   | "shipping"
   | "delivery_confirmed"
 
@@ -37,6 +41,17 @@ export const resolveParticipationStage = (input: {
 
   if (participant.tracking_number) {
     return "shipping"
+  }
+
+  const metadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+  const openingStatus = String(metadata.opening_status ?? "pending")
+  const receiptStatus = String(deal.purchase_receipt_status ?? "pending")
+
+  if (
+    receiptStatus === GroupDealReceiptStatus.VERIFIED &&
+    openingStatus !== "completed"
+  ) {
+    return "opening"
   }
 
   const dealStatus = String(deal.status ?? "")
@@ -95,6 +110,59 @@ export const resolveLeaderStage = (deal: DealRecord): GroupDealLeaderStage => {
   return "created"
 }
 
+const readDealMetadata = (deal: DealRecord): Record<string, unknown> =>
+  (deal.metadata as Record<string, unknown> | null) ?? {}
+
+const readJsonRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+
+const readStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.filter((item): item is string => typeof item === "string")
+}
+
+export const serializeAccountGroupDealReportDetails = (deal: DealRecord) => {
+  const metadata = readDealMetadata(deal)
+  const receiptAiResult = readJsonRecord(deal.receipt_ai_result)
+  const trackingAiResult = readJsonRecord(deal.tracking_ai_result)
+  const structuredReceipt =
+    readJsonRecord(metadata.purchase_receipt_structured) ??
+    readJsonRecord(receiptAiResult?.structured_receipt)
+
+  const receiptValidation = readJsonRecord(receiptAiResult?.validation)
+  const autoMatchedParticipantIds = readStringArray(
+    trackingAiResult?.auto_matched_participant_ids
+  )
+  const reviewConflicts = Array.isArray(trackingAiResult?.review_conflicts)
+    ? trackingAiResult.review_conflicts
+    : []
+  const invoiceRows = Array.isArray(trackingAiResult?.invoice_rows)
+    ? trackingAiResult.invoice_rows
+    : []
+
+  return {
+    purchase_receipt_structured: structuredReceipt,
+    receipt_ai_validation: receiptValidation
+      ? {
+          passed: Boolean(receiptValidation.passed),
+          reasons: Array.isArray(receiptValidation.reasons)
+            ? receiptValidation.reasons.filter(
+                (item): item is string => typeof item === "string"
+              )
+            : [],
+        }
+      : null,
+    tracking_ai_matched_count: autoMatchedParticipantIds.length,
+    tracking_ai_conflict_count: reviewConflicts.length,
+    tracking_ai_invoice_rows: invoiceRows.slice(0, 5),
+  }
+}
+
 export const serializeAccountGroupDeal = (deal: DealRecord) => ({
   id: String(deal.id),
   title: String(deal.title ?? ""),
@@ -110,6 +178,23 @@ export const serializeAccountGroupDeal = (deal: DealRecord) => ({
     ? new Date(deal.ends_at as string | Date).toISOString()
     : null,
   purchase_receipt_status: String(deal.purchase_receipt_status ?? "pending"),
+  receipt_ai_status: String(
+    deal.receipt_ai_status ?? GroupDealDocumentAiStatus.NOT_REQUESTED
+  ),
+  receipt_ai_confidence:
+    deal.receipt_ai_confidence != null
+      ? Number(deal.receipt_ai_confidence)
+      : null,
+  tracking_ai_status: String(
+    deal.tracking_ai_status ?? GroupDealDocumentAiStatus.NOT_REQUESTED
+  ),
+  tracking_ai_confidence:
+    deal.tracking_ai_confidence != null
+      ? Number(deal.tracking_ai_confidence)
+      : null,
+  report_stage: String(deal.report_stage ?? GroupDealReportStage.NOT_STARTED),
+  dispute_status: String(deal.dispute_status ?? GroupDealDisputeStatus.NONE),
+  ...serializeAccountGroupDealReportDetails(deal),
   created_at: deal.created_at
     ? new Date(deal.created_at as string | Date).toISOString()
     : new Date(0).toISOString(),
@@ -121,12 +206,25 @@ export const serializeAccountParticipation = (input: {
 }) => {
   const { participant, deal } = input
   const stage = resolveParticipationStage({ deal, participant })
+  const metadata = readDealMetadata(deal)
+  const applicationDetails =
+    (metadata.participant_application_details as
+      | Record<string, Record<string, unknown>>
+      | undefined) ?? {}
+  const participantDetails =
+    applicationDetails[String(participant.id)] ?? null
+  const shippingAddress = participantDetails?.shipping_address ?? null
+  const memberLabel =
+    typeof participantDetails?.member_label === "string"
+      ? participantDetails.member_label
+      : null
 
   return {
     participant_id: String(participant.id),
     quantity: Number(participant.quantity ?? 1),
     status: String(participant.status ?? ""),
     stage,
+    member_label: memberLabel,
     tracking_number:
       participant.tracking_number != null
         ? String(participant.tracking_number)
@@ -142,6 +240,10 @@ export const serializeAccountParticipation = (input: {
           participant.delivery_confirmed_at as string | Date
         ).toISOString()
       : null,
+    shipping_address:
+      shippingAddress && typeof shippingAddress === "object"
+        ? shippingAddress
+        : null,
     group_deal: serializeAccountGroupDeal(deal),
     created_at: participant.created_at
       ? new Date(participant.created_at as string | Date).toISOString()
@@ -161,11 +263,20 @@ export type SavedPaymentMethodRecord = {
   created_at: string
 }
 
+export type PreferredRole = "participant" | "leader"
+
 export type GroupBuyingPreferences = {
   favorite_idol_group: string | null
   favorite_member: string | null
+  /** seat_alerts */
   notify_vacancy: boolean
+  /** deal_progress_alerts */
   notify_progress: boolean
+  /** payment_settlement_alerts */
+  payment_settlement_alerts: boolean
+  /** marketing_alerts */
+  marketing_alerts: boolean
+  preferred_role: PreferredRole
 }
 
 const DEFAULT_PREFERENCES: GroupBuyingPreferences = {
@@ -173,6 +284,9 @@ const DEFAULT_PREFERENCES: GroupBuyingPreferences = {
   favorite_member: null,
   notify_vacancy: true,
   notify_progress: true,
+  payment_settlement_alerts: true,
+  marketing_alerts: true,
+  preferred_role: "participant",
 }
 
 export const readGroupBuyingPreferences = (
@@ -201,6 +315,18 @@ export const readGroupBuyingPreferences = (
       typeof prefs.notify_progress === "boolean"
         ? prefs.notify_progress
         : DEFAULT_PREFERENCES.notify_progress,
+    payment_settlement_alerts:
+      typeof prefs.payment_settlement_alerts === "boolean"
+        ? prefs.payment_settlement_alerts
+        : DEFAULT_PREFERENCES.payment_settlement_alerts,
+    marketing_alerts:
+      typeof prefs.marketing_alerts === "boolean"
+        ? prefs.marketing_alerts
+        : metadata?.marketing_opt_in === false
+          ? false
+          : DEFAULT_PREFERENCES.marketing_alerts,
+    preferred_role:
+      prefs.preferred_role === "leader" ? "leader" : "participant",
   }
 }
 

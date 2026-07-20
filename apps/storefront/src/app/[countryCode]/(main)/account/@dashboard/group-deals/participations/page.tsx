@@ -30,6 +30,7 @@ export default async function ParticipationsPage() {
       </div>
       <ParticipationsList
         participations={participations}
+        stageLabels={dictionary.account.groupBuying.stages}
         labels={{
           tabActive: t.tabActive,
           tabCompleted: t.tabCompleted,
@@ -40,14 +41,25 @@ export default async function ParticipationsPage() {
           emptyCompleted: t.emptyCompleted,
           emptyCancelled: t.emptyCancelled,
           autoDeliveryConfirmHint: t.autoDeliveryConfirmHint,
+          deliveryConfirmNeededAlert: t.deliveryConfirmNeededAlert,
           quantity: t.quantity,
           viewDeal: t.viewDeal,
           viewDetail: t.viewDetail,
+          memberLabel: t.memberLabel,
+          memberFallback: t.memberFallback,
+          statusCancelled: t.statusCancelled,
+          statusRefunded: t.statusRefunded,
           tracking: t.tracking,
           confirmDelivery: t.confirmDelivery,
           confirmingDelivery: t.confirmingDelivery,
           deliveryConfirmed: t.deliveryConfirmed,
           confirmDeliveryError: t.confirmDeliveryError,
+          confirmPurchase: t.confirmPurchase,
+          confirmPurchaseTitle: t.confirmPurchaseTitle,
+          confirmPurchaseMessage: t.confirmPurchaseMessage,
+          confirmPurchaseConfirm: t.confirmPurchaseConfirm,
+          confirmPurchaseCancel: t.confirmPurchaseCancel,
+          progressStages: t.progressStages,
         }}
       />
     </div>

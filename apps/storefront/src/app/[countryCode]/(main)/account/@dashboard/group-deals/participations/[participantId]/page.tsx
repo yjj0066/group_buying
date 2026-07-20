@@ -3,10 +3,14 @@ import { notFound } from "next/navigation"
 
 import { listMyParticipations } from "@lib/data/account-group-deals"
 import { getServerDictionary } from "@i18n/server"
+import { buildTrackingUrl } from "@lib/util/tracking-link"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ConfirmDeliveryButton from "@modules/account/components/confirm-delivery-button"
+import ParticipationDisputeForm from "@modules/account/components/participation-dispute-form"
+import ParticipationReviewForm from "@modules/account/components/participation-review-form"
 import ParticipationTimeline from "@modules/account/components/participation-timeline"
 import LeaderTrustPanel from "@modules/group-buying/components/leader-trust-panel"
+import GroupDealAiReportPanel from "@modules/group-buying/components/group-deal-ai-report-panel"
 import PurchaseReceiptPanel from "@modules/group-buying/components/purchase-receipt-panel"
 import { Button, Text } from "@modules/common/components/ui"
 import { convertToLocale } from "@lib/util/money"
@@ -62,6 +66,8 @@ export default async function ParticipationDetailPage(props: Props) {
     deposit_status: participation.group_deal.deposit_status,
     deposit_amount: participation.group_deal.deposit_amount,
     purchase_receipt_status: participation.group_deal.purchase_receipt_status,
+    purchase_receipt_structured:
+      participation.group_deal.purchase_receipt_structured ?? null,
     created_at: participation.created_at,
     updated_at: participation.created_at,
   } satisfies GroupDeal
@@ -70,6 +76,23 @@ export default async function ParticipationDetailPage(props: Props) {
     participation.stage === "shipping" &&
     !participation.delivery_confirmed_at &&
     participation.status === "confirmed"
+
+  const canReview =
+    participation.stage === "delivery_confirmed" ||
+    Boolean(participation.delivery_confirmed_at)
+
+  const canDispute =
+    participation.stage === "shipping" ||
+    participation.stage === "delivery_confirmed" ||
+    Boolean(participation.tracking_number)
+
+  const trackingUrl =
+    participation.tracking_number != null
+      ? buildTrackingUrl(
+          participation.carrier,
+          participation.tracking_number
+        )
+      : null
 
   return (
     <div className="flex flex-col gap-y-6">
@@ -97,12 +120,41 @@ export default async function ParticipationDetailPage(props: Props) {
 
       <PurchaseReceiptPanel deal={dealForTrust} />
 
+      <section className="rounded-xl border border-ui-border-base p-5">
+        <Text className="text-sm font-semibold">
+          {t.report.title}
+        </Text>
+        <Text className="mt-1 text-sm text-ui-fg-subtle">
+          {t.report.description}
+        </Text>
+        <div className="mt-4">
+          <GroupDealAiReportPanel
+            deal={participation.group_deal}
+            audience="participant"
+          />
+        </div>
+      </section>
+
       {participation.tracking_number && (
         <section className="rounded-xl border border-ui-border-base p-5">
           <Text className="text-sm font-semibold">{t.trackingTitle}</Text>
           <Text className="mt-2 text-sm text-ui-fg-subtle">
-            {t.tracking.replace("{number}", participation.tracking_number)}
+            {participation.carrier
+              ? t.trackingWithCarrier
+                  .replace("{carrier}", participation.carrier)
+                  .replace("{number}", participation.tracking_number)
+              : t.tracking.replace("{number}", participation.tracking_number)}
           </Text>
+          {trackingUrl && (
+            <a
+              href={trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-block text-sm font-medium text-ui-fg-interactive underline"
+            >
+              {t.trackingExternalLink}
+            </a>
+          )}
         </section>
       )}
 
@@ -117,6 +169,30 @@ export default async function ParticipationDetailPage(props: Props) {
               currency_code: participation.group_deal.currency_code,
             })}
           </Text>
+        </section>
+      )}
+
+      {canDispute && (
+        <section className="rounded-xl border border-ui-border-base p-5">
+          <Text className="text-sm font-semibold">{t.disputeTitle}</Text>
+          <Text className="mt-1 text-sm text-ui-fg-subtle">{t.disputeDescription}</Text>
+          <div className="mt-4">
+            <ParticipationDisputeForm
+              participantId={participation.participant_id}
+            />
+          </div>
+        </section>
+      )}
+
+      {canReview && (
+        <section className="rounded-xl border border-ui-border-base p-5">
+          <Text className="text-sm font-semibold">{t.reviewTitle}</Text>
+          <Text className="mt-1 text-sm text-ui-fg-subtle">{t.reviewDescription}</Text>
+          <div className="mt-4">
+            <ParticipationReviewForm
+              participantId={participation.participant_id}
+            />
+          </div>
         </section>
       )}
 

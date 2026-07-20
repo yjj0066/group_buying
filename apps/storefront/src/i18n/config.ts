@@ -7,6 +7,7 @@ import {
   type UiLocale,
 } from "./constants"
 import { getDefaultDictionary, isValidDictionary } from "./fallback"
+import { mergeDictionary } from "./merge"
 
 const dictionaries: Record<UiLocale, () => Promise<Dictionary>> = {
   ko: () => import("./dictionaries/ko").then((m) => m.default),
@@ -31,7 +32,24 @@ export const getDictionary = async (locale: UiLocale): Promise<Dictionary> => {
       return fallback
     }
 
-    return dictionary
+    if (locale === "ko") {
+      return dictionary
+    }
+
+    if (locale === "en") {
+      return mergeDictionary(fallback, dictionary)
+    }
+
+    const enDictionary = await dictionaries.en()
+
+    if (!isValidDictionary(enDictionary)) {
+      return mergeDictionary(fallback, dictionary)
+    }
+
+    return mergeDictionary(
+      mergeDictionary(fallback, enDictionary),
+      dictionary
+    )
   } catch (error) {
     console.error(
       `[i18n] Failed to load dictionary for "${locale}". Falling back to Korean.`,

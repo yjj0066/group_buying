@@ -8,7 +8,8 @@ const DEFAULT_REGION = (
 ).toLowerCase()
 
 const REGION_CACHE_TTL_MS = 3600 * 1000
-const REGION_FETCH_TIMEOUT_MS = 5000
+const REGION_FETCH_TIMEOUT_MS =
+  process.env.NODE_ENV === "development" ? 2000 : 5000
 
 const regionMapCache = {
   regionMap: new Map<string, HttpTypes.StoreRegion>(),

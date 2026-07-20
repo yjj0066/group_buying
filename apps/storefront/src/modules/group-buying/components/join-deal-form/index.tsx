@@ -63,7 +63,7 @@ const JoinDealForm = ({
     setError(null)
 
     try {
-      await startGroupDealCheckout(deal.id, {
+      const response = await startGroupDealCheckout(deal.id, {
         email,
         quantity,
         countryCode,
@@ -72,7 +72,18 @@ const JoinDealForm = ({
           : undefined,
       })
 
-      router.push(`/${countryCode}/checkout`)
+      if (response.virtual_account) {
+        sessionStorage.setItem(
+          `group-deal-deposit:${deal.id}:${response.participant.id}`,
+          JSON.stringify(response.virtual_account)
+        )
+      }
+
+      const depositPath = response.checkout_path.startsWith("/")
+        ? `/${countryCode}${response.checkout_path}`
+        : response.checkout_path
+
+      router.push(depositPath)
       router.refresh()
     } catch (err) {
       setError(
