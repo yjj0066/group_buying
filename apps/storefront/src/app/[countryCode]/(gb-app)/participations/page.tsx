@@ -2,12 +2,27 @@
  * [MYJN] 내 참여 현황 (목록)
  * Wireframe ID: MYJN | 도메인: 참여자 | 우선순위: P0
  */
+import { Suspense } from "react"
+
 import { listMyParticipations } from "@lib/data/account-group-deals"
 import { getServerDictionary } from "@i18n/server"
+import { buildParticipationsListLabels } from "@lib/util/participations-list-labels"
 import ParticipationsList from "@modules/account/components/participations-list"
 import { BbSectionHeader } from "@modules/design-system"
 
-export default async function ParticipationsPage() {
+export default function ParticipationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-8 text-sm text-[var(--bb-mute)]">불러오는 중...</div>
+      }
+    >
+      <ParticipationsPageContent />
+    </Suspense>
+  )
+}
+
+async function ParticipationsPageContent() {
   const [dictionary, participations] = await Promise.all([
     getServerDictionary(),
     listMyParticipations(),
@@ -23,36 +38,7 @@ export default async function ParticipationsPage() {
       <ParticipationsList
         participations={participations}
         stageLabels={stageLabels}
-        labels={{
-          tabActive: t.tabActive,
-          tabCompleted: t.tabCompleted,
-          tabCancelled: t.tabCancelled,
-          empty: t.empty,
-          emptyActive: t.emptyActive,
-          emptyActiveCta: t.emptyActiveCta,
-          emptyCompleted: t.emptyCompleted,
-          emptyCancelled: t.emptyCancelled,
-          autoDeliveryConfirmHint: t.autoDeliveryConfirmHint,
-          deliveryConfirmNeededAlert: t.deliveryConfirmNeededAlert,
-          quantity: t.quantity,
-          viewDeal: t.viewDeal,
-          viewDetail: t.viewDetail,
-          memberLabel: t.memberLabel,
-          memberFallback: t.memberFallback,
-          statusCancelled: t.statusCancelled,
-          statusRefunded: t.statusRefunded,
-          tracking: t.tracking,
-          confirmDelivery: t.confirmDelivery,
-          confirmingDelivery: t.confirmingDelivery,
-          deliveryConfirmed: t.deliveryConfirmed,
-          confirmDeliveryError: t.confirmDeliveryError,
-          confirmPurchase: t.confirmPurchase,
-          confirmPurchaseTitle: t.confirmPurchaseTitle,
-          confirmPurchaseMessage: t.confirmPurchaseMessage,
-          confirmPurchaseConfirm: t.confirmPurchaseConfirm,
-          confirmPurchaseCancel: t.confirmPurchaseCancel,
-          progressStages: t.progressStages,
-        }}
+        labels={buildParticipationsListLabels(t)}
       />
     </div>
   )

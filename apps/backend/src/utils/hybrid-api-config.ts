@@ -52,7 +52,7 @@ export const getDocumentAiRequestTimeoutMs = (): number => {
     return override
   }
 
-  return process.env.NODE_ENV === "development" ? 15000 : 8000
+  return process.env.NODE_ENV === "development" ? 180000 : 120000
 }
 
 export const getDocumentAiAutoVerifyConfidence = (): number => {

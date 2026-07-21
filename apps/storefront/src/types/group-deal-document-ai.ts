@@ -46,9 +46,16 @@ export type AiExtractField = {
   masked?: string
 }
 
+export type VerificationItemStatus =
+  | "pass"
+  | "fail"
+  | "skipped"
+  | "no_match"
+  | "not_extracted"
+
 export type VerificationItem = {
   id: string
   label: string
-  status: "pass" | "fail" | "pending"
+  status: VerificationItemStatus
   detail?: string
 }

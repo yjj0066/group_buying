@@ -1,14 +1,71 @@
-import { ExecArgs } from "@medusajs/framework/types"
+import { ExecArgs, MedusaContainer } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   ProductStatus,
 } from "@medusajs/framework/utils"
-import { createProductsWorkflow } from "@medusajs/medusa/core-flows"
+import {
+  createProductsWorkflow,
+  updateProductVariantsWorkflow,
+} from "@medusajs/medusa/core-flows"
 
 import {
   DEMO_GROUP_BUY_PRODUCT_ID,
   DEMO_GROUP_BUY_VARIANT_ID,
 } from "../constants/group-buying-demo-product"
+
+const DEMO_VARIANT = {
+  id: DEMO_GROUP_BUY_VARIANT_ID,
+  title: "Default",
+  sku: "GB-PLACEHOLDER",
+  manage_inventory: false,
+  options: {
+    Type: "Default",
+  },
+  prices: [
+    { amount: 10000, currency_code: "krw" },
+    { amount: 10, currency_code: "eur" },
+    { amount: 10, currency_code: "usd" },
+  ],
+}
+
+const ensureDemoVariantSkipsInventory = async (
+  container: MedusaContainer,
+  logger: { info: (message: string) => void }
+) => {
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+
+  const { data: variants } = await query.graph({
+    entity: "product_variant",
+    fields: ["id", "manage_inventory"],
+    filters: { id: DEMO_GROUP_BUY_VARIANT_ID },
+  })
+
+  const variant = variants?.[0]
+
+  if (!variant?.id) {
+    return false
+  }
+
+  if (variant.manage_inventory === false) {
+    logger.info(
+      `Group-buy demo variant already skips inventory (${DEMO_GROUP_BUY_VARIANT_ID}).`
+    )
+    return true
+  }
+
+  await updateProductVariantsWorkflow(container).run({
+    input: {
+      selector: { id: DEMO_GROUP_BUY_VARIANT_ID },
+      update: { manage_inventory: false },
+    },
+  })
+
+  logger.info(
+    `Updated group-buy demo variant to manage_inventory=false (${DEMO_GROUP_BUY_VARIANT_ID}).`
+  )
+
+  return true
+}
 
 /**
  * Ensures the placeholder product used by leader/seller create flows exists.
@@ -28,6 +85,7 @@ export default async function seedGroupBuyDemoProduct({ container }: ExecArgs) {
     logger.info(
       `Group-buy demo product already exists (${DEMO_GROUP_BUY_PRODUCT_ID}).`
     )
+    await ensureDemoVariantSkipsInventory(container, logger)
     return
   }
 
@@ -70,21 +128,7 @@ export default async function seedGroupBuyDemoProduct({ container }: ExecArgs) {
               values: ["Default"],
             },
           ],
-          variants: [
-            {
-              id: DEMO_GROUP_BUY_VARIANT_ID,
-              title: "Default",
-              sku: "GB-PLACEHOLDER",
-              options: {
-                Type: "Default",
-              },
-              prices: [
-                { amount: 10000, currency_code: "krw" },
-                { amount: 10, currency_code: "eur" },
-                { amount: 10, currency_code: "usd" },
-              ],
-            },
-          ],
+          variants: [DEMO_VARIANT],
           sales_channels: [{ id: salesChannel.id }],
         },
       ],

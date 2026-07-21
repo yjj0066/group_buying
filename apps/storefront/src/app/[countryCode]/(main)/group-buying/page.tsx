@@ -9,6 +9,8 @@ import { parseFiltersFromSearchParams } from "@lib/util/group-deal-filter-url"
 import { getServerDictionary } from "@i18n/server"
 import GroupDealsCatalog from "@modules/group-buying/components/group-deals-catalog"
 
+export const dynamic = "force-dynamic"
+
 export async function generateMetadata(): Promise<Metadata> {
   const dictionary = await getServerDictionary()
 

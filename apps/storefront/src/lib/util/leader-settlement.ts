@@ -3,6 +3,7 @@ import {
   GROUP_BUYING_PLATFORM_FEE,
   GROUP_BUYING_SHIPPING_FEE,
 } from "@lib/constants/group-buying-fees"
+import type { RefundBankAccount } from "types/account-group-deals"
 import { loadLeaderCreateDraft } from "@modules/group-buying/components/leader-create-wizard/storage"
 import { loadLeaderPurchaseProofDraft } from "@modules/group-buying/components/leader-purchase-proof/storage"
 import type { GroupDeal } from "types/group-deal"
@@ -136,29 +137,78 @@ export const readRefundBankAccountFromDealMetadata = (
   }
 }
 
+export const EMPTY_LEADER_SETTLEMENT_BANK_ACCOUNT: LeaderSettlementBankAccount = {
+  bankCode: "",
+  bankName: "",
+  accountNumber: "",
+  accountHolder: "",
+}
+
+export const convertRefundBankAccountToSettlement = (
+  account: RefundBankAccount
+): LeaderSettlementBankAccount => ({
+  bankCode: account.bank_code,
+  bankName: account.bank_name,
+  accountNumber: account.account_number.trim(),
+  accountHolder: account.account_holder,
+})
+
+const isLikelyMaskedAccountNumber = (accountNumber: string): boolean =>
+  accountNumber.includes("*")
+
+export const isLeaderSettlementBankAccountComplete = (
+  account: LeaderSettlementBankAccount | null | undefined
+): account is LeaderSettlementBankAccount =>
+  Boolean(
+    account?.bankCode.trim() &&
+      account.bankName.trim() &&
+      account.accountNumber.trim() &&
+      !isLikelyMaskedAccountNumber(account.accountNumber) &&
+      account.accountHolder.trim()
+  )
+
+export const isRegisteredBankAccountComplete = (
+  account: RefundBankAccount | null | undefined
+): account is RefundBankAccount =>
+  Boolean(
+    account &&
+      account.bank_code.trim() &&
+      account.bank_name.trim() &&
+      account.account_number.trim() &&
+      !isLikelyMaskedAccountNumber(account.account_number) &&
+      account.account_holder.trim()
+  )
+
 export const resolveLeaderSettlementBankAccount = (
   dealId: string,
   dealMetadata?: Record<string, unknown> | null,
-  settlementOverride?: LeaderSettlementBankAccount | null
+  settlementOverride?: LeaderSettlementBankAccount | null,
+  registeredBankAccount?: RefundBankAccount | null
 ): LeaderSettlementBankAccount | null => {
-  if (
-    settlementOverride?.bankName &&
-    settlementOverride.accountNumber &&
-    settlementOverride.accountHolder
-  ) {
+  if (isLeaderSettlementBankAccountComplete(settlementOverride)) {
     return settlementOverride
+  }
+
+  if (registeredBankAccount) {
+    const converted = convertRefundBankAccountToSettlement(registeredBankAccount)
+
+    if (isLeaderSettlementBankAccountComplete(converted)) {
+      return converted
+    }
   }
 
   const wizardDraft = loadLeaderCreateDraft()
   const wizardAccount = wizardDraft.refundAccount
 
-  if (
-    wizardAccount.bankName &&
-    wizardAccount.accountNumber &&
-    wizardAccount.accountHolder
-  ) {
+  if (isLeaderSettlementBankAccountComplete(wizardAccount)) {
     return wizardAccount
   }
 
-  return readRefundBankAccountFromDealMetadata(dealMetadata)
+  const metadataAccount = readRefundBankAccountFromDealMetadata(dealMetadata)
+
+  if (isLeaderSettlementBankAccountComplete(metadataAccount)) {
+    return metadataAccount
+  }
+
+  return null
 }

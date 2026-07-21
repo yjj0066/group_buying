@@ -85,13 +85,16 @@ export const POST = async (
   const quantity = body.quantity ?? 1
   const email = await resolveCustomerEmail(req, customerId)
   const regionId = await resolveRegionId(body.country_code, req.scope)
+  const selections = body.option_id
+    ? [{ option_id: body.option_id, quantity }]
+    : undefined
 
   const { result } = await prepareGroupDealCheckoutWorkflow(req.scope).run({
     input: {
       group_deal_id: req.params.id,
       email,
       quantity,
-      selections: [{ option_id: body.option_id, quantity }],
+      selections,
       region_id: regionId,
       customer_id: customerId,
     },
@@ -166,7 +169,7 @@ export const POST = async (
     participation: {
       id: participantId,
       deal_id: req.params.id,
-      option_id: body.option_id,
+      option_id: body.option_id ?? null,
       member_label: body.member_label,
       status: "pending_deposit",
       virtual_account: virtualAccount,

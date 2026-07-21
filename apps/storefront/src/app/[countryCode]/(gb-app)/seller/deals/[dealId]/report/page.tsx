@@ -43,7 +43,7 @@ export default async function SellerReportPage(props: Props) {
 
   return (
     <div className="flex flex-col gap-4 pb-8">
-      <LocalizedClientLink href={gbAppRoutes.sellerDeal(resolvedCountryCode, dealId)}>
+      <LocalizedClientLink href={gbAppRoutes.myHosted(resolvedCountryCode)}>
         <BbButton variant="secondary" size="sm">
           {dictionary.account.hostedDeals.report.backToList}
         </BbButton>

@@ -12,6 +12,7 @@ import {
   PostAdminQuoteGroupDealShipping,
   PostAdminUpdateGroupDeal,
 } from "./validators"
+import { GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT } from "../../../utils/group-deal-document-upload"
 
 export const adminGroupDealRoutesMiddlewares: MiddlewareRoute[] = [
   {
@@ -43,11 +44,17 @@ export const adminGroupDealRoutesMiddlewares: MiddlewareRoute[] = [
   {
     matcher: "/admin/group-deals/:id/receipt",
     method: "POST",
+    bodyParser: {
+      sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
+    },
     middlewares: [validateAndTransformBody(PostAdminGroupDealReceipt)],
   },
   {
     matcher: "/admin/group-deals/:id/tracking",
     method: "POST",
+    bodyParser: {
+      sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
+    },
     middlewares: [validateAndTransformBody(PostAdminGroupDealTracking)],
   },
 ]

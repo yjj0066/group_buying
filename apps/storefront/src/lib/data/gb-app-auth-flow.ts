@@ -10,10 +10,10 @@ import {
   updateGroupBuyingPreferences,
 } from "@lib/data/account-group-deals"
 import { isGbAppOnboardingComplete } from "@lib/util/group-buying-preferences"
+import { formatGbAppSignupError } from "@lib/util/format-gb-app-signup-error"
 import { setGroupBuyingModeCookie } from "@lib/data/group-buying-mode"
 import { resolveCountryCode } from "@lib/util/country-code"
 import { gbAppRoutes } from "@lib/wireframe/routes"
-import { redirect } from "next/navigation"
 import type { PreferredRole } from "types/account-group-deals"
 
 export async function hasValidAuthSession(): Promise<boolean> {
@@ -167,6 +167,12 @@ export async function checkNicknameAvailability(
   }
 }
 
+const formatSignupFailure = (error: unknown): string =>
+  formatGbAppSignupError(
+    error instanceof Error ? error.message : String(error),
+    "회원가입에 실패했습니다. 입력 정보를 확인해 주세요."
+  )
+
 export async function signupGbAppUser(
   _currentState: CustomerAuthState | null,
   formData: FormData
@@ -186,7 +192,7 @@ export async function signupGbAppUser(
     try {
       await applyGbAppSignupPreferences(formData)
     } catch (error) {
-      return { state: "error", error: String(error) }
+      return { state: "error", error: formatSignupFailure(error) }
     }
 
     const preferences = await retrieveGroupBuyingPreferences()
@@ -199,19 +205,26 @@ export async function signupGbAppUser(
       }
     }
 
-    redirect(gbAppRoutes.bankAccount(countryCode))
+    return { state: "success" }
   }
 
   const signupResult = await signup(_currentState, formData)
 
   if (signupResult?.state !== "success") {
+    if (signupResult?.state === "error") {
+      return {
+        state: "error",
+        error: formatSignupFailure(signupResult.error),
+      }
+    }
+
     return signupResult
   }
 
   try {
     await applyGbAppSignupPreferences(formData)
   } catch (error) {
-    return { state: "error", error: String(error) }
+    return { state: "error", error: formatSignupFailure(error) }
   }
 
   const preferences = await retrieveGroupBuyingPreferences()
@@ -223,7 +236,7 @@ export async function signupGbAppUser(
     }
   }
 
-  redirect(gbAppRoutes.bankAccount(countryCode))
+  return { state: "success" }
 }
 
 export type BankAccountFormState =

@@ -11,6 +11,8 @@ export type LeaderDealParticipation = {
   deposit_amount: number
   status: string
   stage?: string
+  tracking_number?: string | null
+  carrier?: string | null
 }
 
 export const isDepositConfirmedLeaderParticipation = (
@@ -29,3 +31,8 @@ export const isDepositConfirmedLeaderParticipation = (
 
   return false
 }
+
+export const filterDepositConfirmedParticipations = (
+  participations: LeaderDealParticipation[]
+): LeaderDealParticipation[] =>
+  participations.filter(isDepositConfirmedLeaderParticipation)

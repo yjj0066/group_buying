@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 
+import { confirmLeaderShipping } from "@lib/data/leader-shipping"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import {
   buildShippingMatchConflicts,
@@ -29,6 +30,8 @@ const SellerShippingConfirmView = ({
   const router = useRouter()
   const { countryCode } = useParams() as { countryCode: string }
   const [selections, setSelections] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const conflicts = useMemo(
     () => buildShippingMatchConflicts(participations),
@@ -38,11 +41,55 @@ const SellerShippingConfirmView = ({
   const conflictCount =
     Number(deal.metadata?.tracking_ai_conflict_count ?? 0) || conflicts.length
 
+  const shippingAlreadyCompleted = Boolean(deal.metadata?.shipping_completed_at)
+
+  const trackingEntries = useMemo(
+    () =>
+      participations
+        .filter(
+          (participant) =>
+            participant.tracking_number?.trim() && participant.carrier?.trim()
+        )
+        .map((participant) => ({
+          participant_id: participant.participant_id,
+          carrier: participant.carrier!.trim(),
+          tracking_number: participant.tracking_number!.trim(),
+        })),
+    [participations]
+  )
+
   const selectCandidate = (conflict: ShippingMatchConflict, participantId: string) => {
     setSelections((current) => ({
       ...current,
       [conflict.id]: participantId,
     }))
+  }
+
+  const handleContinue = async () => {
+    setSubmitError(null)
+
+    if (shippingAlreadyCompleted) {
+      router.push(gbAppRoutes.sellerSettlement(countryCode, deal.id))
+      return
+    }
+
+    if (trackingEntries.length !== participations.length) {
+      router.push(gbAppRoutes.sellerShipping(countryCode, deal.id))
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const result = await confirmLeaderShipping(deal.id, trackingEntries)
+
+    setIsSubmitting(false)
+
+    if (!result.ok) {
+      setSubmitError(result.error)
+      return
+    }
+
+    router.push(gbAppRoutes.sellerSettlement(countryCode, deal.id))
   }
 
   return (
@@ -105,11 +152,12 @@ const SellerShippingConfirmView = ({
           확인 필요 건만 표시 · 전체 재입력 없음
         </p>
 
+        {submitError ? <BbAlert variant="error">{submitError}</BbAlert> : null}
+
         <BbButton
           variant="cta"
-          onClick={() =>
-            router.push(gbAppRoutes.sellerSettlement(countryCode, deal.id))
-          }
+          isLoading={isSubmitting}
+          onClick={() => void handleContinue()}
         >
           확인 완료 · 정산으로
         </BbButton>

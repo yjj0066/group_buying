@@ -259,7 +259,11 @@ export const listGroupDeals = async (options?: {
   try {
     const response = await sdk.client.fetch<{ group_deals: GroupDeal[] }>(
       "/store/group-deals",
-      { method: "GET", cache: "no-store" }
+      {
+        method: "GET",
+        cache: "no-store",
+        next: { tags: ["group-deals"] },
+      }
     )
 
     const groupDeals = (response.group_deals ?? []).map(normalizeGroupDealFromApi)
@@ -282,7 +286,11 @@ export const retrieveGroupDeal = async (
   try {
     const response = await sdk.client.fetch<{ group_deal: GroupDeal }>(
       `/store/group-deals/${id}`,
-      { method: "GET", cache: "no-store" }
+      {
+        method: "GET",
+        cache: "no-store",
+        next: { tags: ["group-deals"] },
+      }
     )
 
     if (response.group_deal) {
@@ -397,25 +405,6 @@ export const getProductGroupDealIndex = async (): Promise<Map<string, string>> =
   }
 
   return index
-}
-
-export const joinGroupDealWaitlist = async (
-  dealId: string,
-  input: { email: string; quantity: number }
-): Promise<void> => {
-  try {
-    await sdk.client.fetch(`/store/group-deals/${dealId}/waitlist`, {
-      method: "POST",
-      body: input,
-    })
-    return
-  } catch {
-    // mock fallback
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 200))
-  void dealId
-  void input
 }
 
 export const startGroupDealCheckout = async (

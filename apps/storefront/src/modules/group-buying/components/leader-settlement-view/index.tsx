@@ -8,6 +8,7 @@ import { submitLeaderSettlementRequest } from "@lib/data/leader-settlement"
 import { applyLeaderDealRuntimeOverrides } from "@lib/util/apply-leader-deal-runtime"
 import {
   computeLeaderSettlementBreakdown,
+  isLeaderSettlementBankAccountComplete,
   maskSettlementAccountNumber,
   resolveLeaderSettlementBankAccount,
   type LeaderSettlementBankAccount,
@@ -24,10 +25,11 @@ import {
   BbSectionHeader,
 } from "@modules/design-system"
 import { markLeaderDealSettled } from "@modules/group-buying/components/leader-deal-runtime/storage"
+import type { RefundBankAccount } from "types/account-group-deals"
 import type { GroupDeal } from "types/group-deal"
 import type { LeaderDealParticipation } from "types/leader-deal-participation"
 
-import LeaderSettlementBankAccountEditModal from "../leader-settlement/bank-account-edit-modal"
+import LeaderSettlementBankAccountForm from "../leader-settlement/bank-account-form"
 import LeaderSettlementSuccessDialog from "../leader-settlement/settlement-success-dialog"
 import {
   loadLeaderSettlementDraft,
@@ -38,11 +40,13 @@ import {
 type LeaderSettlementViewProps = {
   deal: GroupDeal
   participations: LeaderDealParticipation[]
+  registeredBankAccount?: RefundBankAccount | null
 }
 
 const LeaderSettlementView = ({
   deal,
   participations,
+  registeredBankAccount = null,
 }: LeaderSettlementViewProps) => {
   const t = useDictionary()
   const labels = t.gbApp.leaderSettlement
@@ -54,7 +58,6 @@ const LeaderSettlementView = ({
   )
   const [bankAccount, setBankAccount] =
     useState<LeaderSettlementBankAccount | null>(null)
-  const [bankModalOpen, setBankModalOpen] = useState(false)
   const [successDialogOpen, setSuccessDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -71,8 +74,9 @@ const LeaderSettlementView = ({
 
   const isAlreadySubmitted = Boolean(
     settlementDraft.submittedAt ||
+      deal.metadata?.settlement_submitted_at ||
       dealWithRuntime.metadata?.settlement_submitted_at ||
-      dealWithRuntime.status === "completed"
+      dealWithRuntime.status === "settled"
   )
 
   useEffect(() => {
@@ -82,11 +86,12 @@ const LeaderSettlementView = ({
     const resolved = resolveLeaderSettlementBankAccount(
       deal.id,
       deal.metadata,
-      draft.bankAccount
+      draft.bankAccount,
+      registeredBankAccount
     )
 
     setBankAccount(resolved)
-  }, [deal.id, deal.metadata])
+  }, [deal.id, deal.metadata, registeredBankAccount])
 
   const formatAmount = (amount: number, prefix = "") =>
     `${prefix}${convertToLocale({
@@ -94,14 +99,15 @@ const LeaderSettlementView = ({
       currency_code: deal.currency_code,
     })}`
 
-  const handleSaveBankAccount = (account: LeaderSettlementBankAccount) => {
+  const handleBankAccountChange = (account: LeaderSettlementBankAccount) => {
     saveLeaderSettlementBankAccount(deal.id, account)
     setBankAccount(account)
     setSettlementDraft(loadLeaderSettlementDraft(deal.id))
+    setSubmitError(null)
   }
 
   const handleSubmit = async () => {
-    if (!bankAccount) {
+    if (!isLeaderSettlementBankAccountComplete(bankAccount)) {
       setSubmitError(labels.bankRequiredError)
       return
     }
@@ -128,6 +134,15 @@ const LeaderSettlementView = ({
     setSuccessDialogOpen(false)
     router.push(gbAppRoutes.myHosted(countryCode))
   }
+
+  const submittedBankAccount =
+    (deal.metadata?.settlement_bank_account as
+      | {
+          bank_name?: string
+          account_number_masked?: string
+          account_holder?: string
+        }
+      | undefined) ?? null
 
   return (
     <LeaderWireframeShell screenId="STLM" title="정산">
@@ -200,28 +215,29 @@ const LeaderSettlementView = ({
 
         <div>
           <BbSectionHeader
-            title="입금 계좌"
+            title={labels.bankAccountTitle}
             className="mb-3 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-[#111827]"
           />
-          {bankAccount ? (
+          {isAlreadySubmitted && submittedBankAccount ? (
+            <Text className="text-sm text-[#111827]">
+              {submittedBankAccount.bank_name}{" "}
+              {submittedBankAccount.account_number_masked} (
+              {submittedBankAccount.account_holder})
+            </Text>
+          ) : isAlreadySubmitted && bankAccount ? (
             <Text className="text-sm text-[#111827]">
               {bankAccount.bankName}{" "}
               {maskSettlementAccountNumber(bankAccount.accountNumber)} (
               {bankAccount.accountHolder})
             </Text>
           ) : (
-            <BbAlert variant="warning">{labels.bankRequiredError}</BbAlert>
+            <LeaderSettlementBankAccountForm
+              value={bankAccount}
+              registeredBankAccount={registeredBankAccount}
+              disabled={isSubmitting}
+              onChange={handleBankAccountChange}
+            />
           )}
-          {bankAccount && !isAlreadySubmitted ? (
-            <BbButton
-              variant="secondary"
-              size="sm"
-              className="mt-2"
-              onClick={() => setBankModalOpen(true)}
-            >
-              {labels.editBankAccount}
-            </BbButton>
-          ) : null}
         </div>
 
         <div className="rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3">
@@ -236,29 +252,21 @@ const LeaderSettlementView = ({
           <BbButton
             variant="cta"
             isLoading={isSubmitting}
-            disabled={!bankAccount || breakdown.participantCount === 0}
+            disabled={
+              !isLeaderSettlementBankAccountComplete(bankAccount) ||
+              breakdown.participantCount === 0
+            }
             onClick={handleSubmit}
             data-testid="leader-settlement-submit"
           >
-            {isSubmitting ? labels.submitting : "정산 받기"}
+            {isSubmitting ? labels.submitting : labels.submitButton}
           </BbButton>
         ) : null}
 
         <LocalizedClientLink href={gbAppRoutes.sellerDeal(countryCode, deal.id)}>
-          <BbButton variant="secondary">
-            {labels.backToDashboard}
-          </BbButton>
+          <BbButton variant="secondary">{labels.backToDashboard}</BbButton>
         </LocalizedClientLink>
       </div>
-
-      {bankAccount ? (
-        <LeaderSettlementBankAccountEditModal
-          open={bankModalOpen}
-          initialAccount={bankAccount}
-          onClose={() => setBankModalOpen(false)}
-          onSave={handleSaveBankAccount}
-        />
-      ) : null}
 
       <LeaderSettlementSuccessDialog
         open={successDialogOpen}

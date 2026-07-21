@@ -1,10 +1,12 @@
 "use client"
 
 import Image from "next/image"
-import { memo } from "react"
+import { memo, type MouseEvent } from "react"
+import { useParams, useRouter } from "next/navigation"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { useDictionary } from "@i18n/provider"
+import { gbAppRoutes } from "@lib/wireframe/routes"
 import { calculateLeaderTrustScore } from "@lib/util/group-deal-trust"
 import { isCatalogDealClosed } from "@lib/util/group-deal-catalog"
 import { convertToLocale } from "@lib/util/money"
@@ -20,6 +22,7 @@ import {
   isDepositSecured,
 } from "types/group-deal"
 
+import { BbButton } from "./bb-button"
 import { BbMemberChipRow, MemberChipItem } from "./bb-member-chip-row"
 import { cn } from "../cn"
 
@@ -59,6 +62,8 @@ const BbGroupBuyCardComponent = ({
   className,
 }: BbGroupBuyCardProps) => {
   const t = useDictionary()
+  const router = useRouter()
+  const { countryCode } = useParams() as { countryCode: string }
   const trust = calculateLeaderTrustScore(deal)
   const closed = isCatalogDealClosed(deal)
   const soldOut = isDealSoldOut(deal)
@@ -98,6 +103,26 @@ const BbGroupBuyCardComponent = ({
         })
 
   const metaLine = `${priceLabel} · ${deadlineLabel}`
+
+  const handleWaitlistClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const params = new URLSearchParams({ dealId: deal.id })
+
+    if (highlightMember) {
+      const matchedOption = memberOptions.find(
+        (option) => option.label === highlightMember
+      )
+
+      if (matchedOption) {
+        params.set("member", matchedOption.label)
+        params.set("optionId", matchedOption.id)
+      }
+    }
+
+    router.push(`${gbAppRoutes.waitlist(countryCode)}?${params.toString()}`)
+  }
 
   const cardClassName = cn(
     "relative flex gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-sm transition-colors",
@@ -167,13 +192,18 @@ const BbGroupBuyCardComponent = ({
       </div>
 
       {closed && (
-        <div
-          className="absolute inset-0 flex items-center justify-center rounded-[inherit] bg-black/40"
-          aria-hidden
-        >
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-[inherit] bg-black/40 p-3">
           <span className="rounded-full bg-[#F3F4F6] px-3 py-1.5 text-xs font-bold text-[#9CA3AF]">
             {t.groupBuying.cardClosedOverlay}
           </span>
+          <BbButton
+            variant="cta"
+            size="sm"
+            className="h-9 min-w-[8.5rem] px-4 text-xs shadow-md"
+            onClick={handleWaitlistClick}
+          >
+            {t.groupBuying.waitlistButton}
+          </BbButton>
         </div>
       )}
     </>

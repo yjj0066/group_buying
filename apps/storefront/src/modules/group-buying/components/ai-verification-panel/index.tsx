@@ -8,6 +8,7 @@ import {
 } from "@lib/data/group-deal-document-ai"
 import {
   assertDocumentUploadSize,
+  formatDocumentUploadMaxSizeLabel,
   readFileAsDataUrl,
 } from "@lib/util/file-to-data-url"
 import {
@@ -16,6 +17,8 @@ import {
   buildShippingExtractFields,
   buildShippingVerificationItems,
   resolveDocumentAiStatusLabel,
+  resolveVerificationStatusLabel,
+  resolveVerificationStatusVariant,
 } from "@lib/util/group-deal-document-ai-presenter"
 import { useDictionary } from "@i18n/provider"
 import { formatMessage } from "@i18n/format-message"
@@ -38,19 +41,15 @@ type AiVerificationPanelProps = {
   groupDealId: string
   mode: "purchase" | "shipping"
   uploadLabel: string
+  resultsSectionId?: string
   onComplete?: (result: GroupDealDocumentParseResponse) => void
-}
-
-const statusBadge = {
-  pass: { variant: "success" as const, label: "통과" },
-  fail: { variant: "warning" as const, label: "실패" },
-  pending: { variant: "default" as const, label: "대기" },
 }
 
 const AiVerificationPanel = ({
   groupDealId,
   mode,
   uploadLabel,
+  resultsSectionId,
   onComplete,
 }: AiVerificationPanelProps) => {
   const t = useDictionary()
@@ -85,12 +84,39 @@ const AiVerificationPanel = ({
       return buildReceiptVerificationItems(
         t,
         result.document_ai.validation,
+        result.document_ai.structured_receipt,
         true
       )
     }
 
     return buildShippingVerificationItems(t, result.document_ai)
   }, [mode, result, t])
+
+  const statusBadge = useMemo(
+    () => ({
+      pass: {
+        variant: resolveVerificationStatusVariant("pass"),
+        label: resolveVerificationStatusLabel(t, "pass"),
+      },
+      fail: {
+        variant: resolveVerificationStatusVariant("fail"),
+        label: resolveVerificationStatusLabel(t, "fail"),
+      },
+      skipped: {
+        variant: resolveVerificationStatusVariant("skipped"),
+        label: resolveVerificationStatusLabel(t, "skipped"),
+      },
+      no_match: {
+        variant: resolveVerificationStatusVariant("no_match"),
+        label: resolveVerificationStatusLabel(t, "no_match"),
+      },
+      not_extracted: {
+        variant: resolveVerificationStatusVariant("not_extracted"),
+        label: resolveVerificationStatusLabel(t, "not_extracted"),
+      },
+    }),
+    [t]
+  )
 
   const statusLabel = result
     ? resolveDocumentAiStatusLabel(
@@ -127,13 +153,18 @@ const AiVerificationPanel = ({
         filename: file.name,
       }
 
-      const response =
+      const result =
         mode === "purchase"
           ? await parseGroupDealReceiptDocument(groupDealId, payload)
           : await parseGroupDealTrackingDocument(groupDealId, payload)
 
-      setResult(response)
-      onComplete?.(response)
+      if (!result.ok) {
+        setErrorMessage(result.error)
+        return
+      }
+
+      setResult(result.data)
+      onComplete?.(result.data)
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -152,7 +183,7 @@ const AiVerificationPanel = ({
         <span className="text-2xl">📄</span>
         <Text className="text-sm font-bold text-brand-purple">{uploadLabel}</Text>
         <Text className="text-xs text-[var(--bb-mute)]">
-          JPG, PNG, PDF · 최대 8MB
+          JPG, PNG, PDF · 최대 {formatDocumentUploadMaxSizeLabel()}
         </Text>
         <input
           type="file"
@@ -182,7 +213,10 @@ const AiVerificationPanel = ({
       )}
 
       {result && (
-        <>
+        <div
+          id={resultsSectionId}
+          className="flex flex-col gap-5 scroll-mt-24"
+        >
           <div className="flex flex-wrap items-center gap-2">
             {statusLabel && (
               <BbBadge
@@ -296,7 +330,7 @@ const AiVerificationPanel = ({
                 </div>
               </section>
             )}
-        </>
+        </div>
       )}
     </div>
   )

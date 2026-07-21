@@ -56,7 +56,7 @@ export type MemberQuantityTotal = {
 const resolveDepositStatus = (
   status: string
 ): HostedDealParticipant["deposit_status"] => {
-  if (status === "pending_deposit") {
+  if (status === "pending_deposit" || status === "pending" || status === "reserved") {
     return "pending"
   }
 
@@ -64,11 +64,15 @@ const resolveDepositStatus = (
     return "cancelled"
   }
 
-  if (status === "expired") {
+  if (status === "expired" || status === "capture_failed") {
     return "expired"
   }
 
-  return "paid"
+  if (status === "confirmed" || status === "payment_complete") {
+    return "paid"
+  }
+
+  return "pending"
 }
 
 export const maskShippingRegion = (

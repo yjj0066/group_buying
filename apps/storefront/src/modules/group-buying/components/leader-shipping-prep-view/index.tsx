@@ -4,33 +4,54 @@ import { ChangeEvent, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 
 import { useDictionary } from "@i18n/provider"
+import { parseGroupDealTrackingDocument } from "@lib/data/group-deal-document-ai"
 import { confirmLeaderShipping } from "@lib/data/leader-shipping"
 import { SHIPPING_COURIER_OPTIONS } from "@lib/constants/shipping-couriers"
-import { gbAppRoutes } from "@lib/wireframe/routes"
+import {
+  assertDocumentUploadSize,
+  readFileAsDataUrl,
+} from "@lib/util/file-to-data-url"
+import {
+  applyManualTrackingPatch,
+  buildParticipantManualRows,
+  buildShippingMatchSummary,
+  findDuplicateParticipantProfileGroups,
+  formatMatchReviewReasons,
+  getMatchTableDisplayRows,
+  matchStatusLabel,
+  mergeInvoiceRowsIntoMatchTable,
+  mergeParticipantMatchRows,
+  compactMatchRowsForState,
+  type ShippingMatchReviewReasonLabels,
+  type ShippingMatchTableRow,
+} from "@lib/util/leader-tracking-match"
 import {
   applyAllocationDraftsToParticipations,
-  createInitialTrackingDraft,
-  downloadTrackingTemplateCsv,
-  mergeTrackingUploadRows,
-  parseTrackingUploadCsv,
   toLeaderShippingParticipantRows,
-  validateTrackingDraft,
-  type LeaderTrackingDraft,
 } from "@lib/util/leader-shipping-tracking"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { gbAppRoutes } from "@lib/wireframe/routes"
+import LeaderWireframeShell from "@modules/group-buying/components/leader-wireframe-shell"
 import { Text } from "@modules/common/components/ui"
 import {
   BbAlert,
+  BbBadge,
   BbButton,
-  BbCard,
   BbSectionHeader,
+  BbTable,
 } from "@modules/design-system"
 import type { GroupDeal } from "types/group-deal"
 import type { LeaderDealParticipation } from "types/leader-deal-participation"
+import type { StructuredInvoiceRow } from "types/group-deal-document-ai"
 
 type LeaderShippingPrepViewProps = {
   deal: GroupDeal
   participations: LeaderDealParticipation[]
+}
+
+const statusBadgeVariant = {
+  complete: "success" as const,
+  needs_review: "warning" as const,
+  unmatched: "default" as const,
 }
 
 const LeaderShippingPrepView = ({
@@ -51,101 +72,160 @@ const LeaderShippingPrepView = ({
     return toLeaderShippingParticipantRows(resolvedParticipations)
   }, [deal.id, participations])
 
-  const [trackingDraft, setTrackingDraft] = useState<LeaderTrackingDraft>(() =>
-    createInitialTrackingDraft(participantRows)
-  )
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [matchRows, setMatchRows] = useState<ShippingMatchTableRow[]>([])
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const updateTrackingEntry = (
-    participantId: string,
-    patch: Partial<{ courier: string; trackingNumber: string }>
-  ) => {
-    setTrackingDraft((current) => ({
-      ...current,
-      [participantId]: {
-        courier: patch.courier ?? current[participantId]?.courier ?? "",
-        trackingNumber:
-          patch.trackingNumber ?? current[participantId]?.trackingNumber ?? "",
-      },
-    }))
-    setValidationError(null)
-    setSubmitError(null)
-  }
+  const manualRows = useMemo(
+    () => buildParticipantManualRows(participantRows, matchRows),
+    [matchRows, participantRows]
+  )
 
-  const handleDownloadTemplate = () => {
-    downloadTrackingTemplateCsv(`shipping-template-${deal.id}.csv`, participantRows, {
-      nameColumn: labels.csvNameColumn,
-      phoneColumn: labels.csvPhoneColumn,
-      addressColumn: labels.csvAddressColumn,
-      courierColumn: labels.csvCourierColumn,
-      trackingColumn: labels.csvTrackingColumn,
-    })
-  }
+  const displayRows = useMemo(
+    () => getMatchTableDisplayRows(manualRows),
+    [manualRows]
+  )
 
-  const handleUploadCsv = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const summary = useMemo(
+    () => buildShippingMatchSummary(displayRows),
+    [displayRows]
+  )
+
+  const duplicateProfileGroups = useMemo(
+    () => findDuplicateParticipantProfileGroups(participantRows),
+    [participantRows]
+  )
+
+  const reviewReasonLabels = useMemo<ShippingMatchReviewReasonLabels>(
+    () => ({
+      tracking_missing: labels.matchReviewReasons.trackingMissing,
+      carrier_missing: labels.matchReviewReasons.carrierMissing,
+      low_confidence: labels.matchReviewReasons.lowConfidence,
+      ai_needs_review: labels.matchReviewReasons.aiNeedsReview,
+      ambiguous_participant: labels.matchReviewReasons.ambiguousParticipant,
+      duplicate_recipient_in_upload:
+        labels.matchReviewReasons.duplicateRecipientInUpload,
+      no_participant_match: labels.matchReviewReasons.noParticipantMatch,
+      not_matched_from_upload: labels.matchReviewReasons.notMatchedFromUpload,
+      manual_incomplete: labels.matchReviewReasons.manualIncomplete,
+      duplicate_participant_profile:
+        labels.matchReviewReasons.duplicateParticipantProfile,
+    }),
+    [labels.matchReviewReasons]
+  )
+
+  const handleInvoiceUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? [])
     event.target.value = ""
 
-    if (!file) {
+    if (!files.length) {
       return
     }
 
     setUploadError(null)
     setUploadSuccess(null)
+    setIsUploading(true)
+
+    let mergedRows = [...matchRows]
+    let extractedCount = 0
 
     try {
-      const content = await file.text()
-      const parsedRows = parseTrackingUploadCsv(content)
+      for (const file of files) {
+        assertDocumentUploadSize(file)
+        const imageBase64 = await readFileAsDataUrl(file)
 
-      if (!parsedRows.length) {
-        setUploadError(labels.uploadEmptyError)
-        return
+        const result = await parseGroupDealTrackingDocument(deal.id, {
+          image_base64: imageBase64,
+          filename: file.name,
+        })
+
+        if (!result.ok) {
+          setUploadError(result.error)
+          return
+        }
+
+        const invoiceRows = result.data.document_ai.invoice_rows ?? []
+        extractedCount += invoiceRows.length
+
+        mergedRows = mergeInvoiceRowsIntoMatchTable(
+          participantRows,
+          invoiceRows as StructuredInvoiceRow[],
+          mergedRows
+        )
       }
 
-      setTrackingDraft((current) =>
-        mergeTrackingUploadRows(participantRows, parsedRows, current)
-      )
+      setMatchRows(compactMatchRowsForState(mergedRows))
       setUploadSuccess(
-        labels.uploadSuccess.replace("{count}", String(parsedRows.length))
+        labels.uploadSuccess.replace("{count}", String(extractedCount))
       )
-    } catch {
-      setUploadError(labels.uploadParseError)
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : labels.uploadParseError
+      )
+    } finally {
+      setIsUploading(false)
     }
   }
 
-  const handleSubmit = async () => {
-    setValidationError(null)
-    setSubmitError(null)
-    setSuccessMessage(null)
+  const updateManualTracking = (
+    participantId: string,
+    patch: { trackingNumber?: string; carrier?: string }
+  ) => {
+    setMatchRows((current) => {
+      const merged = mergeParticipantMatchRows(participantRows, current)
 
-    const validation = validateTrackingDraft(participantRows, trackingDraft)
-
-    if (!validation.ok) {
-      setValidationError(
-        labels.validationError.replace(
-          "{count}",
-          String(validation.missingParticipantIds.length)
+      return compactMatchRowsForState(
+        applyManualTrackingPatch(
+          merged,
+          participantId,
+          patch,
+          participantRows
         )
+      )
+    })
+    setSubmitError(null)
+  }
+
+  const handleConfirmShipping = async () => {
+    setSubmitError(null)
+
+    if (!participantRows.length) {
+      setSubmitError(labels.emptyParticipants)
+      return
+    }
+
+    const rowsForSubmit = buildParticipantManualRows(
+      participantRows,
+      matchRows.filter((row) => row.participantId)
+    )
+
+    const incomplete = rowsForSubmit.filter(
+      (row) =>
+        row.participantId &&
+        (!row.trackingNumber.trim() || !row.carrier.trim())
+    )
+
+    if (incomplete.length) {
+      setSubmitError(
+        labels.validationError.replace("{count}", String(incomplete.length))
       )
       return
     }
 
     setIsSubmitting(true)
 
-    const result = await confirmLeaderShipping(
-      deal.id,
-      participantRows.map((participant) => ({
-        participant_id: participant.participantId,
-        carrier: trackingDraft[participant.participantId].courier.trim(),
-        tracking_number:
-          trackingDraft[participant.participantId].trackingNumber.trim(),
+    const entries = rowsForSubmit
+      .filter((row) => row.participantId)
+      .map((row) => ({
+        participant_id: row.participantId as string,
+        carrier: row.carrier.trim(),
+        tracking_number: row.trackingNumber.trim(),
       }))
-    )
+
+    const result = await confirmLeaderShipping(deal.id, entries)
 
     setIsSubmitting(false)
 
@@ -154,124 +234,181 @@ const LeaderShippingPrepView = ({
       return
     }
 
-    setSuccessMessage(
-      labels.successMessage.replace(
-        "{count}",
-        String(result.notified_count)
-      )
-    )
-
-    window.setTimeout(() => {
-      router.push(gbAppRoutes.sellerSettlement(countryCode, deal.id))
-    }, 1200)
+    router.push(gbAppRoutes.sellerSettlement(countryCode, deal.id))
   }
 
+  const tableRows = displayRows.map((row) => [
+    row.recipientLabel,
+    row.trackingNumber || "-",
+    matchStatusLabel(row.status, {
+      complete: labels.matchStatusComplete,
+      needsReview: labels.matchStatusNeedsReview,
+      unmatched: labels.matchStatusUnmatched,
+    }),
+    row.status === "complete"
+      ? "-"
+      : formatMatchReviewReasons(row.reviewReasons, reviewReasonLabels) || "-",
+  ])
+
   return (
-    <div className="flex flex-col gap-6 pb-8">
-      <LocalizedClientLink href={gbAppRoutes.sellerDeal(countryCode, deal.id)}>
-        <BbButton variant="secondary" size="sm">
-          {labels.backToDashboard}
-        </BbButton>
-      </LocalizedClientLink>
+    <LeaderWireframeShell screenId="SHIP" title={labels.wireframeTitle}>
+      <div className="flex flex-col gap-6">
+        <BbSectionHeader
+          title={labels.uploadSectionTitle}
+          className="mb-0 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-[#111827]"
+        />
 
-      <BbSectionHeader
-        title={labels.title}
-        subtitle={`${labels.stepLabel} · ${deal.title}`}
-      />
-
-      {participantRows.length === 0 ? (
-        <BbAlert variant="info">{labels.emptyParticipants}</BbAlert>
-      ) : (
-        <>
-          <section className="flex flex-col gap-3">
-            <BbSectionHeader title={labels.bulkToolsTitle} className="mb-0" />
-            <div className="flex flex-wrap gap-2">
-              <BbButton
-                variant="secondary"
-                size="sm"
-                onClick={handleDownloadTemplate}
-                data-testid="leader-shipping-download-template"
-              >
-                {labels.downloadTemplate}
-              </BbButton>
-              <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-[var(--bb-line)] bg-white px-3 text-xs font-semibold text-[var(--bb-ink)] transition-colors hover:border-brand-purple/30 hover:bg-brand-purple/5 h-9">
-                <input
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="sr-only"
-                  onChange={handleUploadCsv}
-                  data-testid="leader-shipping-upload-csv"
-                />
-                {labels.uploadCsv}
-              </label>
-            </div>
-            <Text className="text-xs text-[var(--bb-mute)]">
-              {labels.uploadHint}
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#D1D5DB] bg-[#F9FAFB] px-4 py-10 text-center transition-colors hover:border-[#6B46E5]/40 hover:bg-[#F5F3FF]">
+          <span className="text-2xl">⬆</span>
+          <Text className="text-sm font-bold text-[#111827]">
+            {labels.uploadCaptureTitle}
+          </Text>
+          <Text className="text-xs text-[#6B7280] whitespace-pre-line">
+            {labels.uploadCaptureHint}
+          </Text>
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            multiple
+            className="hidden"
+            disabled={isUploading || participantRows.length === 0}
+            onChange={handleInvoiceUpload}
+            data-testid="leader-shipping-invoice-upload"
+          />
+          {isUploading ? (
+            <Text className="text-xs font-medium text-[#6B46E5]">
+              {labels.uploadProcessing}
             </Text>
-            {uploadError ? (
-              <BbAlert variant="error">{uploadError}</BbAlert>
-            ) : null}
-            {uploadSuccess ? (
-              <BbAlert variant="success">{uploadSuccess}</BbAlert>
-            ) : null}
-          </section>
+          ) : null}
+        </label>
 
-          <section className="flex flex-col gap-3">
-            <BbSectionHeader
-              title={labels.participantListTitle}
-              className="mb-0"
-            />
-            <div className="flex flex-col gap-3">
-              {participantRows.map((participant) => {
-                const entry = trackingDraft[participant.participantId] ?? {
-                  courier: "",
-                  trackingNumber: "",
-                }
+        {uploadError ? (
+          <BbAlert variant="error" className="whitespace-pre-wrap">
+            {uploadError}
+          </BbAlert>
+        ) : null}
+        {uploadSuccess ? (
+          <BbAlert variant="success">{uploadSuccess}</BbAlert>
+        ) : null}
 
-                return (
-                  <BbCard
-                    key={participant.participantId}
-                    padding="md"
-                    className="flex flex-col gap-3"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <Text className="text-sm font-black text-[var(--bb-ink)]">
-                        {participant.recipientName}
-                      </Text>
-                      <Text className="text-xs text-[var(--bb-mute)]">
-                        {participant.phone}
-                      </Text>
-                      <Text className="text-xs text-[var(--bb-ink)]">
-                        {participant.address}
-                      </Text>
-                      {participant.memberLabel ? (
-                        <Text className="text-[10px] font-semibold text-brand-purple">
-                          {labels.memberLabel.replace(
-                            "{member}",
-                            participant.memberLabel
+        {participantRows.length === 0 ? (
+          <BbAlert variant="info">{labels.emptyParticipants}</BbAlert>
+        ) : (
+          <>
+            <div>
+              <BbSectionHeader
+                title={labels.matchResultsTitle}
+                className="mb-3 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-[#111827]"
+              />
+              {displayRows.length ? (
+                <>
+                  <BbTable
+                    columns={[
+                      labels.matchRecipientColumn,
+                      labels.matchTrackingColumn,
+                      labels.matchStatusColumn,
+                      labels.matchReasonColumn,
+                    ]}
+                    rows={tableRows}
+                  />
+                  <div className="mt-3 flex flex-col gap-2 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm text-[#111827]">
+                    <div className="flex items-center justify-between">
+                      <span>{labels.summaryCompleteLabel}</span>
+                      <span className="font-bold">
+                        {labels.summaryCount.replace(
+                          "{count}",
+                          String(summary.complete)
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>{labels.summaryNeedsReviewLabel}</span>
+                      <span className="font-bold text-[#D97706]">
+                        {labels.summaryCount.replace(
+                          "{count}",
+                          String(summary.needsReview)
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>{labels.summaryUnmatchedLabel}</span>
+                      <span className="font-bold text-[#6B7280]">
+                        {labels.summaryCount.replace(
+                          "{count}",
+                          String(summary.unmatched)
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center text-sm text-[#6B7280]">
+                  {labels.matchResultsEmpty}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <BbSectionHeader
+                title={labels.manualEntryTitle}
+                className="mb-3 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-[#111827]"
+              />
+              <Text className="mb-3 text-xs text-[#6B7280]">
+                {labels.manualEntryHint}
+              </Text>
+              {duplicateProfileGroups.length > 0 ? (
+                <BbAlert variant="info" className="mb-3 whitespace-pre-wrap">
+                  {labels.duplicateProfileHint}
+                </BbAlert>
+              ) : null}
+              <div className="flex flex-col gap-3">
+                {participantRows.map((participant) => {
+                  const row =
+                    manualRows.find(
+                      (item) => item.participantId === participant.participantId
+                    ) ??
+                    ({
+                      trackingNumber: "",
+                      carrier: "",
+                      status: "needs_review",
+                      reviewReasons: ["not_matched_from_upload"],
+                    } as ShippingMatchTableRow)
+
+                  return (
+                    <div
+                      key={participant.participantId}
+                      className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <Text className="text-sm font-bold text-[#111827]">
+                          {participant.recipientName}
+                        </Text>
+                        <BbBadge variant={statusBadgeVariant[row.status]}>
+                          {matchStatusLabel(row.status, {
+                            complete: labels.matchStatusComplete,
+                            needsReview: labels.matchStatusNeedsReview,
+                            unmatched: labels.matchStatusUnmatched,
+                          })}
+                        </BbBadge>
+                      </div>
+                      {row.status !== "complete" &&
+                      row.reviewReasons.length > 0 ? (
+                        <Text className="mb-2 text-xs text-[#D97706] whitespace-pre-wrap">
+                          {formatMatchReviewReasons(
+                            row.reviewReasons,
+                            reviewReasonLabels
                           )}
                         </Text>
                       ) : null}
-                    </div>
-
-                    <div className="grid gap-2 small:grid-cols-2">
-                      <div className="flex flex-col gap-1">
-                        <label
-                          htmlFor={`courier-${participant.participantId}`}
-                          className="text-xs font-semibold text-[var(--bb-mute)]"
-                        >
-                          {labels.courierLabel}
-                        </label>
+                      <div className="grid gap-2 small:grid-cols-2">
                         <select
-                          id={`courier-${participant.participantId}`}
                           className="bb-input w-full"
-                          value={entry.courier}
+                          value={row.carrier}
                           onChange={(event) =>
-                            updateTrackingEntry(participant.participantId, {
-                              courier: event.target.value,
+                            updateManualTracking(participant.participantId, {
+                              carrier: event.target.value,
                             })
                           }
-                          data-testid={`leader-shipping-courier-${participant.participantId}`}
                         >
                           <option value="">{labels.courierPlaceholder}</option>
                           {SHIPPING_COURIER_OPTIONS.map((option) => (
@@ -280,55 +417,44 @@ const LeaderShippingPrepView = ({
                             </option>
                           ))}
                         </select>
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label
-                          htmlFor={`tracking-${participant.participantId}`}
-                          className="text-xs font-semibold text-[var(--bb-mute)]"
-                        >
-                          {labels.trackingLabel}
-                        </label>
                         <input
-                          id={`tracking-${participant.participantId}`}
                           className="bb-input w-full"
-                          placeholder={labels.trackingPlaceholder}
-                          value={entry.trackingNumber}
+                          placeholder={labels.manualTrackingPlaceholder}
+                          value={row.trackingNumber}
                           onChange={(event) =>
-                            updateTrackingEntry(participant.participantId, {
+                            updateManualTracking(participant.participantId, {
                               trackingNumber: event.target.value,
                             })
                           }
-                          data-testid={`leader-shipping-tracking-${participant.participantId}`}
                         />
                       </div>
                     </div>
-                  </BbCard>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </section>
-        </>
-      )}
+          </>
+        )}
 
-      {validationError ? (
-        <BbAlert variant="error">{validationError}</BbAlert>
-      ) : null}
-      {submitError ? <BbAlert variant="error">{submitError}</BbAlert> : null}
-      {successMessage ? (
-        <BbAlert variant="success">{successMessage}</BbAlert>
-      ) : null}
+        {submitError ? (
+          <BbAlert variant="error" className="whitespace-pre-wrap">
+            {submitError}
+          </BbAlert>
+        ) : null}
 
-      <BbButton
-        variant="cta"
-        fullWidth
-        disabled={participantRows.length === 0 || isSubmitting}
-        onClick={handleSubmit}
-        data-testid="leader-shipping-submit"
-      >
-        {isSubmitting ? labels.submitting : labels.submitButton}
-      </BbButton>
-    </div>
+        <BbButton
+          variant="cta"
+          fullWidth
+          disabled={
+            participantRows.length === 0 || isSubmitting || isUploading
+          }
+          onClick={handleConfirmShipping}
+          data-testid="leader-shipping-submit"
+        >
+          {isSubmitting ? labels.submitting : labels.confirmShippingButton}
+        </BbButton>
+      </div>
+    </LeaderWireframeShell>
   )
 }
 

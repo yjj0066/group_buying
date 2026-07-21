@@ -45,7 +45,7 @@ export const BbMemberSeatCard = ({
 }: BbMemberSeatCardProps) => (
   <button
     type="button"
-    disabled={disabled || status === "full"}
+    disabled={disabled}
     className={cn(
       "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200",
       statusStyles[status],

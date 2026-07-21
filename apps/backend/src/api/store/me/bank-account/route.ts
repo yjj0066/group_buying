@@ -9,6 +9,7 @@ import { PostStoreMeBankAccount } from "./validators"
 export type RefundBankAccount = {
   bank_name: string
   bank_code: string
+  account_number: string
   account_number_masked: string
   account_holder: string
   registered_at?: string | null
@@ -49,6 +50,10 @@ const readRefundBankAccount = (
   return {
     bank_name: record.bank_name,
     bank_code: record.bank_code,
+    account_number:
+      typeof record.account_number === "string"
+        ? record.account_number
+        : record.account_number_masked,
     account_number_masked: record.account_number_masked,
     account_holder: record.account_holder,
     registered_at:
@@ -115,6 +120,7 @@ export const POST = async (
   const bankAccount: RefundBankAccount = {
     bank_name: body.bank_name,
     bank_code: body.bank_code,
+    account_number: body.account_number.trim(),
     account_number_masked: maskAccountNumber(body.account_number),
     account_holder: body.account_holder,
     registered_at: new Date().toISOString(),

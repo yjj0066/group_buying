@@ -31,6 +31,7 @@ export const BbSearchInput = forwardRef<HTMLInputElement, BbSearchInputProps>(
         className="bb-input pl-11 pr-4"
         onKeyDown={(event) => {
           if (event.key === "Enter") {
+            event.preventDefault()
             onSearch?.()
           }
           props.onKeyDown?.(event)

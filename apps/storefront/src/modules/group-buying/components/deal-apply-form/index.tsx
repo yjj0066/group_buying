@@ -16,6 +16,7 @@ import {
   SEAT_HOLD_MINUTES,
 } from "@lib/constants/group-buying-fees"
 import { submitDealApplication } from "@lib/data/group-deal-participation"
+import { formatGroupDealApplyError } from "@lib/util/format-group-deal-apply-error"
 import { useDictionary } from "@i18n/provider"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import { dealApplicationSummaryKey } from "@modules/group-buying/components/deal-complete-view"
@@ -38,7 +39,7 @@ import type { GroupDeal } from "types/group-deal"
 
 type DealApplyFormProps = {
   deal: GroupDeal
-  optionId: string
+  optionId?: string
   memberLabel: string
   quantity: number
 }
@@ -76,7 +77,10 @@ const DealApplyForm = ({
   const { countryCode } = useParams() as { countryCode: string }
 
   const option = useMemo(
-    () => deal.options?.find((item) => item.id === optionId),
+    () =>
+      optionId
+        ? deal.options?.find((item) => item.id === optionId)
+        : undefined,
     [deal.options, optionId]
   )
 
@@ -178,7 +182,7 @@ const DealApplyForm = ({
 
       const participation = await submitDealApplication({
         dealId: deal.id,
-        optionId,
+        ...(optionId ? { optionId } : {}),
         memberLabel,
         quantity,
         recipientName: recipientName.trim(),
@@ -220,8 +224,14 @@ const DealApplyForm = ({
       router.push(
         `${gbAppRoutes.dealDeposit(countryCode, deal.id)}?participantId=${participation.id}`
       )
-    } catch {
-      setError(t.groupBuying.joinError)
+    } catch (err) {
+      const rawMessage =
+        err instanceof Error && err.message.trim() ? err.message : ""
+      setError(
+        rawMessage
+          ? formatGroupDealApplyError(rawMessage)
+          : t.groupBuying.joinError
+      )
     } finally {
       setIsSubmitting(false)
     }

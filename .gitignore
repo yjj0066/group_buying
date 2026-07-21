@@ -46,6 +46,23 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Uploaded leader documents (local dev — do not commit)
+apps/backend/static/receipts/*
+apps/backend/static/tracking/*
+!apps/backend/static/receipts/.gitkeep
+!apps/backend/static/tracking/.gitkeep
+
+# TypeScript build info
+**/*.tsbuildinfo
+
+# Scratch / temp files
+**/tmp-*.html
+
+# Python (Document AI BFF)
+**/.venv/
+**/__pycache__/
+*.pyc
+
 # macOS system files
 .DS_Store
 .DS_Store?

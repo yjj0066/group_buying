@@ -23,7 +23,7 @@ export type DealApplicationRefundBankAccount = {
 
 export const submitDealApplication = async (input: {
   dealId: string
-  optionId: string
+  optionId?: string
   memberLabel: string
   quantity?: number
   recipientName: string
@@ -36,8 +36,16 @@ export const submitDealApplication = async (input: {
   const headers = await getAuthHeaders()
   const quantity = input.quantity ?? 1
 
-  if ("authorization" in headers && headers.authorization) {
+  if (!("authorization" in headers && headers.authorization)) {
+    if (!isMockFallbackEnabled()) {
+      throw new Error(
+        "로그인이 필요합니다. 계정에 로그인한 뒤 다시 시도해 주세요."
+      )
+    }
+  } else {
     try {
+      const normalizedOptionId = input.optionId?.trim()
+
       const response = await sdk.client.fetch<{
         participation: GroupDealParticipation & {
           virtual_account?: VirtualAccountInfo | null
@@ -46,7 +54,7 @@ export const submitDealApplication = async (input: {
         method: "POST",
         headers,
         body: {
-          option_id: input.optionId,
+          ...(normalizedOptionId ? { option_id: normalizedOptionId } : {}),
           member_label: input.memberLabel,
           quantity,
           recipient_name: input.recipientName,
@@ -62,21 +70,17 @@ export const submitDealApplication = async (input: {
       if (response.participation) {
         return response.participation
       }
+
+      if (!isMockFallbackEnabled()) {
+        throw new Error(
+          "참여 신청이 처리되었지만 응답에 참여 정보가 없습니다. 잠시 후 다시 시도해 주세요."
+        )
+      }
     } catch (error) {
       if (!isMockFallbackEnabled()) {
         medusaError(error)
       }
     }
-  } else if (!isMockFallbackEnabled()) {
-    throw new Error(
-      "로그인이 필요합니다. 계정에 로그인한 뒤 다시 시도해 주세요."
-    )
-  }
-
-  if (!isMockFallbackEnabled()) {
-    throw new Error(
-      "로그인이 필요합니다. 계정에 로그인한 뒤 다시 시도해 주세요."
-    )
   }
 
   const deal = await getStoreGroupDeal(input.dealId)
@@ -90,7 +94,7 @@ export const submitDealApplication = async (input: {
 
   return createMockParticipation(
     input.dealId,
-    input.optionId,
+    input.optionId ?? "",
     input.memberLabel,
     deal,
     unitPrice * quantity

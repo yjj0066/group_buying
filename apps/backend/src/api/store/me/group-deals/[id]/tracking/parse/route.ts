@@ -2,12 +2,65 @@ import {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
+import { MedusaError } from "@medusajs/framework/utils"
+import { ZodError } from "zod"
 
 import { processGroupDealTrackingParse } from "../../../../../../../utils/group-deal-document-ai"
 import {
   PostStoreMeGroupDealDocumentParse,
   PostStoreMeGroupDealDocumentParseType,
 } from "../../../validators"
+
+const resolveRouteErrorStatus = (error: unknown): number => {
+  if (
+    error &&
+    typeof error === "object" &&
+    "type" in error &&
+    typeof (error as MedusaError).type === "string"
+  ) {
+    switch ((error as MedusaError).type) {
+      case MedusaError.Types.NOT_ALLOWED:
+      case MedusaError.Types.INVALID_DATA:
+        return 400
+      case MedusaError.Types.NOT_FOUND:
+        return 404
+      case MedusaError.Types.UNAUTHORIZED:
+        return 401
+      default:
+        return 500
+    }
+  }
+
+  return 500
+}
+
+const respondWithRouteError = (res: MedusaResponse, error: unknown) => {
+  if (error instanceof ZodError) {
+    res.status(400).json({
+      message: error.issues.map((issue) => issue.message).join("\n"),
+      type: MedusaError.Types.INVALID_DATA,
+    })
+    return
+  }
+
+  if (error instanceof MedusaError) {
+    res.status(resolveRouteErrorStatus(error)).json({
+      message: error.message,
+      type: error.type,
+    })
+    return
+  }
+
+  console.error("[tracking/parse]", error)
+
+  res.status(500).json({
+    message:
+      error instanceof Error
+        ? error.message
+        : "Tracking parse failed on the server",
+    type: "unexpected_error",
+  })
+}
 
 export const POST = async (
   req: AuthenticatedMedusaRequest<PostStoreMeGroupDealDocumentParseType>,
@@ -20,14 +73,18 @@ export const POST = async (
     return
   }
 
-  const body = PostStoreMeGroupDealDocumentParse.parse(req.body ?? {})
+  try {
+    const body = PostStoreMeGroupDealDocumentParse.parse(req.body ?? {})
 
-  const result = await processGroupDealTrackingParse(req.scope, {
-    groupDealId: req.params.id,
-    customerId,
-    imageBase64: body.image_base64,
-    filename: body.filename,
-  })
+    const result = await processGroupDealTrackingParse(req.scope, {
+      groupDealId: req.params.id,
+      customerId,
+      imageBase64: body.image_base64,
+      filename: body.filename,
+    })
 
-  res.status(200).json(result)
+    res.status(200).json(result)
+  } catch (error) {
+    respondWithRouteError(res, error)
+  }
 }
