@@ -4,11 +4,11 @@ import {
   countUniqueConfirmedParticipants,
   evaluateDealStatus,
   isDealJoinable,
-} from "../utils/group-deal-rules"
+} from "../group-deal-rules"
 import {
   GroupDealParticipantStatus,
   GroupDealStatus,
-} from "../types/group-buying"
+} from "../../types/group-buying"
 
 describe("group-deal-rules", () => {
   const baseDeal = {

@@ -13,6 +13,7 @@ import {
   assertPriceDecreaseOnly,
   buildOptionPriceRecommendations,
 } from "../../../../../../utils/group-deal-price-recommendations"
+import type { OptionRecord } from "../../../../../../utils/group-deal-price-recommendations"
 
 const PostApplyPriceRecommendations = z.object({
   options: z
@@ -131,7 +132,7 @@ export const POST = async (
   res.json({
     updated,
     recommendations: buildOptionPriceRecommendations({
-      options: refreshedOptions as unknown as Array<Record<string, unknown>>,
+      options: refreshedOptions as OptionRecord[],
       dealPrice: Number(deal.deal_price ?? 0),
     }),
   })

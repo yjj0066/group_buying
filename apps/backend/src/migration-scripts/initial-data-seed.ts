@@ -971,7 +971,6 @@ export default async function initial_data_seed({
           ],
           variants: [
             {
-              id: DEMO_GROUP_BUY_VARIANT_ID,
               title: "Default",
               sku: "GB-PLACEHOLDER",
               manage_inventory: false,

@@ -145,7 +145,7 @@ export default async function seedCurrencyRegions({ container }: ExecArgs) {
 
   const variantPrices = (variants ?? [])
     .map((variant) => {
-      const prices = variant.prices ?? []
+      const prices = ((variant as { prices?: Array<{ currency_code?: string | null; amount?: number | null }> }).prices) ?? []
       const hasKrw = prices.some(
         (price) => price.currency_code?.toLowerCase() === "krw"
       )

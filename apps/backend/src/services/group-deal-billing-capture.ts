@@ -152,7 +152,7 @@ export class GroupDealBillingCaptureService {
 
     this.groupBuyingService_ = container.resolve(GROUP_BUYING_MODULE)
 
-    this.logger_ = container.logger ?? console
+    this.logger_ = (container.logger ?? console) as Logger
 
 
 
@@ -798,7 +798,12 @@ export class GroupDealBillingCaptureService {
 
         order_id: captured.transactionId ?? participant.order_id,
 
-        capture_payment_key: captured.paymentKey ?? captured.transactionId ?? null,
+        capture_payment_key:
+          (captured as { paymentKey?: string; paymentIntentId?: string })
+            .paymentKey ??
+          (captured as { paymentIntentId?: string }).paymentIntentId ??
+          captured.transactionId ??
+          null,
 
       })
 
@@ -1040,7 +1045,12 @@ export class GroupDealBillingCaptureService {
 
         order_id: captured.transactionId ?? participant.order_id,
 
-        capture_payment_key: captured.paymentKey ?? captured.transactionId ?? null,
+        capture_payment_key:
+          (captured as { paymentKey?: string; paymentIntentId?: string })
+            .paymentKey ??
+          (captured as { paymentIntentId?: string }).paymentIntentId ??
+          captured.transactionId ??
+          null,
 
       })
 

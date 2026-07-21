@@ -41,7 +41,7 @@ export class GroupDealEscrowService {
     assertStripeGroupDealOptions(resolveStripeGroupDealOptionsFromEnv())
 
     this.groupBuyingService_ = container.resolve(GROUP_BUYING_MODULE)
-    this.logger_ = container.logger ?? console
+    this.logger_ = (container.logger ?? console) as Logger
   }
 
   async releaseParticipantEscrow(

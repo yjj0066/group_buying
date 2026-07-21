@@ -91,7 +91,7 @@ export class KoreanPgWebhookHandler {
     options?: TossPaymentsProviderOptions
   ) {
     this.container_ = container
-    this.logger_ = container.logger ?? console
+    this.logger_ = (container.logger ?? console) as Logger
 
     const pgOptions: TossPaymentsProviderOptions =
       options ?? resolveTossPaymentsOptionsFromEnv()
@@ -253,7 +253,6 @@ export class KoreanPgWebhookHandler {
       await this.pgClient_.cancelPayment({
         orderId: event.orderId ?? context.orderId ?? "",
         paymentKey: event.paymentKey ?? context.paymentKey,
-        transactionId: event.transactionId,
         reason,
       })
     } catch (error) {

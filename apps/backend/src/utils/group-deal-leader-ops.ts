@@ -36,6 +36,34 @@ type AddressLike = {
   country_code?: string | null
 }
 
+export type GroupDealPackingSlipRow = {
+  participant_id: string
+  email: string
+  customer_id: string | null
+  quantity: number
+  status: GroupDealParticipantStatus
+  order_id: string | null
+  recipient_name: string | null
+  phone: string | null
+  address_line_1: string | null
+  address_line_2: string | null
+  city: string | null
+  province: string | null
+  postal_code: string | null
+  country_code: string | null
+  tracking_number: string | null
+  carrier: string | null
+  option_summary: string | null
+}
+
+export type GroupDealPackingSlip = {
+  group_deal_id: string
+  title: string
+  generated_at: string
+  total_rows: number
+  rows: GroupDealPackingSlipRow[]
+}
+
 const formatRecipientName = (address?: AddressLike | null): string | null => {
   if (!address) {
     return null

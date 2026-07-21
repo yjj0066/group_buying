@@ -370,9 +370,12 @@ export const readSavedPaymentMethods = (
     .map((item) => {
       const record = item as Record<string, unknown>
 
+      const provider: SavedPaymentMethodRecord["provider"] =
+        record.provider === "toss" ? "toss" : "stripe"
+
       return {
         id: String(record.id ?? ""),
-        provider: record.provider === "toss" ? "toss" : "stripe",
+        provider,
         label: String(record.label ?? ""),
         is_default: record.is_default === true,
         last4:

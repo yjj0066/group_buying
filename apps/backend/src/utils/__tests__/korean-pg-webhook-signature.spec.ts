@@ -2,7 +2,7 @@ import {
   createTestWebhookSignature,
   verifyPortoneWebhookSignature,
   verifyTossWebhookSignature,
-} from "../utils/korean-pg-webhook-signature"
+} from "../korean-pg-webhook-signature"
 
 describe("korean-pg-webhook-signature", () => {
   const secret = "whsec_test_secret"

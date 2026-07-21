@@ -30,6 +30,12 @@ import {
 import { resolveInitialShippingFeeStatus } from "../utils/group-deal-payment-phases"
 import { extractBillingPaymentFromOrder } from "../utils/group-deal-checkout-payment"
 import {
+  assertDealDeletable,
+  assertDealUpdatable,
+  assertStatusTransitionAllowed,
+  validateDealSchedule,
+} from "../utils/group-deal-admin-rules"
+import {
   resolveGroupDealPaymentProviderId,
   resolveGroupDealPaymentProviderKind,
 } from "../utils/group-deal-payment-provider"
@@ -419,6 +425,22 @@ export type ConfirmGroupDealParticipationInput = {
   order_id: string
 }
 
+type ConfirmGroupDealParticipationCompensation = Array<{
+  participant_id: string
+  previous_status: GroupDealParticipantStatus
+  previous_quantity: number
+  previous_order_id: string | null
+  previous_billing_customer_key: string | null
+  previous_payment_session_id: string | null
+  had_billing_key: boolean
+}>
+
+type ConfirmGroupDealParticipationOutput = {
+  updated_deals: string[]
+  captured_deals: string[]
+  billing_reservation: boolean
+}
+
 const confirmGroupDealParticipationStep = createStep(
   "confirm-group-deal-participation",
   async (input: ConfirmGroupDealParticipationInput, { container }) => {
@@ -428,9 +450,7 @@ const confirmGroupDealParticipationStep = createStep(
     const billingCaptureService = createGroupDealBillingCaptureService(container)
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
 
-    const {
-      data: [order],
-    } = await query.graph({
+    const { data = [] } = await query.graph({
       entity: "order",
       fields: [
         "id",
@@ -450,24 +470,34 @@ const confirmGroupDealParticipationStep = createStep(
       filters: { id: input.order_id },
     })
 
+    const order = data[0]
+
     if (!order?.items?.length) {
-      return new StepResponse({ updated_deals: [] as string[] })
+      return new StepResponse<
+        ConfirmGroupDealParticipationOutput,
+        ConfirmGroupDealParticipationCompensation
+      >(
+        {
+          updated_deals: [],
+          captured_deals: [],
+          billing_reservation: false,
+        },
+        []
+      )
     }
 
-    const billingPayment = extractBillingPaymentFromOrder(order)
+    const billingPayment = extractBillingPaymentFromOrder(
+      order as Parameters<typeof extractBillingPaymentFromOrder>[0]
+    )
     const updatedDealIds = new Set<string>()
     const dealsToCapture = new Set<string>()
-    const compensation: Array<{
-      participant_id: string
-      previous_status: GroupDealParticipantStatus
-      previous_quantity: number
-      previous_order_id: string | null
-      previous_billing_customer_key: string | null
-      previous_payment_session_id: string | null
-      had_billing_key: boolean
-    }> = []
+    const compensation: ConfirmGroupDealParticipationCompensation = []
 
     for (const item of order.items) {
+      if (!item) {
+        continue
+      }
+
       const metadata = (item.metadata ?? {}) as Record<string, unknown>
       const groupDealId = metadata.group_deal_id as string | undefined
       const participantId = metadata.participant_id as string | undefined
@@ -614,7 +644,10 @@ const confirmGroupDealParticipationStep = createStep(
       await emitGroupDealUpdated(container, groupDealId)
     }
 
-    return new StepResponse(
+    return new StepResponse<
+      ConfirmGroupDealParticipationOutput,
+      ConfirmGroupDealParticipationCompensation
+    >(
       {
         updated_deals: Array.from(updatedDealIds),
         captured_deals: Array.from(dealsToCapture),
@@ -626,17 +659,7 @@ const confirmGroupDealParticipationStep = createStep(
     )
   },
   async (
-    compensation:
-      | Array<{
-          participant_id: string
-          previous_status: GroupDealParticipantStatus
-          previous_quantity: number
-          previous_order_id: string | null
-          previous_billing_customer_key: string | null
-          previous_payment_session_id: string | null
-          had_billing_key: boolean
-        }>
-      | undefined,
+    compensation: ConfirmGroupDealParticipationCompensation | undefined,
     { container }
   ) => {
     if (!compensation?.length) {
@@ -707,12 +730,6 @@ const updateGroupDealStep = createStep(
     )
 
     const existing = await groupBuyingService.retrieveGroupDeal(input.id)
-
-    const {
-      assertDealUpdatable,
-      assertStatusTransitionAllowed,
-      validateDealSchedule,
-    } = await import("../utils/group-deal-admin-rules")
 
     assertDealUpdatable(existing)
     assertStatusTransitionAllowed(existing.status, input.status, existing)
@@ -854,7 +871,6 @@ const deleteGroupDealStep = createStep(
     )
 
     const existing = await groupBuyingService.retrieveGroupDeal(input.id)
-    const { assertDealDeletable } = await import("../utils/group-deal-admin-rules")
 
     assertDealDeletable(existing)
 
