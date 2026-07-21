@@ -1,6 +1,6 @@
 # Medusa backend (monorepo)
 FROM node:20-alpine AS base
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 
 FROM base AS deps
@@ -26,4 +26,4 @@ COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/apps/backend/node_modules ./node_modules
 
 EXPOSE 9000
-CMD ["pnpm", "start"]
+CMD ["npx", "medusa", "start"]
