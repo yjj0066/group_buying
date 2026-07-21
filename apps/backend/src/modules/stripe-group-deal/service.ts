@@ -1,4 +1,4 @@
-import type { Logger } from "@medusajs/framework/types"
+import type { BigNumberInput, Logger } from "@medusajs/framework/types"
 import crypto from "crypto"
 import {
   AuthorizePaymentInput,
@@ -13,18 +13,26 @@ import {
   GetPaymentStatusOutput,
   InitiatePaymentInput,
   InitiatePaymentOutput,
+  ProviderWebhookPayload,
   RefundPaymentInput,
   RefundPaymentOutput,
   RetrievePaymentInput,
   RetrievePaymentOutput,
   UpdatePaymentInput,
   UpdatePaymentOutput,
+  WebhookActionResult,
 } from "@medusajs/framework/types"
 import {
   AbstractPaymentProvider,
   MedusaError,
+  PaymentActions,
   PaymentSessionStatus,
 } from "@medusajs/framework/utils"
+
+import {
+  readPaymentProviderContext,
+  toNumericPaymentAmount,
+} from "../../utils/payment-provider-helpers"
 
 import {
   assertStripeGroupDealOptions,
@@ -77,6 +85,7 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
     this.assertInternationalPaymentContext(input)
 
     if (this.isSetupReservationMode(input)) {
+      const context = readPaymentProviderContext(input.context)
       const customerKey = this.resolveCustomerKey(input)
       const orderId = this.resolveOrderId(input)
       const amount = this.normalizeAmount(input.amount, input.currency_code)
@@ -85,18 +94,12 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
         orderId,
         amount,
         currencyCode: input.currency_code,
-        customerEmail: input.context?.customer?.email,
+        customerEmail: context.customer?.email,
         customerKey,
         metadata: {
           session_id: String(input.data?.session_id ?? ""),
-          group_deal_id: String(
-            (input.context?.group_deal as Record<string, unknown> | undefined)
-              ?.id ?? ""
-          ),
-          participant_id: String(
-            (input.context?.group_deal as Record<string, unknown> | undefined)
-              ?.participant_id ?? ""
-          ),
+          group_deal_id: String(context.group_deal?.id ?? ""),
+          participant_id: String(context.group_deal?.participant_id ?? ""),
         },
       })
 
@@ -174,6 +177,18 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
       data: {
         ...(input.data ?? {}),
         status: "canceled",
+      },
+    }
+  }
+
+  async getWebhookActionAndData(
+    _payload: ProviderWebhookPayload["payload"]
+  ): Promise<WebhookActionResult> {
+    return {
+      action: PaymentActions.NOT_SUPPORTED,
+      data: {
+        session_id: "",
+        amount: 0,
       },
     }
   }
@@ -269,6 +284,7 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
   async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
     this.assertInternationalPaymentContext(input)
 
+    const context = readPaymentProviderContext(input.context)
     const orderId = this.resolveOrderId(input)
     const amount = this.normalizeAmount(input.amount, input.currency_code)
     const customerKey = this.resolveCustomerKey(input)
@@ -277,7 +293,7 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
       orderId,
       amount,
       currencyCode: input.currency_code,
-      customerEmail: input.context?.customer?.email,
+      customerEmail: context.customer?.email,
       customerKey,
     })
 
@@ -300,7 +316,7 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
 
   protected assertInternationalPaymentContext(input: {
     currency_code?: string
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): void {
     const currency = String(input.currency_code ?? "").toLowerCase()
 
@@ -311,10 +327,9 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
       )
     }
 
+    const context = readPaymentProviderContext(input.context)
     const countryCode = String(
-      input.context?.country_code ??
-        input.context?.billing_address?.country_code ??
-        ""
+      context.country_code ?? context.billing_address?.country_code ?? ""
     ).toLowerCase()
 
     if (countryCode && KOREA_COUNTRY_CODES.has(countryCode)) {
@@ -340,42 +355,35 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
 
   protected isSetupReservationMode(input: {
     data?: Record<string, unknown>
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): boolean {
     if (input.data?.mode === "setup_reservation") {
       return true
     }
 
-    if (input.context?.billing_mode === "reservation") {
+    const context = readPaymentProviderContext(input.context)
+
+    if (context.billing_mode === "reservation") {
       return true
     }
 
-    const groupDeal = input.context?.group_deal as
-      | Record<string, unknown>
-      | undefined
-
-    return groupDeal?.billing_reservation === true
+    return context.group_deal?.billing_reservation === true
   }
 
   protected resolveCustomerKey(input: {
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): string {
-    return (
-      (input.context?.customer_key as string | undefined) ??
-      input.context?.customer?.id ??
-      crypto.randomUUID()
-    )
+    const context = readPaymentProviderContext(input.context)
+
+    return context.customer_key ?? context.customer?.id ?? crypto.randomUUID()
   }
 
   protected resolveOrderId(input: {
     data?: Record<string, unknown>
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): string {
-    const groupDeal = input.context?.group_deal as
-      | Record<string, unknown>
-      | undefined
-
-    const participantId = String(groupDeal?.participant_id ?? "")
+    const context = readPaymentProviderContext(input.context)
+    const participantId = String(context.group_deal?.participant_id ?? "")
 
     if (participantId) {
       return `gdeal_setup_${participantId}_${crypto.randomUUID()}`
@@ -388,8 +396,11 @@ export class StripeGroupDealProviderService extends AbstractPaymentProvider<Stri
     )
   }
 
-  protected normalizeAmount(amount: number, currencyCode: string): number {
-    const numericAmount = Number(amount)
+  protected normalizeAmount(
+    amount: BigNumberInput,
+    currencyCode: string
+  ): number {
+    const numericAmount = toNumericPaymentAmount(amount)
 
     if (!Number.isFinite(numericAmount) || numericAmount < 0) {
       throw new MedusaError(

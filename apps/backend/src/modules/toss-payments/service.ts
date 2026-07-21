@@ -1,4 +1,4 @@
-import type { Logger } from "@medusajs/framework/types"
+import type { BigNumberInput, Logger } from "@medusajs/framework/types"
 import crypto from "crypto"
 import {
   AuthorizePaymentInput,
@@ -29,6 +29,10 @@ import {
   PaymentSessionStatus,
 } from "@medusajs/framework/utils"
 
+import {
+  readPaymentProviderContext,
+  toNumericPaymentAmount,
+} from "../../utils/payment-provider-helpers"
 import {
   assertTossPaymentsOptions,
   createTossPaymentsClient,
@@ -89,6 +93,7 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
     const billingMode = this.isBillingReservationMode(input)
     const easyPayMethods = this.resolveEasyPayMethods()
     const amount = this.normalizeAmount(input.amount, input.currency_code)
+    const context = readPaymentProviderContext(input.context)
 
     if (billingMode) {
       const customerKey = this.resolveCustomerKey(input)
@@ -99,7 +104,7 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
         orderId,
         amount,
         currencyCode: input.currency_code,
-        customerEmail: input.context?.customer?.email,
+        customerEmail: context.customer?.email,
       })
 
       return {
@@ -128,10 +133,10 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
       amount,
       currencyCode: input.currency_code,
       orderName: this.resolveOrderName(input),
-      customerEmail: input.context?.customer?.email,
+      customerEmail: context.customer?.email,
       customerName: [
-        input.context?.customer?.billing_address?.first_name,
-        input.context?.customer?.billing_address?.last_name,
+        context.customer?.billing_address?.first_name,
+        context.customer?.billing_address?.last_name,
       ]
         .filter(Boolean)
         .join(" "),
@@ -163,9 +168,10 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
     this.assertKoreaPaymentContext(input)
 
     if (this.isBillingReservationMode(input)) {
+      const context = readPaymentProviderContext(input.context)
       const customerKey =
         (input.data?.customerKey as string | undefined) ||
-        (input.context?.customer_key as string | undefined)
+        context.customer_key
       const authKey = input.data?.authKey as string | undefined
 
       if (!customerKey || !authKey) {
@@ -196,7 +202,8 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
 
     const orderId = String(input.data?.orderId ?? "")
     const paymentKey = String(input.data?.paymentKey ?? "")
-    const amount = Number(input.data?.amount ?? input.context?.amount ?? 0)
+    const context = readPaymentProviderContext(input.context)
+    const amount = Number(input.data?.amount ?? context.amount ?? 0)
 
     if (!orderId || !paymentKey) {
       throw new MedusaError(
@@ -390,6 +397,7 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
   async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
     this.assertKoreaPaymentContext(input)
 
+    const context = readPaymentProviderContext(input.context)
     const orderId = this.resolveOrderId(input)
     const amount = this.normalizeAmount(input.amount, input.currency_code)
 
@@ -397,7 +405,7 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
       orderId,
       amount,
       currencyCode: input.currency_code,
-      customerEmail: input.context?.customer?.email,
+      customerEmail: context.customer?.email,
       flowMode: "DEFAULT",
     })
 
@@ -419,7 +427,7 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
 
   protected assertKoreaPaymentContext(input: {
     currency_code?: string
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): void {
     const currency = String(input.currency_code ?? "").toLowerCase()
 
@@ -430,10 +438,9 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
       )
     }
 
+    const context = readPaymentProviderContext(input.context)
     const countryCode = String(
-      input.context?.country_code ??
-        input.context?.billing_address?.country_code ??
-        ""
+      context.country_code ?? context.billing_address?.country_code ?? ""
     ).toLowerCase()
 
     const supportedCountries =
@@ -449,21 +456,19 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
 
   protected isBillingReservationMode(input: {
     data?: Record<string, unknown>
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): boolean {
     if (input.data?.mode === "billing_reservation") {
       return true
     }
 
-    if (input.context?.billing_mode === "reservation") {
+    const context = readPaymentProviderContext(input.context)
+
+    if (context.billing_mode === "reservation") {
       return true
     }
 
-    const groupDeal = input.context?.group_deal as
-      | Record<string, unknown>
-      | undefined
-
-    return groupDeal?.billing_reservation === true
+    return context.group_deal?.billing_reservation === true
   }
 
   protected resolveEasyPayMethods(): TossEasyPayMethod[] {
@@ -473,45 +478,46 @@ export class TossPaymentsProviderService extends AbstractPaymentProvider<TossPay
   }
 
   protected resolveCustomerKey(input: {
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): string {
+    const context = readPaymentProviderContext(input.context)
+
     return (
-      (input.context?.customer_key as string | undefined) ??
-      (input.context?.group_deal as Record<string, unknown> | undefined)
-        ?.billing_customer_key as string | undefined ??
-      input.context?.customer?.id ??
+      context.customer_key ??
+      (context.group_deal?.billing_customer_key as string | undefined) ??
+      context.customer?.id ??
       crypto.randomUUID()
     )
   }
 
   protected resolveOrderId(input: {
     data?: Record<string, unknown>
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): string {
+    const context = readPaymentProviderContext(input.context)
+
     return (
       (input.data?.session_id as string | undefined) ??
-      (input.context?.idempotency_key as string | undefined) ??
+      (context.idempotency_key as string | undefined) ??
       crypto.randomUUID()
     )
   }
 
   protected resolveOrderName(input: InitiatePaymentInput): string {
-    const groupDeal = input.context?.group_deal as
-      | Record<string, unknown>
-      | undefined
+    const context = readPaymentProviderContext(input.context)
 
-    if (groupDeal?.title) {
-      return String(groupDeal.title)
+    if (context.group_deal?.title) {
+      return String(context.group_deal.title)
     }
 
     return "Medusa Store Order"
   }
 
   protected normalizeAmount(
-    amount: number | string,
+    amount: BigNumberInput,
     currencyCode: string
   ): number {
-    const numericAmount = Number(amount)
+    const numericAmount = toNumericPaymentAmount(amount)
 
     if (Number.isNaN(numericAmount)) {
       throw new MedusaError(

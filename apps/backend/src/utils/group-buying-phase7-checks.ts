@@ -282,7 +282,9 @@ export const runPhase7SmokeChecks = (): Phase7SmokeCheck[] => {
     "favorite_member_vacancy",
     "Favorite member vacancy filter",
     vacantFiltered.length === 1 &&
-      vacantFiltered[0].options?.some((option) => option.label === "Wonyoung")
+      Boolean(
+        vacantFiltered[0].options?.some((option) => option.label === "Wonyoung")
+      )
   )
 
   const urgentFiltered = filterGroupDeals(mockDeals, {

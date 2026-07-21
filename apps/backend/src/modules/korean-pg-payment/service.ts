@@ -1,4 +1,4 @@
-import type { Logger } from "@medusajs/framework/types"
+import type { BigNumberInput, Logger } from "@medusajs/framework/types"
 import crypto from "crypto"
 import {
   AuthorizePaymentInput,
@@ -34,6 +34,13 @@ import {
   KoreanPgClient,
 } from "./client"
 import { createKoreanPgWebhookHandler } from "../../services/korean-pg-webhook-handler"
+import {
+  readPaymentProviderContext,
+  toNumericPaymentAmount,
+} from "../../utils/payment-provider-helpers"
+import type {
+  TossPaymentsProviderOptions,
+} from "../toss-payments/types"
 import type {
   KoreanPgEasyPayMethod,
   KoreanPgPaymentProviderOptions,
@@ -82,17 +89,17 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
   ): Promise<InitiatePaymentOutput> {
     const billingMode = this.isBillingReservationMode(input)
     const easyPayMethods = this.resolveEasyPayMethods()
+    const context = readPaymentProviderContext(input.context)
 
     if (billingMode) {
       const customerKey =
-        (input.context?.customer_key as string | undefined) ??
-        (input.context?.group_deal as Record<string, unknown> | undefined)
-          ?.billing_customer_key as string | undefined ??
-        input.context?.customer?.id ??
+        context.customer_key ??
+        (context.group_deal?.billing_customer_key as string | undefined) ??
+        context.customer?.id ??
         crypto.randomUUID()
       const orderId =
         (input.data?.session_id as string | undefined) ??
-        (input.context?.idempotency_key as string | undefined) ??
+        (context.idempotency_key as string | undefined) ??
         crypto.randomUUID()
       const amount = this.normalizeAmount(input.amount, input.currency_code)
 
@@ -101,7 +108,7 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
         orderId,
         amount,
         currencyCode: input.currency_code,
-        customerEmail: input.context?.customer?.email,
+        customerEmail: context.customer?.email,
       })
 
       return {
@@ -129,7 +136,7 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
 
     const orderId =
       (input.data?.session_id as string | undefined) ??
-      (input.context?.idempotency_key as string | undefined) ??
+      (context.idempotency_key as string | undefined) ??
       crypto.randomUUID()
     const amount = this.normalizeAmount(input.amount, input.currency_code)
 
@@ -137,10 +144,10 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
       orderId,
       amount,
       currencyCode: input.currency_code,
-      customerEmail: input.context?.customer?.email,
+      customerEmail: context.customer?.email,
       customerName: [
-        input.context?.customer?.billing_address?.first_name,
-        input.context?.customer?.billing_address?.last_name,
+        context.customer?.billing_address?.first_name,
+        context.customer?.billing_address?.last_name,
       ]
         .filter(Boolean)
         .join(" "),
@@ -170,12 +177,13 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
     const billingMode = this.isBillingReservationMode(input)
 
     if (billingMode) {
+      const context = readPaymentProviderContext(input.context)
       const customerKey =
         (input.data?.customerKey as string | undefined) ||
-        (input.context?.customer_key as string | undefined)
+        context.customer_key
 
       const orderId = String(
-        input.data?.orderId ?? input.context?.idempotency_key ?? ""
+        input.data?.orderId ?? context.idempotency_key ?? ""
       )
 
       if (!customerKey || !orderId) {
@@ -250,7 +258,7 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
   ): Promise<WebhookActionResult> {
     const handler = createKoreanPgWebhookHandler(
       this.container as { resolve: <T>(key: string) => T; logger?: Logger },
-      this.options_
+      this.toWebhookHandlerOptions()
     )
 
     const result = await handler.processWebhook(payload)
@@ -353,6 +361,7 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
   }
 
   async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
+    const context = readPaymentProviderContext(input.context)
     const orderId =
       (input.data?.orderId as string | undefined) ?? crypto.randomUUID()
     const amount = this.normalizeAmount(input.amount, input.currency_code)
@@ -361,7 +370,7 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
       orderId,
       amount,
       currencyCode: input.currency_code,
-      customerEmail: input.context?.customer?.email,
+      customerEmail: context.customer?.email,
     })
 
     return {
@@ -371,21 +380,29 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
 
   protected isBillingReservationMode(input: {
     data?: Record<string, unknown>
-    context?: Record<string, unknown>
+    context?: InitiatePaymentInput["context"]
   }): boolean {
     if (input.data?.mode === "billing_reservation") {
       return true
     }
 
-    if (input.context?.billing_mode === "reservation") {
+    const context = readPaymentProviderContext(input.context)
+
+    if (context.billing_mode === "reservation") {
       return true
     }
 
-    const groupDeal = input.context?.group_deal as
-      | Record<string, unknown>
-      | undefined
+    return context.group_deal?.billing_reservation === true
+  }
 
-    return groupDeal?.billing_reservation === true
+  protected toWebhookHandlerOptions(): TossPaymentsProviderOptions {
+    return {
+      secretKey: this.options_.tossSecretKey ?? "",
+      clientKey: this.options_.tossClientKey ?? "",
+      webhookSecret: this.options_.webhookSecret,
+      testMode: this.options_.testMode,
+      enabledEasyPayMethods: this.options_.enabledEasyPayMethods,
+    }
   }
 
   protected resolveEasyPayMethods(): KoreanPgEasyPayMethod[] {
@@ -399,10 +416,10 @@ export class KoreanPgPaymentProviderService extends AbstractPaymentProvider<Kore
   }
 
   protected normalizeAmount(
-    amount: number | string,
+    amount: BigNumberInput,
     currencyCode: string
   ): number {
-    const numericAmount = Number(amount)
+    const numericAmount = toNumericPaymentAmount(amount)
 
     if (Number.isNaN(numericAmount)) {
       throw new MedusaError(

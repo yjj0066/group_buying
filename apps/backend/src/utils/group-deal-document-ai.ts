@@ -23,6 +23,7 @@ import {
 } from "./flask-document-ai-client"
 import {
   assertPurchaseReceiptVerified,
+  markGroupDealShippingCompletedIfReady,
   saveGroupDealDocumentImage,
 } from "./group-deal-leader-ops"
 import {
@@ -503,10 +504,6 @@ const matchParticipantsToInvoiceRows = async (
       group_deal_id: groupDealId,
       entries,
     })
-
-    const { markGroupDealShippingCompletedIfReady } = await import(
-      "./group-deal-leader-ops"
-    )
 
     await markGroupDealShippingCompletedIfReady(scope, groupDealId)
   }

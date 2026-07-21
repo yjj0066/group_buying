@@ -70,7 +70,7 @@ export const POST = async (
     : []
 
   const review = {
-    id: `review_${participantId}_${Date.now()}`,
+    id: `review_${participant.id}_${Date.now()}`,
     participant_id: String(participant.id),
     customer_id: String(participant.customer_id ?? ""),
     rating: body.rating,

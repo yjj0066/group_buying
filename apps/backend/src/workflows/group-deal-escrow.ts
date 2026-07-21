@@ -18,6 +18,8 @@ import {
   GroupDealWaitlistMatchResult,
 } from "../types/group-buying"
 import { hasOpenParticipantDisputes } from "../utils/group-deal-disputes"
+import { assertDealCancellable } from "../utils/group-deal-admin-rules"
+import { assertPurchaseReceiptVerified } from "../utils/group-deal-leader-ops"
 import { emitGroupDealUpdated } from "./group-deal-billing"
 
 export const emitGroupDealWaitlistMatched = async (
@@ -188,10 +190,6 @@ const refundGroupDealEscrowStep = createStep(
     const existing = await groupBuyingService.retrieveGroupDeal(input.group_deal_id)
 
     if (input.final_status === GroupDealStatus.CANCELLED) {
-      const { assertDealCancellable } = await import(
-        "../utils/group-deal-admin-rules"
-      )
-
       assertDealCancellable(existing)
     }
 
@@ -330,7 +328,13 @@ const settleGroupDealStep = createStep(
     const reservedParticipants =
       await groupBuyingService.listReservedParticipants(input.group_deal_id)
 
-    let captureResult = null
+    let captureResult: Awaited<
+      ReturnType<
+        ReturnType<
+          typeof createGroupDealBillingCaptureService
+        >["captureGroupDealPayments"]
+      >
+    > | null = null
 
     if (reservedParticipants.length) {
       captureResult = await billingCaptureService.captureGroupDealPayments(
@@ -581,10 +585,6 @@ const completeLeaderShippingStep = createStep(
         "Only the deal leader can complete shipping for this group deal"
       )
     }
-
-    const { assertPurchaseReceiptVerified } = await import(
-      "../utils/group-deal-leader-ops"
-    )
 
     await assertPurchaseReceiptVerified(container, input.group_deal_id)
 

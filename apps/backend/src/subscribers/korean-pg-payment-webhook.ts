@@ -1,6 +1,7 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import type { ProviderWebhookPayload } from "@medusajs/framework/types"
 import {
+  ContainerRegistrationKeys,
   Modules,
   PaymentActions,
   PaymentWebhookEvents,
@@ -50,7 +51,7 @@ export default async function koreanPgPaymentWebhookHandler({
     const message =
       error instanceof Error ? error.message : "Korean PG webhook rejected"
 
-    container.resolve(Modules.LOGGER)?.error(
+    container.resolve(ContainerRegistrationKeys.LOGGER)?.error(
       `[korean-pg-webhook] ${message}`
     )
 

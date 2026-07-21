@@ -56,7 +56,7 @@ export class StripeGroupDealClient {
   constructor(options: StripeGroupDealProviderOptions) {
     this.options = options
     this.stripe_ = options.apiKey?.trim()
-      ? new Stripe(options.apiKey, { apiVersion: "2024-06-20" })
+      ? new Stripe(options.apiKey, { apiVersion: "2024-04-10" })
       : null
   }
 

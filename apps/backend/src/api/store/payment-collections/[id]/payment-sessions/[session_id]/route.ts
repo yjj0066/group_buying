@@ -43,6 +43,8 @@ export const POST = async (
 
   const updated = await paymentModule.updatePaymentSession({
     id: sessionId,
+    currency_code: session.currency_code,
+    amount: session.amount,
     data: {
       ...(session.data ?? {}),
       ...incomingData,

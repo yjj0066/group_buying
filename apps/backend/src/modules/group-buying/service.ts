@@ -23,6 +23,7 @@ import {
   evaluateDealStatus,
   sumCommittedQuantity,
 } from "../../utils/group-deal-rules"
+import { hasOpenParticipantDisputesForParticipant } from "../../utils/group-deal-disputes"
 import {
   assertSelectionsWithinLimits,
   buildSelectionSnapshots,
@@ -699,10 +700,6 @@ class GroupBuyingModuleService extends MedusaService({
 
       const deal = await this.retrieveGroupDeal(String(participant.group_deal_id))
       const metadata = (deal.metadata as Record<string, unknown> | null) ?? {}
-      const { hasOpenParticipantDisputesForParticipant } = await import(
-        "../utils/group-deal-disputes"
-      )
-
       if (
         hasOpenParticipantDisputesForParticipant(metadata, String(participant.id))
       ) {

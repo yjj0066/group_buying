@@ -370,7 +370,9 @@ export const resolveCartIdByPaymentCollection = async (
 
 ): Promise<string | null> => {
 
-  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const query = container.resolve(ContainerRegistrationKeys.QUERY) as {
+    graph: (config: Record<string, unknown>) => Promise<{ data?: unknown[] }>
+  }
 
 
 
@@ -422,23 +424,19 @@ export const buildGroupDealPaymentSessionContext = async (
 
 
 
-  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const query = container.resolve(ContainerRegistrationKeys.QUERY) as {
+    graph: (config: Record<string, unknown>) => Promise<{ data?: unknown[] }>
+  }
 
 
 
-  const {
-
-    data: [cart],
-
-  } = await query.graph({
-
+  const { data = [] } = await query.graph({
     entity: "cart",
-
     fields: ["id", "email", "customer_id", "metadata", "items.metadata"],
-
     filters: { id: cartId },
-
   })
+
+  const cart = data[0]
 
 
 

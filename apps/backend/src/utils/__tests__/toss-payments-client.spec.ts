@@ -1,8 +1,8 @@
 import {
   assertTossPaymentsOptions,
   createTossPaymentsClient,
-} from "../modules/toss-payments/client"
-import { resolveTossPaymentsOptionsFromEnv } from "./toss-payments-options"
+} from "../../modules/toss-payments/client"
+import { resolveTossPaymentsOptionsFromEnv } from "../toss-payments-options"
 
 describe("toss-payments client", () => {
   it("creates widget session metadata for checkout", async () => {

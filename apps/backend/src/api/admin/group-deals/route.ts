@@ -46,7 +46,7 @@ export const POST = async (
   )
 
   const status = body.status ?? GroupDealStatus.DRAFT
-  const metadata = {
+  const metadata: Record<string, unknown> = {
     ...(body.metadata ?? {}),
     admin_created: true,
     source: "admin",

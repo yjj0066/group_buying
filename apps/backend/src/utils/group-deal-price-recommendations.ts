@@ -1,4 +1,4 @@
-type OptionRecord = {
+export type OptionRecord = {
   id: string
   option_key?: string | null
   label?: string | null

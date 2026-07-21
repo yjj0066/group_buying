@@ -17,7 +17,7 @@ const createStripe = () => {
     )
   }
 
-  return new Stripe(apiKey, { apiVersion: "2024-06-20" })
+  return new Stripe(apiKey, { apiVersion: "2024-04-10" })
 }
 
 export const createCustomerStripeSetupIntent = async (input: {

@@ -7,6 +7,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 import { GROUP_BUYING_MODULE } from "../../../../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../../../../modules/group-buying/service"
 import { buildOptionPriceRecommendations } from "../../../../../../utils/group-deal-price-recommendations"
+import type { OptionRecord } from "../../../../../../utils/group-deal-price-recommendations"
 
 const resolveHostedDeal = async (
   req: AuthenticatedMedusaRequest,
@@ -46,7 +47,7 @@ export const GET = async (
   const options = await groupBuyingService.listDealOptions(String(deal.id))
 
   const recommendations = buildOptionPriceRecommendations({
-    options: options as unknown as Array<Record<string, unknown>>,
+    options: options as OptionRecord[],
     dealPrice: Number(deal.deal_price ?? 0),
   }).filter((item) => item.recommended_price < item.current_price)
 
