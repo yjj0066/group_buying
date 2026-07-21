@@ -1,14 +1,16 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useMemo, useState, useEffect } from "react"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 
 import { confirmParticipantDelivery } from "@lib/data/account-group-deals"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import {
+  canCancelParticipation,
   canShowPurchaseConfirm,
   resolveParticipationCardStatusLabel,
 } from "@lib/util/participation-status"
+import ParticipationCancelButton from "@modules/group-buying/components/participation-cancel-button"
 import PurchaseConfirmButton from "@modules/group-buying/components/purchase-confirm-button"
 import {
   BbAlert,
@@ -50,6 +52,13 @@ type ParticipationsListLabels = {
   confirmPurchaseMessage: string
   confirmPurchaseConfirm: string
   confirmPurchaseCancel: string
+  cancelParticipation: string
+  cancelParticipationTitle: string
+  cancelParticipationMessage: string
+  cancelParticipationConfirm: string
+  cancelParticipationDismiss: string
+  cancelParticipationSuccess?: string
+  cancelParticipationError?: string
   progressStages?: Record<string, string>
 }
 
@@ -91,11 +100,25 @@ const ParticipationsList = ({
 }: ParticipationsListProps) => {
   const { countryCode } = useParams() as { countryCode: string }
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const cancelledSuccess = searchParams.get("cancelled") === "1"
   const [activeTab, setActiveTab] = useState<
     "active" | "completed" | "cancelled"
-  >("active")
+  >(
+    tabParam === "completed" || tabParam === "cancelled" ? tabParam : "active"
+  )
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [confirmError, setConfirmError] = useState<string | null>(null)
+  const [cancelSuccessMessage, setCancelSuccessMessage] = useState<string | null>(
+    cancelledSuccess ? labels.cancelParticipationSuccess ?? null : null
+  )
+
+  useEffect(() => {
+    if (tabParam === "active" || tabParam === "completed" || tabParam === "cancelled") {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
 
   const activeItems = useMemo(
     () => participations.filter(isActiveParticipation),
@@ -143,6 +166,15 @@ const ParticipationsList = ({
     dialogCancel: labels.confirmPurchaseCancel,
   }
 
+  const cancelParticipationLabels = {
+    button: labels.cancelParticipation,
+    dialogTitle: labels.cancelParticipationTitle,
+    dialogMessage: labels.cancelParticipationMessage,
+    dialogConfirm: labels.cancelParticipationConfirm,
+    dialogCancel: labels.cancelParticipationDismiss,
+    errorMessage: labels.cancelParticipationError,
+  }
+
   const cardStatusLabels = {
     progressStages: labels.progressStages ?? {},
     stageLabels,
@@ -182,6 +214,10 @@ const ParticipationsList = ({
 
       {confirmError && <BbAlert variant="error">{confirmError}</BbAlert>}
 
+      {cancelSuccessMessage && (
+        <BbAlert variant="success">{cancelSuccessMessage}</BbAlert>
+      )}
+
       {visibleItems.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--bb-line)] px-4 py-8 text-center text-sm text-[var(--bb-mute)]">
           {activeTab === "active"
@@ -216,6 +252,7 @@ const ParticipationsList = ({
               participation.stage === "shipping" &&
               !participation.delivery_confirmed_at
             const showPurchaseConfirm = canShowPurchaseConfirm(participation)
+            const showCancelParticipation = canCancelParticipation(participation)
 
             return (
               <LocalizedClientLink
@@ -241,6 +278,16 @@ const ParticipationsList = ({
                       <Text className="mt-1 text-xs text-[#6B7280]">
                         {labels.memberLabel.replace("{member}", memberLabel)}
                       </Text>
+                      {activeTab === "active" &&
+                      participation.stage === "shipping" &&
+                      participation.tracking_number ? (
+                        <Text className="mt-1 text-[10px] text-[#6B7280]">
+                          {labels.tracking.replace(
+                            "{number}",
+                            participation.tracking_number
+                          )}
+                        </Text>
+                      ) : null}
                       {activeTab === "active" && (
                         <Text className="mt-0.5 text-[10px] text-[#9CA3AF]">
                           {labels.quantity.replace(
@@ -264,6 +311,15 @@ const ParticipationsList = ({
                       countryCode={countryCode}
                       className="mt-3"
                       labels={purchaseConfirmLabels}
+                    />
+                  )}
+
+                  {showCancelParticipation && (
+                    <ParticipationCancelButton
+                      participation={participation}
+                      countryCode={countryCode}
+                      className="mt-3"
+                      labels={cancelParticipationLabels}
                     />
                   )}
 

@@ -34,6 +34,9 @@ export type AccountGroupDeal = {
   tracking_ai_confidence?: number | null
   report_stage?: string
   dispute_status?: string
+  shipping_completed_at?: string | null
+  settlement_submitted_at?: string | null
+  settled_at?: string | null
   purchase_receipt_structured?: Record<string, unknown> | null
   receipt_ai_validation?: {
     passed: boolean
@@ -105,6 +108,7 @@ export type PreferredRole = "participant" | "leader"
 export type RefundBankAccount = {
   bank_name: string
   bank_code: string
+  account_number: string
   account_number_masked: string
   account_holder: string
   registered_at?: string | null

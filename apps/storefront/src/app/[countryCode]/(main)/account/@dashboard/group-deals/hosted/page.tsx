@@ -58,6 +58,7 @@ export default async function HostedGroupDealsPage(props: {
           emptyCompleted: t.emptyCompleted,
           footerNotice: t.footerNotice,
           achievementRate: t.achievementRate,
+          stageClosed: t.stageClosed,
           leaderStages,
         }}
       />

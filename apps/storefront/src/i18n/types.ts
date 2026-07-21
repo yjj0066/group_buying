@@ -283,6 +283,7 @@ export type Dictionary = {
     waitlistSuccessNote: string
     waitlistError: string
     waitlistHint: string
+    waitlistSeatHint: string
     cardMemberVacancy: string
     cardMemberWaitlist: string
     cardMemberFull: string
@@ -358,6 +359,12 @@ export type Dictionary = {
     documentAiCheckMatchDetail: string
     documentAiCheckReview: string
     documentAiCheckReviewDetail: string
+    documentAiVerificationStatusPass: string
+    documentAiVerificationStatusFail: string
+    documentAiVerificationStatusSkipped: string
+    documentAiVerificationStatusNoMatch: string
+    documentAiVerificationStatusNotExtracted: string
+    documentAiCheckDateSkippedDetail: string
     applyForm: {
       summaryTitle: string
       selectedOption: string
@@ -557,6 +564,9 @@ export type Dictionary = {
       nicknameAvailableSuccess: string
       nicknameCheckRequired: string
       passwordMismatchError: string
+      passwordMinLengthError: string
+      passwordConfirmRequiredError: string
+      termsRequiredError: string
       agreeTerms: string
       agreePrivacy: string
       agreeMarketing: string
@@ -569,7 +579,9 @@ export type Dictionary = {
       roleParticipant: string
       roleLeader: string
       next: string
+      back: string
       signupSubmit: string
+      emailAlreadyRegisteredError: string
       submitError: string
       alreadyMember: string
       bankTitle: string
@@ -586,6 +598,21 @@ export type Dictionary = {
     leaderActionShipping: string
     leaderActionUrgentFill: string
     leaderCreateCta: string
+    leaderPurchase: {
+      title: string
+      declaredQuantityLabel: string
+      primarySellerLabel: string
+      primarySellerFallback: string
+      totalEscrowLabel: string
+      dealLabel: string
+      uploadSectionTitle: string
+      uploadHint: string
+      uploadButton: string
+      quantityUnit: string
+      confirmAnalysisButton: string
+      proceedButton: string
+      failedButton: string
+    }
     leaderPurchaseProof: {
       title: string
       uploadButton: string
@@ -664,8 +691,43 @@ export type Dictionary = {
     }
     leaderShippingPrep: {
       title: string
+      wireframeTitle: string
       stepLabel: string
       backToDashboard: string
+      uploadSectionTitle: string
+      uploadCaptureTitle: string
+      uploadCaptureHint: string
+      uploadProcessing: string
+      matchResultsTitle: string
+      matchRecipientColumn: string
+      matchTrackingColumn: string
+      matchStatusColumn: string
+      matchReasonColumn: string
+      matchStatusComplete: string
+      matchStatusNeedsReview: string
+      matchStatusUnmatched: string
+      matchReviewReasons: {
+        trackingMissing: string
+        carrierMissing: string
+        lowConfidence: string
+        aiNeedsReview: string
+        ambiguousParticipant: string
+        duplicateRecipientInUpload: string
+        noParticipantMatch: string
+        notMatchedFromUpload: string
+        manualIncomplete: string
+        duplicateParticipantProfile: string
+      }
+      duplicateProfileHint: string
+      summaryCompleteLabel: string
+      summaryNeedsReviewLabel: string
+      summaryUnmatchedLabel: string
+      summaryCount: string
+      matchResultsEmpty: string
+      manualEntryTitle: string
+      manualEntryHint: string
+      manualTrackingPlaceholder: string
+      confirmShippingButton: string
       bulkToolsTitle: string
       downloadTemplate: string
       uploadCsv: string
@@ -716,6 +778,10 @@ export type Dictionary = {
       saveBankAccount: string
       cancel: string
       bankRequiredError: string
+      useRegisteredAccountTitle: string
+      useRegisteredAccountButton: string
+      registeredAccountNumberRequired: string
+      registeredAccountResaveRequired: string
       disputeWarning: string
       backToDashboard: string
     }
@@ -1025,6 +1091,7 @@ export type Dictionary = {
       emptyCompleted: string
       footerNotice: string
       achievementRate: string
+      stageClosed: string
       depositSecured: string
       depositPending: string
       adminLink: string
@@ -1324,6 +1391,8 @@ export type Dictionary = {
       progressTitle: string
       trackingTitle: string
       escrowTitle: string
+      settlementCompletedMessage: string
+      settlementPendingMessage: string
       confirmDeliveryIrreversible: string
       tracking: string
       trackingWithCarrier: string
@@ -1337,6 +1406,13 @@ export type Dictionary = {
       confirmPurchaseMessage: string
       confirmPurchaseConfirm: string
       confirmPurchaseCancel: string
+      cancelParticipation: string
+      cancelParticipationTitle: string
+      cancelParticipationMessage: string
+      cancelParticipationConfirm: string
+      cancelParticipationDismiss: string
+      cancelParticipationSuccess: string
+      cancelParticipationError: string
       progressStages: {
         deposit_confirming: string
         order_complete: string

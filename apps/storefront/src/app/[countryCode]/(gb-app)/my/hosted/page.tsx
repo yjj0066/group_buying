@@ -45,6 +45,7 @@ export default async function MyHostedPage(props: {
           emptyCompleted: t.emptyCompleted,
           footerNotice: t.footerNotice,
           achievementRate: t.achievementRate,
+          stageClosed: t.stageClosed,
           leaderStages,
         }}
       />

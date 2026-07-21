@@ -521,3 +521,141 @@ export const confirmParticipantDeliveryWorkflow = createWorkflow(
     return new WorkflowResponse(result)
   }
 )
+
+export type CompleteLeaderShippingInput = {
+  group_deal_id: string
+  leader_customer_id: string
+  entries: Array<{
+    participant_id: string
+    carrier: string
+    tracking_number: string
+  }>
+}
+
+export const emitGroupDealParticipantShippingRegistered = async (
+  container: { resolve: <T>(key: string) => T },
+  input: {
+    group_deal_id: string
+    participant_id: string
+    email: string
+    tracking_number: string
+    carrier: string | null
+  }
+) => {
+  try {
+    const eventBus = container.resolve(Modules.EVENT_BUS) as {
+      emit: (event: {
+        name: string
+        data: Record<string, unknown>
+      }) => Promise<void>
+    }
+
+    await eventBus.emit({
+      name: "group_deal.participant_shipping_registered",
+      data: {
+        group_deal_id: input.group_deal_id,
+        participant_id: input.participant_id,
+        email: input.email,
+        tracking_number: input.tracking_number,
+        carrier: input.carrier,
+        notified_at: new Date().toISOString(),
+      },
+    })
+  } catch {
+    // Event bus may be unavailable in isolated tests.
+  }
+}
+
+const completeLeaderShippingStep = createStep(
+  "complete-leader-shipping",
+  async (input: CompleteLeaderShippingInput, { container }) => {
+    const groupBuyingService: GroupBuyingModuleService = container.resolve(
+      GROUP_BUYING_MODULE
+    )
+
+    const deal = await groupBuyingService.retrieveGroupDeal(input.group_deal_id)
+
+    if (String(deal.leader_customer_id ?? "") !== input.leader_customer_id) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Only the deal leader can complete shipping for this group deal"
+      )
+    }
+
+    const { assertPurchaseReceiptVerified } = await import(
+      "../utils/group-deal-leader-ops"
+    )
+
+    await assertPurchaseReceiptVerified(container, input.group_deal_id)
+
+    const participants = await groupBuyingService.listGroupDealParticipants({
+      group_deal_id: input.group_deal_id,
+    })
+    const participantsById = new Map(
+      participants.map((participant) => [participant.id, participant])
+    )
+
+    const updatedParticipantIds =
+      await groupBuyingService.bulkUpdateParticipantTracking({
+        group_deal_id: input.group_deal_id,
+        entries: input.entries,
+      })
+
+    let notifiedCount = 0
+
+    for (const participantId of updatedParticipantIds) {
+      const participant = participantsById.get(participantId)
+
+      if (!participant?.email) {
+        continue
+      }
+
+      const entry = input.entries.find(
+        (item) => item.participant_id === participantId
+      )
+
+      if (!entry) {
+        continue
+      }
+
+      await emitGroupDealParticipantShippingRegistered(container, {
+        group_deal_id: input.group_deal_id,
+        participant_id: participantId,
+        email: participant.email,
+        tracking_number: entry.tracking_number.trim(),
+        carrier: entry.carrier.trim(),
+      })
+
+      notifiedCount += 1
+    }
+
+    const dealMetadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+
+    await groupBuyingService.updateGroupDeals({
+      id: input.group_deal_id,
+      metadata: {
+        ...dealMetadata,
+        opening_status: "completed",
+        shipping_completed_at: new Date().toISOString(),
+      },
+    })
+
+    await emitGroupDealUpdated(container, input.group_deal_id)
+
+    return new StepResponse({
+      group_deal_id: input.group_deal_id,
+      updated_count: updatedParticipantIds.length,
+      notified_count: notifiedCount,
+      updated_participant_ids: updatedParticipantIds,
+    })
+  }
+)
+
+export const completeLeaderShippingWorkflow = createWorkflow(
+  "complete-leader-shipping",
+  (input: CompleteLeaderShippingInput) => {
+    const result = completeLeaderShippingStep(input)
+
+    return new WorkflowResponse(result)
+  }
+)

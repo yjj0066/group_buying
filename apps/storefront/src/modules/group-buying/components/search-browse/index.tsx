@@ -1,9 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 
-import { useDebouncedValue } from "@lib/hooks/use-debounced-value"
+import {
+  filtersToSearchParams,
+  parseFiltersFromSearchParams,
+} from "@lib/util/group-deal-filter-url"
 import {
   buildInitialFiltersFromPreferences,
   DEFAULT_GROUP_DEAL_FILTERS,
@@ -12,6 +15,7 @@ import {
   hasActiveFilters,
   type GroupDealFilterState,
 } from "@lib/util/group-deal-filters"
+import { isStoreVisibleDeal } from "@lib/util/normalize-group-deal"
 import { useDictionary } from "@i18n/provider"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import GroupDealCardList from "@modules/group-buying/components/group-deal-card-list"
@@ -34,55 +38,85 @@ type SearchBrowseProps = {
   } | null
 }
 
+const buildFiltersFromSearchParams = (
+  searchParams: URLSearchParams,
+  initialPreferences?: SearchBrowseProps["initialPreferences"]
+) =>
+  buildInitialFiltersFromPreferences(initialPreferences, {
+    ...parseFiltersFromSearchParams(searchParams, {
+      favoriteMember: initialPreferences?.favorite_member ?? "",
+      idolGroup: initialPreferences?.favorite_idol_group ?? "",
+    }),
+  })
+
 const SearchBrowse = ({ deals, initialPreferences }: SearchBrowseProps) => {
   const t = useDictionary()
   const router = useRouter()
   const { countryCode } = useParams() as { countryCode: string }
   const searchParams = useSearchParams()
+  const searchKey = searchParams.toString()
 
   const [filters, setFilters] = useState<GroupDealFilterState>(() =>
-    buildInitialFiltersFromPreferences(initialPreferences, {
-      query: searchParams.get("q") ?? "",
-      favoriteMember: searchParams.get("favorite") ?? initialPreferences?.favorite_member ?? "",
-      vacantOnly: searchParams.get("vacant") === "1",
-      urgentOnly: searchParams.get("urgent") === "1",
-    })
+    buildFiltersFromSearchParams(searchParams, initialPreferences)
   )
-  const [searchInput, setSearchInput] = useState(filters.query)
-  const debouncedSearchInput = useDebouncedValue(searchInput, 200)
+  const [searchInput, setSearchInput] = useState(() => filters.query)
+  const [appliedFilters, setAppliedFilters] = useState<GroupDealFilterState>(
+    () => buildFiltersFromSearchParams(searchParams, initialPreferences)
+  )
 
-  const facets = useMemo(() => extractGroupDealFacets(deals), [deals])
+  useEffect(() => {
+    const fromUrl = buildFiltersFromSearchParams(searchParams, initialPreferences)
+    setFilters(fromUrl)
+    setSearchInput(fromUrl.query)
+    setAppliedFilters(fromUrl)
+  }, [searchKey, initialPreferences])
+
+  const visibleDeals = useMemo(
+    () => deals.filter(isStoreVisibleDeal),
+    [deals]
+  )
+
+  const facets = useMemo(() => extractGroupDealFacets(visibleDeals), [visibleDeals])
   const filtered = useMemo(
     () =>
-      filterGroupDeals(deals, {
+      filterGroupDeals(visibleDeals, {
+        ...appliedFilters,
         ...filters,
-        query: debouncedSearchInput,
+        query: appliedFilters.query,
       }),
-    [deals, debouncedSearchInput, filters]
+    [visibleDeals, appliedFilters, filters]
   )
 
   const runSearch = () => {
-    const nextFilters = { ...filters, query: searchInput }
-
-    if (
-      nextFilters.query.trim().length >= 1 &&
-      filtered.length === 0 &&
-      hasActiveFilters(nextFilters)
-    ) {
-      const params = new URLSearchParams()
-      if (nextFilters.query) params.set("q", nextFilters.query)
-      router.push(`${gbAppRoutes.searchEmpty(countryCode)}?${params.toString()}`)
-      return
+    const nextFilters: GroupDealFilterState = {
+      ...filters,
+      query: searchInput.trim(),
     }
+
+    setFilters(nextFilters)
+    setAppliedFilters(nextFilters)
+
+    const params = filtersToSearchParams(nextFilters)
+    const queryString = params.toString()
+    const target = queryString
+      ? `${gbAppRoutes.search(countryCode)}?${queryString}`
+      : gbAppRoutes.search(countryCode)
+
+    router.replace(target, { scroll: false })
+    router.refresh()
   }
 
   const resetFilters = () => {
-    setSearchInput("")
-    setFilters({
+    const reset = {
       ...DEFAULT_GROUP_DEAL_FILTERS,
       favoriteMember: initialPreferences?.favorite_member ?? "",
       idolGroup: initialPreferences?.favorite_idol_group ?? "",
-    })
+    }
+
+    setSearchInput("")
+    setFilters(reset)
+    setAppliedFilters(reset)
+    router.replace(gbAppRoutes.search(countryCode), { scroll: false })
   }
 
   return (
@@ -167,19 +201,19 @@ const SearchBrowse = ({ deals, initialPreferences }: SearchBrowseProps) => {
           onWaitlist={() =>
             router.push(
               `${gbAppRoutes.waitlist(countryCode)}?${new URLSearchParams({
-                q: searchInput,
-                member: filters.favoriteMember,
+                q: appliedFilters.query,
+                member: appliedFilters.favoriteMember,
               }).toString()}`
             )
           }
           onReset={resetFilters}
-          showReset={hasActiveFilters(filters)}
+          showReset={hasActiveFilters(appliedFilters)}
         />
       ) : (
         <GroupDealCardList
           deals={filtered}
           highlightMember={
-            filters.vacantOnly ? filters.favoriteMember : undefined
+            appliedFilters.vacantOnly ? appliedFilters.favoriteMember : undefined
           }
         />
       )}

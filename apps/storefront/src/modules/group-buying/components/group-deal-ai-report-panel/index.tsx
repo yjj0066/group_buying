@@ -8,6 +8,8 @@ import {
   buildReceiptExtractFields,
   buildReceiptVerificationItems,
   buildShippingVerificationItems,
+  resolveVerificationStatusLabel,
+  resolveVerificationStatusVariant,
 } from "@lib/util/group-deal-document-ai-presenter"
 import {
   formatConfidence,
@@ -58,6 +60,7 @@ const GroupDealAiReportPanel = ({
       buildReceiptVerificationItems(
         t,
         deal.receipt_ai_validation ?? undefined,
+        structuredReceipt,
         Boolean(structuredReceipt)
       ),
     [deal.receipt_ai_validation, structuredReceipt, t]
@@ -209,20 +212,8 @@ const GroupDealAiReportPanel = ({
                       </Text>
                     )}
                   </div>
-                  <BbBadge
-                    variant={
-                      item.status === "pass"
-                        ? "success"
-                        : item.status === "fail"
-                          ? "warning"
-                          : "default"
-                    }
-                  >
-                    {item.status === "pass"
-                      ? labels.validationPass
-                      : item.status === "fail"
-                        ? labels.validationFail
-                        : labels.validationPending}
+                  <BbBadge variant={resolveVerificationStatusVariant(item.status)}>
+                    {resolveVerificationStatusLabel(t, item.status)}
                   </BbBadge>
                 </div>
               ))}
@@ -314,20 +305,8 @@ const GroupDealAiReportPanel = ({
                       </Text>
                     )}
                   </div>
-                  <BbBadge
-                    variant={
-                      item.status === "pass"
-                        ? "success"
-                        : item.status === "fail"
-                          ? "warning"
-                          : "default"
-                    }
-                  >
-                    {item.status === "pass"
-                      ? labels.validationPass
-                      : item.status === "fail"
-                        ? labels.validationFail
-                        : labels.validationPending}
+                  <BbBadge variant={resolveVerificationStatusVariant(item.status)}>
+                    {resolveVerificationStatusLabel(t, item.status)}
                   </BbBadge>
                 </div>
               ))}

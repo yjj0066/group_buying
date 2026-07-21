@@ -13,6 +13,7 @@ import {
 } from "@lib/util/group-deal-filters"
 import GroupDealFilters from "@modules/group-buying/components/group-deal-filters"
 import useGroupDealSearch from "@modules/group-buying/hooks/use-group-deal-search"
+import useSoftRouterRefresh from "@lib/hooks/use-soft-router-refresh"
 import { useDictionary } from "@i18n/provider"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import { BbPageShell, BbSectionHeader } from "@modules/design-system"
@@ -81,6 +82,8 @@ const GroupDealsCatalog = ({
     applySearch,
     resetSearch,
   } = useGroupDealSearch({ initialFilters })
+
+  useSoftRouterRefresh()
 
   const visibleDeals = useMemo(
     () => deals.filter(isStoreVisibleDeal),

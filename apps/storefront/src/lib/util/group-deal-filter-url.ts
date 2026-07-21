@@ -96,14 +96,20 @@ export const buildGroupBuyingSearchPath = (
   countryCode: string,
   query: string
 ): string => {
-  const trimmed = query.trim()
+  return buildGroupBuyingCatalogPath(countryCode, { query })
+}
 
-  if (!trimmed) {
-    return `/${countryCode}/group-buying`
-  }
+export const buildGroupBuyingCatalogPath = (
+  countryCode: string,
+  filters: Partial<GroupDealFilterState> = {}
+): string => {
+  const params = filtersToSearchParams({
+    ...DEFAULT_GROUP_DEAL_FILTERS,
+    ...filters,
+  })
+  const queryString = params.toString()
 
-  const params = new URLSearchParams()
-  params.set("q", trimmed)
-
-  return `/${countryCode}/group-buying?${params.toString()}`
+  return queryString
+    ? `/${countryCode}/group-buying?${queryString}`
+    : `/${countryCode}/group-buying`
 }

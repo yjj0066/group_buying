@@ -184,7 +184,25 @@ const prepareGroupDealCheckoutStep = createStep(
     const totalQuantity = joinValidation.totalQuantity
     const firstPaymentAmount = joinValidation.firstPaymentAmount
 
-    if (!groupDeal.variant_id) {
+    let variantId = groupDeal.variant_id
+
+    if (!variantId && groupDeal.product_id) {
+      const { data: products } = await query.graph({
+        entity: "product",
+        fields: ["id", "variants.id"],
+        filters: { id: groupDeal.product_id },
+      })
+
+      const resolvedVariantId = (
+        products?.[0] as { variants?: Array<{ id?: string }> } | undefined
+      )?.variants?.[0]?.id
+
+      if (resolvedVariantId) {
+        variantId = String(resolvedVariantId)
+      }
+    }
+
+    if (!variantId) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
         "Group deal is missing a product variant"
@@ -197,7 +215,7 @@ const prepareGroupDealCheckoutStep = createStep(
       {
         entity: "product_variant",
         fields: ["id", "product_id", "manage_inventory", "inventory_quantity"],
-        filters: { id: groupDeal.variant_id },
+        filters: { id: variantId },
       },
       { throwIfKeyNotFound: true }
     )

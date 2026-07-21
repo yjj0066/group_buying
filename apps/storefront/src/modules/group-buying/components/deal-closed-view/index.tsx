@@ -53,7 +53,15 @@ const DealClosedView = ({ deal }: DealClosedViewProps) => {
               status="full"
               statusLabel={t.groupBuying.seatClosed}
               remaining={getOptionRemainingQuantity(option)}
-              disabled
+              onClick={() =>
+                router.push(
+                  `${gbAppRoutes.waitlist(countryCode)}?${new URLSearchParams({
+                    dealId: deal.id,
+                    member: option.label,
+                    optionId: option.id,
+                  }).toString()}`
+                )
+              }
             />
           ))}
         </div>
@@ -63,7 +71,9 @@ const DealClosedView = ({ deal }: DealClosedViewProps) => {
         fullWidth
         onClick={() =>
           router.push(
-            `${gbAppRoutes.waitlist(countryCode)}?dealId=${deal.id}`
+            `${gbAppRoutes.waitlist(countryCode)}?${new URLSearchParams({
+              dealId: deal.id,
+            }).toString()}`
           )
         }
       >

@@ -127,9 +127,30 @@ const RECEIPT_VALIDATION_ITEMS: Array<{
   },
 ]
 
+const resolveReceiptItemStatus = (
+  itemId: string,
+  failed: boolean,
+  structured: StructuredReceiptFields | null | undefined
+): VerificationItem["status"] => {
+  if (failed) {
+    return "fail"
+  }
+
+  if (itemId === "date") {
+    if (!structured?.ordered_at?.trim()) {
+      return "skipped"
+    }
+
+    return "pass"
+  }
+
+  return "pass"
+}
+
 export const buildReceiptVerificationItems = (
   t: Dictionary,
   validation: { passed: boolean; reasons: string[] } | undefined,
+  structured: StructuredReceiptFields | null | undefined,
   hasResult: boolean
 ): VerificationItem[] => {
   if (!hasResult) {
@@ -140,12 +161,18 @@ export const buildReceiptVerificationItems = (
 
   return RECEIPT_VALIDATION_ITEMS.map((item) => {
     const failed = reasons.has(item.reason)
+    const status = resolveReceiptItemStatus(item.id, failed, structured)
+    const baseDetail = t.groupBuying[item.detailKey] as string
+    const detail =
+      item.id === "date" && status === "skipped"
+        ? t.groupBuying.documentAiCheckDateSkippedDetail
+        : baseDetail
 
     return {
       id: item.id,
       label: t.groupBuying[item.labelKey] as string,
-      detail: t.groupBuying[item.detailKey] as string,
-      status: failed ? "fail" : validation?.passed ? "pass" : "pending",
+      detail,
+      status,
     }
   })
 }
@@ -214,7 +241,7 @@ export const buildShippingVerificationItems = (
           ? "fail"
           : response.invoice_rows?.length
             ? "pass"
-            : "pending",
+            : "not_extracted",
     },
     {
       id: "match",
@@ -228,7 +255,7 @@ export const buildShippingVerificationItems = (
           ? "pass"
           : conflictCount > 0
             ? "fail"
-            : "pending",
+            : "no_match",
     },
     {
       id: "review",
@@ -240,6 +267,40 @@ export const buildShippingVerificationItems = (
       status: response.needs_review || conflictCount > 0 ? "fail" : "pass",
     },
   ]
+}
+
+export const resolveVerificationStatusLabel = (
+  t: Dictionary,
+  status: VerificationItem["status"]
+): string => {
+  switch (status) {
+    case "pass":
+      return t.groupBuying.documentAiVerificationStatusPass
+    case "fail":
+      return t.groupBuying.documentAiVerificationStatusFail
+    case "skipped":
+      return t.groupBuying.documentAiVerificationStatusSkipped
+    case "no_match":
+      return t.groupBuying.documentAiVerificationStatusNoMatch
+    case "not_extracted":
+      return t.groupBuying.documentAiVerificationStatusNotExtracted
+    default:
+      return t.groupBuying.documentAiVerificationStatusSkipped
+  }
+}
+
+export const resolveVerificationStatusVariant = (
+  status: VerificationItem["status"]
+): "success" | "warning" | "default" => {
+  if (status === "pass") {
+    return "success"
+  }
+
+  if (status === "fail") {
+    return "warning"
+  }
+
+  return "default"
 }
 
 const maskTrackingNumber = (value: string): string => {

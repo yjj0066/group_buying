@@ -1,4 +1,5 @@
 import {
+  GroupDealDepositStatus,
   GroupDealDisputeStatus,
   GroupDealDocumentAiStatus,
   GroupDealReceiptStatus,
@@ -53,6 +54,22 @@ const readMetadata = (deal: DealRecord): Record<string, unknown> => {
   return (deal.metadata as Record<string, unknown> | null) ?? {}
 }
 
+export const isStoreVisibleGroupDeal = (deal: DealRecord): boolean => {
+  const metadata = readMetadata(deal)
+  const depositStatus = String(deal.deposit_status ?? GroupDealDepositStatus.PENDING)
+  const depositOk =
+    depositStatus === GroupDealDepositStatus.DEPOSITED ||
+    depositStatus === "secured"
+  const adminCreated =
+    metadata.admin_created === true || metadata.source === "admin"
+  const legacyAdminOpen =
+    String(deal.status ?? "") === GroupDealStatus.OPEN &&
+    !deal.leader_customer_id &&
+    depositStatus !== GroupDealDepositStatus.REFUNDED
+
+  return depositOk || adminCreated || legacyAdminOpen
+}
+
 export const resolveStoreDealTimelineStage = (
   deal: DealRecord
 ): StoreDealTimelineStage => {
@@ -96,24 +113,32 @@ export const resolveStoreDealTimelineStage = (
 
 export const serializeStoreGroupDealOption = (
   option: DealRecord
-) => ({
-  id: String(option.id),
-  group_deal_id: String(option.group_deal_id),
-  option_type: String(option.option_type ?? "custom"),
-  option_key: String(option.option_key ?? ""),
-  label: String(option.label ?? ""),
-  deal_price: option.deal_price != null ? toNumber(option.deal_price) : null,
-  original_price:
-    option.original_price != null ? toNumber(option.original_price) : null,
-  max_quantity:
-    option.max_quantity != null ? toNumber(option.max_quantity) : null,
-  target_quantity:
-    option.target_quantity != null ? toNumber(option.target_quantity) : null,
-  current_quantity: toNumber(option.current_quantity),
-  sort_order: toNumber(option.sort_order),
-  is_active: Boolean(option.is_active ?? true),
-  metadata: (option.metadata as Record<string, unknown> | null) ?? null,
-})
+) => {
+  const maxQuantity =
+    option.max_quantity != null ? toNumber(option.max_quantity) : null
+  const currentQuantity = toNumber(option.current_quantity)
+  const remainingQuantity =
+    maxQuantity != null ? Math.max(0, maxQuantity - currentQuantity) : null
+
+  return {
+    id: String(option.id),
+    group_deal_id: String(option.group_deal_id),
+    option_type: String(option.option_type ?? "custom"),
+    option_key: String(option.option_key ?? ""),
+    label: String(option.label ?? ""),
+    deal_price: option.deal_price != null ? toNumber(option.deal_price) : null,
+    original_price:
+      option.original_price != null ? toNumber(option.original_price) : null,
+    max_quantity: maxQuantity,
+    target_quantity:
+      option.target_quantity != null ? toNumber(option.target_quantity) : null,
+    current_quantity: currentQuantity,
+    remaining_quantity: remainingQuantity,
+    sort_order: toNumber(option.sort_order),
+    is_active: Boolean(option.is_active ?? true),
+    metadata: (option.metadata as Record<string, unknown> | null) ?? null,
+  }
+}
 
 export const serializeStoreGroupDealDocumentAiFields = (deal: DealRecord) => ({
   receipt_ai_status: String(

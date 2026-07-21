@@ -105,10 +105,17 @@ const parseFlaskResponse = async (
   }
 
   if (!response.ok) {
-    const message =
-      (typeof body.message === "string" && body.message) ||
+    const detail =
       (typeof body.error === "string" && body.error) ||
+      (typeof body.detail === "string" && body.detail) ||
+      null
+    const headline =
+      (typeof body.message === "string" && body.message) ||
       `Flask Document AI request failed (${response.status})`
+    const message =
+      detail && !headline.includes(detail)
+        ? `${headline}: ${detail}`
+        : headline
 
     throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, message)
   }
@@ -145,11 +152,27 @@ const postDocumentAi = async (
     )
   }
 
-  const response = await fetchWithTimeout(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: buildHybridHeaders(),
-    body: JSON.stringify(buildParsePayload(input)),
-  })
+  let response: Response
+
+  try {
+    response = await fetchWithTimeout(`${baseUrl}${path}`, {
+      method: "POST",
+      headers: buildHybridHeaders(),
+      body: JSON.stringify(buildParsePayload(input)),
+    })
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    const isTimeout =
+      (error instanceof Error && error.name === "AbortError") ||
+      detail.toLowerCase().includes("abort")
+
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      isTimeout
+        ? `Document AI BFF request timed out after ${getDocumentAiRequestTimeoutMs()}ms`
+        : `Document AI BFF is unreachable at ${baseUrl}. Start services/document-ai-bff (python -m app.main) or set DOCUMENT_AI_ENABLED=false for stub mode. (${detail})`
+    )
+  }
 
   return parseFlaskResponse(response)
 }
@@ -199,13 +222,29 @@ export const getDocumentAiJobFromFlask = async (
     )
   }
 
-  const response = await fetchWithTimeout(
-    `${baseUrl}/api/v1/document-ai/jobs/${encodeURIComponent(jobId)}`,
-    {
-      method: "GET",
-      headers: buildHybridHeaders(),
-    }
-  )
+  let response: Response
+
+  try {
+    response = await fetchWithTimeout(
+      `${baseUrl}/api/v1/document-ai/jobs/${encodeURIComponent(jobId)}`,
+      {
+        method: "GET",
+        headers: buildHybridHeaders(),
+      }
+    )
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    const isTimeout =
+      (error instanceof Error && error.name === "AbortError") ||
+      detail.toLowerCase().includes("abort")
+
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      isTimeout
+        ? `Document AI BFF request timed out after ${getDocumentAiRequestTimeoutMs()}ms`
+        : `Document AI BFF is unreachable at ${baseUrl}. Start services/document-ai-bff (python -m app.main). (${detail})`
+    )
+  }
 
   return parseFlaskResponse(response)
 }

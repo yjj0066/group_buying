@@ -44,3 +44,30 @@ export const PostStoreMeGroupDealDocumentParse = z.object({
 export type PostStoreMeGroupDealDocumentParseType = z.infer<
   typeof PostStoreMeGroupDealDocumentParse
 >
+
+export const PostStoreMeGroupDealShippingComplete = z.object({
+  entries: z
+    .array(
+      z.object({
+        participant_id: z.string().min(1),
+        carrier: z.string().min(1),
+        tracking_number: z.string().min(1),
+      })
+    )
+    .min(1),
+})
+
+export type PostStoreMeGroupDealShippingCompleteType = z.infer<
+  typeof PostStoreMeGroupDealShippingComplete
+>
+
+export const PostStoreMeGroupDealSettlement = z.object({
+  bank_code: z.string().min(1),
+  bank_name: z.string().min(1),
+  account_number: z.string().min(1),
+  account_holder: z.string().min(1),
+})
+
+export type PostStoreMeGroupDealSettlementType = z.infer<
+  typeof PostStoreMeGroupDealSettlement
+>

@@ -31,6 +31,10 @@ const backendPattern = getBackendImagePattern()
  */
 const nextConfig = {
   reactStrictMode: true,
+  serverActions: {
+    // 20MB uploads become ~27MB as base64 in Server Action payloads
+    bodySizeLimit: "32mb",
+  },
   logging: {
     fetches: {
       fullUrl: process.env.NODE_ENV === "development",

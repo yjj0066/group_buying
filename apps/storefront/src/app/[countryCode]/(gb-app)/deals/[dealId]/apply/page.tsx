@@ -39,10 +39,12 @@ export default async function DealApplyPage(props: Props) {
       ? Math.floor(parsedQuantity)
       : 1
 
+  const resolvedOptionId = optionId?.trim() || undefined
+
   return (
     <DealApplyForm
       deal={deal}
-      optionId={optionId ?? ""}
+      optionId={resolvedOptionId}
       memberLabel={member ?? deal.title}
       quantity={quantity}
     />

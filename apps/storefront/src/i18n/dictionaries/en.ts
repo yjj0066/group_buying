@@ -202,7 +202,7 @@ const dictionary: Dictionary = {
     seatHoldExpired: "Your hold expired. Please select a seat again.",
     selectedSeatSummary: "Selected seat: {member}",
     cardTrustScore: "Trust {score}",
-    waitlistButton: "Join waitlist alert",
+    waitlistButton: "Get seat alert",
     waitlistDescription:
       "This deal is full. We will notify you by email when a slot opens.",
     waitlistSuccess: "You are on the waitlist.",
@@ -210,6 +210,8 @@ const dictionary: Dictionary = {
       "We will email you when a slot becomes available.",
     waitlistError: "Failed to join the waitlist.",
     waitlistHint: "Slots are assigned in queue order.",
+    waitlistSeatHint:
+      "Select a closed member seat to join the vacancy alert waitlist.",
     cardMemberVacancy: "{member} · vacancy available",
     cardMemberWaitlist: "{member} · waitlist only",
     cardMemberFull: "{member} · full",
@@ -259,6 +261,14 @@ const dictionary: Dictionary = {
     receiptFieldOrderNumber: "Order number",
     receiptFieldAlbumQuantity: "Album quantity",
     receiptFieldOrderedAt: "Ordered at",
+    receiptFieldTotalAmount: "Total amount",
+    documentAiVerificationStatusPass: "Pass",
+    documentAiVerificationStatusFail: "Fail",
+    documentAiVerificationStatusSkipped: "N/A",
+    documentAiVerificationStatusNoMatch: "No match",
+    documentAiVerificationStatusNotExtracted: "Not extracted",
+    documentAiCheckDateSkippedDetail:
+      "Purchase date was not extracted or participant payment time is unavailable, so this check was skipped.",
     applyForm: {
       summaryTitle: "Application summary",
       selectedOption: "Selected option",
@@ -444,7 +454,7 @@ const dictionary: Dictionary = {
       logo: "Idol Group Buy",
       splashLoading: "Loading",
       emailPlaceholder: "Email",
-      passwordPlaceholder: "Password",
+      passwordPlaceholder: "Password (8+ characters)",
       passwordConfirmPlaceholder: "Confirm password",
       loginSubmit: "Sign in",
       loginError: "Email or password is incorrect",
@@ -462,6 +472,9 @@ const dictionary: Dictionary = {
       nicknameAvailableSuccess: "This nickname is available",
       nicknameCheckRequired: "Please check nickname availability.",
       passwordMismatchError: "Passwords do not match",
+      passwordMinLengthError: "Password must be at least 8 characters.",
+      passwordConfirmRequiredError: "Please confirm your password.",
+      termsRequiredError: "Please agree to all required terms.",
       agreeTerms: "[Required] Terms of use",
       agreePrivacy: "[Required] Privacy policy",
       agreeMarketing: "[Optional] Marketing",
@@ -474,7 +487,10 @@ const dictionary: Dictionary = {
       roleParticipant: "Start as participant",
       roleLeader: "Start as leader",
       next: "Next",
+      back: "Back",
       signupSubmit: "Create account",
+      emailAlreadyRegisteredError:
+        "This email is already registered. Sign in or use a different email.",
       submitError: "Sign up failed. Please check your details.",
       alreadyMember: "Already a member?",
       bankTitle: "Register your bank account",
@@ -493,10 +509,26 @@ const dictionary: Dictionary = {
     leaderActionShipping: "Register shipping labels",
     leaderActionUrgentFill: "Handle urgent vacancy",
     leaderCreateCta: "Create new deal",
+    leaderPurchase: {
+      title: "First purchase · receipt",
+      declaredQuantityLabel: "Declared album quantity",
+      primarySellerLabel: "Primary seller",
+      primarySellerFallback: "Not set",
+      totalEscrowLabel: "Total escrow",
+      dealLabel: "Deal",
+      uploadSectionTitle: "Upload receipt capture",
+      uploadHint:
+        "Upload your order history capture.\nMobile, dark mode, and scroll captures are supported.",
+      uploadButton: "Upload receipt",
+      quantityUnit: "{count} units",
+      confirmAnalysisButton: "Review receipt analysis",
+      proceedButton: "Publish proof and continue",
+      failedButton: "Verification failed · explain",
+    },
     leaderPurchaseProof: {
       title: "First purchase proof",
       uploadButton: "Upload receipt photo",
-      uploadHint: "JPG, PNG, PDF · up to 8MB",
+      uploadHint: "JPG, PNG, PDF · up to 20MB",
       uploadError: "Failed to upload the receipt.",
       uploading: "Uploading…",
       previewAlt: "Receipt preview",
@@ -575,8 +607,48 @@ const dictionary: Dictionary = {
     },
     leaderShippingPrep: {
       title: "Shipping prep & tracking registration",
+      wireframeTitle: "Shipping management",
       stepLabel: "Step 9 of 10",
       backToDashboard: "← Deal dashboard",
+      uploadSectionTitle: "Upload invoice captures",
+      uploadCaptureTitle: "Courier app registration capture",
+      uploadCaptureHint: "Multiple images and scroll captures supported",
+      uploadProcessing: "Analyzing invoices…",
+      matchResultsTitle: "Auto-matching results",
+      matchRecipientColumn: "Recipient",
+      matchTrackingColumn: "Tracking no.",
+      matchStatusColumn: "Status",
+      matchReasonColumn: "Reason",
+      matchStatusComplete: "Complete",
+      matchStatusNeedsReview: "Needs review",
+      matchStatusUnmatched: "Unmatched",
+      matchReviewReasons: {
+        trackingMissing: "Tracking number was not extracted.",
+        carrierMissing: "Courier was not extracted.",
+        lowConfidence: "AI confidence for this row is low.",
+        aiNeedsReview: "AI flagged this row for manual review.",
+        ambiguousParticipant:
+          "Recipient name matches multiple participants (duplicate or same initial).",
+        duplicateRecipientInUpload:
+          "More than one invoice row maps to the same participant.",
+        noParticipantMatch: "No participant matches this recipient name.",
+        notMatchedFromUpload:
+          "No uploaded invoice row was linked to this participant.",
+        manualIncomplete: "Enter both courier and tracking number.",
+        duplicateParticipantProfile:
+          "Multiple participants share the same name, address, and phone. If they are the same person, one manual entry applies to all.",
+      },
+      duplicateProfileHint:
+        "Some participants look like duplicate profiles. Enter tracking once and it will copy to the matching group.",
+      summaryCompleteLabel: "Matched",
+      summaryNeedsReviewLabel: "Needs review",
+      summaryUnmatchedLabel: "Unmatched",
+      summaryCount: "{count}",
+      matchResultsEmpty: "Upload invoice captures to see auto-matching results.",
+      manualEntryTitle: "Manual entry",
+      manualEntryHint: "Always available even when recognition fails",
+      manualTrackingPlaceholder: "Enter tracking number manually",
+      confirmShippingButton: "Confirm shipping",
       bulkToolsTitle: "Bulk registration tools",
       downloadTemplate: "Download Excel template",
       uploadCsv: "Bulk upload tracking CSV",
@@ -592,8 +664,8 @@ const dictionary: Dictionary = {
       validationError:
         "Every participant needs a courier and tracking number. ({count} missing)",
       uploadEmptyError: "The uploaded file has no data rows.",
-      uploadParseError: "Could not read the CSV file. Check the format.",
-      uploadSuccess: "Applied tracking info for {count} row(s).",
+      uploadParseError: "Could not analyze the invoice image. Please try again.",
+      uploadSuccess: "Extracted {count} tracking row(s).",
       submitButton: "Mark shipping complete",
       submitting: "Processing…",
       successMessage:
@@ -633,6 +705,12 @@ const dictionary: Dictionary = {
       saveBankAccount: "Save",
       cancel: "Cancel",
       bankRequiredError: "Please enter bank, account number, and account holder.",
+      useRegisteredAccountTitle: "Refund account from signup",
+      useRegisteredAccountButton: "Use this account",
+      registeredAccountNumberRequired:
+        "Bank and account holder were filled in. Please enter the account number.",
+      registeredAccountResaveRequired:
+        "The saved account does not include the full account number. Re-save it under My page → Account, then return here.",
       disputeWarning:
         "Amounts related to unresolved disputes may be held until resolved.",
       backToDashboard: "← Deal dashboard",
@@ -1002,6 +1080,7 @@ const dictionary: Dictionary = {
       footerNotice:
         "After opening, edits are limited (unit price, quantity, contact).",
       achievementRate: "{percent}% achieved",
+      stageClosed: "Closed",
       depositSecured: "Deposit secured",
       depositPending: "Deposit pending",
       adminLink: "Operator only",
@@ -1297,6 +1376,9 @@ const dictionary: Dictionary = {
       progressTitle: "Progress",
       trackingTitle: "Delivery tracking",
       escrowTitle: "Escrow held amount",
+      settlementCompletedMessage: "Group buy settlement is complete.",
+      settlementPendingMessage:
+        "The host submitted settlement. Final payout runs after all participants confirm delivery.",
       confirmDeliveryIrreversible:
         "This cannot be undone. Use dispute reporting if there is a problem.",
       tracking: "Tracking: {number}",
@@ -1312,6 +1394,15 @@ const dictionary: Dictionary = {
         "Confirm this purchase? Exchanges and refunds are difficult after confirmation.",
       confirmPurchaseConfirm: "Confirm",
       confirmPurchaseCancel: "Cancel",
+      cancelParticipation: "Cancel purchase",
+      cancelParticipationTitle: "Cancel this purchase?",
+      cancelParticipationMessage:
+        "Your seat will be released and any payment will be refunded to your registered account. Cancellation is not available after shipping preparation starts.",
+      cancelParticipationConfirm: "Cancel purchase",
+      cancelParticipationDismiss: "Go back",
+      cancelParticipationSuccess: "Your purchase has been cancelled.",
+      cancelParticipationError:
+        "Could not cancel your purchase. Please try again shortly.",
       progressStages: {
         deposit_confirming: "Confirming payment",
         order_complete: "Order complete",
@@ -1321,6 +1412,8 @@ const dictionary: Dictionary = {
       },
       memberLabel: "My slot: {member}",
       memberFallback: "Member",
+      statusCancelled: "Cancelled",
+      statusRefunded: "Refunded",
       shippingAddressTitle: "Shipping address",
       changeAddressButton: "Change address",
       changeAddressDisabledMessage:

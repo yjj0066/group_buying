@@ -4,20 +4,30 @@
  */
 import { notFound } from "next/navigation"
 
-import { getStoreGroupDeal } from "@lib/data/group-deals"
-import DealClosedView from "@modules/group-buying/components/deal-closed-view"
+import { retrieveCustomer } from "@lib/data/customer"
+import { loadDealDetailPageData } from "@lib/data/load-deal-detail-page"
+import DealDetailView from "@modules/group-buying/components/deal-detail-view"
 
 type Props = {
-  params: Promise<{ dealId: string }>
+  params: Promise<{ countryCode: string; dealId: string }>
 }
 
 export default async function DealClosedPage(props: Props) {
-  const { dealId } = await props.params
-  const deal = await getStoreGroupDeal(dealId)
+  const { countryCode, dealId } = await props.params
+  const pageData = await loadDealDetailPageData(countryCode, dealId)
 
-  if (!deal) {
+  if (!pageData) {
     notFound()
   }
 
-  return <DealClosedView deal={deal} />
+  const customer = await retrieveCustomer().catch(() => null)
+
+  return (
+    <DealDetailView
+      deal={pageData.deal}
+      heroImageUrl={pageData.heroImageUrl}
+      customerEmail={customer?.email ?? null}
+      allSeatsClosed
+    />
+  )
 }

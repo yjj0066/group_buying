@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useMemo, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 
 import {
@@ -18,7 +18,9 @@ import {
 } from "@lib/util/group-deal-options"
 import DealTimeline from "@modules/group-buying/components/deal-timeline"
 import LeaderTrustPanel from "@modules/group-buying/components/leader-trust-panel"
+import WaitlistForm from "@modules/group-buying/components/waitlist-form"
 import {
+  BbBanner,
   BbButton,
   BbKeyValue,
   BbMemberSeatCard,
@@ -35,13 +37,25 @@ import type { BbMemberSeatStatus } from "@modules/design-system"
 type DealDetailViewProps = {
   deal: GroupDeal
   heroImageUrl?: string | null
+  customerEmail?: string | null
+  /** Wireframe DETL-C: all member seats closed, waitlist only */
+  allSeatsClosed?: boolean
 }
 
-const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
+const DealDetailView = ({
+  deal,
+  heroImageUrl = null,
+  customerEmail = null,
+  allSeatsClosed = false,
+}: DealDetailViewProps) => {
   const t = useDictionary()
   const router = useRouter()
   const { countryCode } = useParams() as { countryCode: string }
   const [selectedOptionId, setSelectedOptionId] = useState("")
+  const [waitlistOption, setWaitlistOption] = useState<GroupDealOption | null>(
+    null
+  )
+  const [waitlistPanelOpen, setWaitlistPanelOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [optionError, setOptionError] = useState<string | null>(null)
 
@@ -80,9 +94,24 @@ const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
       currency_code: deal.currency_code,
     })
 
-  const handleOptionChange = (optionId: string) => {
-    setSelectedOptionId(optionId)
+  const isSeatFull = (option: GroupDealOption) => {
+    const remaining = getOptionRemainingQuantity(option)
+    return remaining != null && remaining <= 0
+  }
+
+  const handleSeatClick = (option: GroupDealOption) => {
     setOptionError(null)
+
+    if (allSeatsClosed || isSeatFull(option)) {
+      setSelectedOptionId("")
+      setWaitlistOption(option)
+      setWaitlistPanelOpen(true)
+      return
+    }
+
+    setWaitlistOption(null)
+    setWaitlistPanelOpen(false)
+    setSelectedOptionId(option.id)
     setQuantity(1)
   }
 
@@ -109,21 +138,37 @@ const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
   }
 
   const resolveSeatStatus = (option: GroupDealOption): BbMemberSeatStatus => {
-    const remaining = getOptionRemainingQuantity(option)
-    const isVacant = remaining == null || remaining > 0
+    if (allSeatsClosed) {
+      if (waitlistOption?.id === option.id) {
+        return "hold"
+      }
+
+      return "full"
+    }
+
+    if (waitlistOption?.id === option.id) {
+      return "hold"
+    }
 
     if (selectedOptionId === option.id) {
       return "hold"
     }
 
-    if (!isVacant) {
+    if (isSeatFull(option)) {
       return "full"
     }
 
     return "vacant"
   }
 
-  const resolveSeatLabel = (status: BbMemberSeatStatus) => {
+  const resolveSeatLabel = (
+    option: GroupDealOption,
+    status: BbMemberSeatStatus
+  ) => {
+    if (waitlistOption?.id === option.id) {
+      return t.groupBuying.cardWaitlistLabel
+    }
+
     if (status === "full") {
       return t.groupBuying.seatClosed
     }
@@ -137,7 +182,67 @@ const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
 
   const applyButtonLabel = `${t.groupBuying.applyButton} · ${formatMoney(priceBreakdown.total)}`
 
-  const checkoutPanel = (
+  const closedCheckoutPanel = (
+    <div className="rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-6 shadow-sm">
+      {waitlistPanelOpen && (
+        <div className="mb-4">
+          <Suspense fallback={null}>
+            <WaitlistForm
+              deal={deal}
+              initialMember={waitlistOption?.label ?? ""}
+              initialOptionId={waitlistOption?.id ?? ""}
+              initialEmail={customerEmail}
+              variant="inline"
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {!waitlistPanelOpen && (
+        <BbButton
+          variant="cta"
+          fullWidth
+          className="h-12"
+          onClick={() => setWaitlistPanelOpen(true)}
+        >
+          {t.groupBuying.waitlistButton}
+        </BbButton>
+      )}
+
+      <BbButton
+        variant="secondary"
+        fullWidth
+        className="mt-3 h-12"
+        disabled
+      >
+        {t.groupBuying.applyButton}
+      </BbButton>
+    </div>
+  )
+
+  const checkoutPanel = allSeatsClosed ? (
+    closedCheckoutPanel
+  ) : waitlistOption ? (
+    <div className="rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-6 shadow-sm">
+      <p className="text-sm font-medium text-[#6B7280]">
+        {t.groupBuying.waitlistButton}
+      </p>
+      <p className="mt-2 text-base font-bold text-[#111827]">
+        {waitlistOption.label}
+      </p>
+      <div className="mt-4">
+        <Suspense fallback={null}>
+          <WaitlistForm
+            deal={deal}
+            initialMember={waitlistOption.label}
+            initialOptionId={waitlistOption.id}
+            initialEmail={customerEmail}
+            variant="inline"
+          />
+        </Suspense>
+      </div>
+    </div>
+  ) : (
     <div className="rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-6 shadow-sm">
       <p className="text-sm font-medium text-[#6B7280]">
         {t.groupBuying.estimatedTotalLabel}
@@ -188,6 +293,10 @@ const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
         </div>
 
         <div className="flex min-w-0 flex-col gap-10">
+          {allSeatsClosed && (
+            <BbBanner>{t.groupBuying.cardClosedOverlay}</BbBanner>
+          )}
+
           <header className="border-b border-[#E5E7EB] pb-8">
             <h1 className="text-3xl font-bold tracking-tight text-[#111827]">
               {deal.title}
@@ -217,6 +326,16 @@ const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
             {requiresSeatSelection && (
               <>
                 <h2 className="text-lg font-bold text-[#111827]">자리 선택</h2>
+                {!allSeatsClosed && (
+                  <Text className="text-sm text-[#6B7280]">
+                    {t.groupBuying.waitlistSeatHint}
+                  </Text>
+                )}
+                {allSeatsClosed && (
+                  <Text className="text-sm text-[#6B7280]">
+                    {t.groupBuying.waitlistDescription}
+                  </Text>
+                )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {seatOptions.map((option) => {
                     const status = resolveSeatStatus(option)
@@ -228,10 +347,9 @@ const DealDetailView = ({ deal, heroImageUrl = null }: DealDetailViewProps) => {
                         member={option.label}
                         priceLabel={formatMoney(option.deal_price)}
                         status={status}
-                        statusLabel={resolveSeatLabel(status)}
+                        statusLabel={resolveSeatLabel(option, status)}
                         remaining={remaining}
-                        disabled={status === "full"}
-                        onClick={() => handleOptionChange(option.id)}
+                        onClick={() => handleSeatClick(option)}
                       />
                     )
                   })}

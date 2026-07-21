@@ -3,6 +3,8 @@ import { getLeaderStageIndex, LEADER_STAGES } from "types/account-group-deals"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import type { GroupDeal } from "types/group-deal"
 import { getDealFillProgress, getDaysUntilDeadline } from "types/group-deal"
+import type { AccountGroupDeal } from "types/account-group-deals"
+import { loadLeaderDealRuntimeState } from "@modules/group-buying/components/leader-deal-runtime/storage"
 import type { HostedDealParticipant } from "@lib/util/seller-deal-dashboard-data"
 import {
   areAllParticipantDepositsPaid,
@@ -210,6 +212,59 @@ export const resolveLeaderManagementMenuHref = (
 }
 
 export type HostedDealTab = "draft" | "recruiting" | "active" | "completed"
+
+export const applyHostedDealRuntimeOverrides = (
+  deal: AccountGroupDeal
+): AccountGroupDeal => {
+  const runtime = loadLeaderDealRuntimeState(deal.id)
+
+  if (!runtime) {
+    return deal
+  }
+
+  return {
+    ...deal,
+    status: runtime.status,
+    leader_stage: runtime.leader_stage,
+    settlement_submitted_at: runtime.settlementSubmittedAt,
+  }
+}
+
+export const isHostedDealSettlementComplete = (
+  deal: AccountGroupDeal
+): boolean => {
+  if (deal.leader_stage === "settled") {
+    return true
+  }
+
+  if (deal.settlement_submitted_at || deal.settled_at) {
+    return true
+  }
+
+  const metadata = deal.metadata
+
+  if (
+    metadata &&
+    typeof metadata === "object" &&
+    typeof metadata.settlement_submitted_at === "string" &&
+    metadata.settlement_submitted_at
+  ) {
+    return true
+  }
+
+  return deal.report_stage === "settled"
+}
+
+export const resolveHostedDealLink = (
+  countryCode: string,
+  deal: AccountGroupDeal
+): string => {
+  if (isHostedDealSettlementComplete(deal)) {
+    return gbAppRoutes.sellerDealReport(countryCode, deal.id)
+  }
+
+  return gbAppRoutes.sellerDeal(countryCode, deal.id)
+}
 
 const IN_PROGRESS_STATUSES = new Set<GroupDeal["status"]>([
   "purchase",

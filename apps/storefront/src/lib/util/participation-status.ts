@@ -3,6 +3,7 @@ import {
   type ParticipationProgressStage,
 } from "@lib/util/participation-progress-stage"
 import type { AccountParticipation } from "types/account-group-deals"
+import { resolveParticipationTab } from "types/account-group-deals"
 
 export type ParticipationCardStatusLabels = {
   progressStages: Partial<Record<ParticipationProgressStage, string>>
@@ -66,4 +67,34 @@ export const canShowPurchaseConfirm = (
     isDeliveryCompleteStatus(participation) &&
     !hasParticipationReviewSubmitted(participation.participant_id)
   )
+}
+
+const CANCELLABLE_PARTICIPATION_STAGES = new Set([
+  "recruiting",
+  "payment_complete",
+])
+
+const CANCELLABLE_PROGRESS_STAGES = new Set<ParticipationProgressStage>([
+  "deposit_confirming",
+  "order_complete",
+])
+
+export const canCancelParticipation = (
+  participation: AccountParticipation
+): boolean => {
+  if (resolveParticipationTab(participation) !== "active") {
+    return false
+  }
+
+  if (participation.delivery_confirmed_at) {
+    return false
+  }
+
+  if (CANCELLABLE_PARTICIPATION_STAGES.has(participation.stage)) {
+    return true
+  }
+
+  const progressStage = resolveParticipationProgressStage(participation)
+
+  return CANCELLABLE_PROGRESS_STAGES.has(progressStage)
 }

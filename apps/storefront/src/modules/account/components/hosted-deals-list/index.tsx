@@ -4,7 +4,10 @@ import { useMemo, useState } from "react"
 
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import {
+  applyHostedDealRuntimeOverrides,
+  isHostedDealSettlementComplete,
   resolveHostedDealAchievementPercent,
+  resolveHostedDealLink,
   resolveHostedDealTab,
   shouldShowHostedDealParticipantProgress,
   type HostedDealTab,
@@ -27,6 +30,7 @@ type HostedDealsListLabels = {
   emptyCompleted: string
   footerNotice: string
   achievementRate: string
+  stageClosed: string
   leaderStages: Record<string, string>
 }
 
@@ -56,8 +60,13 @@ const EMPTY_LABEL_KEYS: Record<
 
 const resolveStageLabel = (
   deal: AccountGroupDeal,
-  leaderStages: Record<string, string>
+  leaderStages: Record<string, string>,
+  stageClosedLabel: string
 ) => {
+  if (isHostedDealSettlementComplete(deal)) {
+    return stageClosedLabel
+  }
+
   if (
     deal.leader_stage === "deposit_pending" &&
     deal.deposit_status !== "deposited"
@@ -89,6 +98,11 @@ const HostedDealsList = ({
 }: HostedDealsListProps) => {
   const [activeTab, setActiveTab] = useState<HostedDealTab>("recruiting")
 
+  const normalizedDeals = useMemo(
+    () => deals.map((deal) => applyHostedDealRuntimeOverrides(deal)),
+    [deals]
+  )
+
   const grouped = useMemo(() => {
     const buckets: Record<HostedDealTab, AccountGroupDeal[]> = {
       draft: [],
@@ -97,12 +111,12 @@ const HostedDealsList = ({
       completed: [],
     }
 
-    for (const deal of deals) {
+    for (const deal of normalizedDeals) {
       buckets[resolveHostedDealTab(deal)].push(deal)
     }
 
     return buckets
-  }, [deals])
+  }, [normalizedDeals])
 
   const visible = grouped[activeTab]
 
@@ -141,7 +155,7 @@ const HostedDealsList = ({
           {visible.map((deal) => (
             <LocalizedClientLink
               key={deal.id}
-              href={gbAppRoutes.sellerDeal(countryCode, deal.id)}
+              href={resolveHostedDealLink(countryCode, deal)}
             >
               <BbCard
                 padding="md"
@@ -152,7 +166,11 @@ const HostedDealsList = ({
                 </Text>
                 <Text className="mt-1 text-xs text-[var(--bb-mute)]">
                   {resolveProgressLabel(deal, labels.achievementRate)} ·{" "}
-                  {resolveStageLabel(deal, labels.leaderStages)}
+                  {resolveStageLabel(
+                    deal,
+                    labels.leaderStages,
+                    labels.stageClosed
+                  )}
                 </Text>
               </BbCard>
             </LocalizedClientLink>

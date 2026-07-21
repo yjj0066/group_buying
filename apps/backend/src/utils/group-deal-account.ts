@@ -79,9 +79,21 @@ export const resolveLeaderStage = (deal: DealRecord): GroupDealLeaderStage => {
   const dealStatus = String(deal.status ?? "")
   const depositStatus = String(deal.deposit_status ?? GroupDealDepositStatus.PENDING)
   const receiptStatus = String(deal.purchase_receipt_status ?? "pending")
+  const metadata = readDealMetadata(deal)
+  const shippingCompletedAt = metadata.shipping_completed_at
+  const settlementSubmittedAt = metadata.settlement_submitted_at
+  const settledAt = metadata.settled_at
 
-  if (dealStatus === GroupDealStatus.SETTLED) {
+  if (dealStatus === GroupDealStatus.SETTLED || settledAt) {
     return "settled"
+  }
+
+  if (settlementSubmittedAt) {
+    return "closing"
+  }
+
+  if (shippingCompletedAt) {
+    return "shipping"
   }
 
   if (dealStatus === GroupDealStatus.CLOSED) {
@@ -163,11 +175,24 @@ export const serializeAccountGroupDealReportDetails = (deal: DealRecord) => {
   }
 }
 
-export const serializeAccountGroupDeal = (deal: DealRecord) => ({
+export const serializeAccountGroupDeal = (deal: DealRecord) => {
+  const metadata = readDealMetadata(deal)
+
+  return {
   id: String(deal.id),
   title: String(deal.title ?? ""),
   status: String(deal.status ?? ""),
   leader_stage: resolveLeaderStage(deal),
+  shipping_completed_at:
+    typeof metadata.shipping_completed_at === "string"
+      ? metadata.shipping_completed_at
+      : null,
+  settlement_submitted_at:
+    typeof metadata.settlement_submitted_at === "string"
+      ? metadata.settlement_submitted_at
+      : null,
+  settled_at:
+    typeof metadata.settled_at === "string" ? metadata.settled_at : null,
   deposit_status: String(deal.deposit_status ?? GroupDealDepositStatus.PENDING),
   deposit_amount:
     deal.deposit_amount != null ? Number(deal.deposit_amount) : null,
@@ -198,7 +223,8 @@ export const serializeAccountGroupDeal = (deal: DealRecord) => ({
   created_at: deal.created_at
     ? new Date(deal.created_at as string | Date).toISOString()
     : new Date(0).toISOString(),
-})
+  }
+}
 
 export const serializeAccountParticipation = (input: {
   participant: ParticipantRecord

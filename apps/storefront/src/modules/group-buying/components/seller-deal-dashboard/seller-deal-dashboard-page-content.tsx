@@ -130,11 +130,15 @@ const SellerDealDashboardPageContent = ({
 
       }
 
-      setParticipants(
+      setParticipants((previous) => {
+        if (!rows.length && previous.length) {
+          return previous
+        }
 
-        rows.map((row) => mapParticipationToHostedDealParticipant(row, deal))
-
-      )
+        return rows.map((row) =>
+          mapParticipationToHostedDealParticipant(row, deal)
+        )
+      })
 
     }
 

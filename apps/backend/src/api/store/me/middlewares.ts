@@ -13,7 +13,10 @@ import {
 import {
   PostStoreCreateGroupDeal,
   PostStoreMeGroupDealDocumentParse,
+  PostStoreMeGroupDealSettlement,
+  PostStoreMeGroupDealShippingComplete,
 } from "./group-deals/validators"
+import { GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT } from "../../../utils/group-deal-document-upload"
 
 export const storeMeRoutesMiddlewares: MiddlewareRoute[] = [
   {
@@ -44,12 +47,30 @@ export const storeMeRoutesMiddlewares: MiddlewareRoute[] = [
   {
     matcher: "/store/me/group-deals/:id/receipt/parse",
     method: "POST",
+    bodyParser: {
+      sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
+    },
     middlewares: [validateAndTransformBody(PostStoreMeGroupDealDocumentParse)],
   },
   {
     matcher: "/store/me/group-deals/:id/tracking/parse",
     method: "POST",
+    bodyParser: {
+      sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
+    },
     middlewares: [validateAndTransformBody(PostStoreMeGroupDealDocumentParse)],
+  },
+  {
+    matcher: "/store/me/group-deals/:id/shipping/complete",
+    method: "POST",
+    middlewares: [
+      validateAndTransformBody(PostStoreMeGroupDealShippingComplete),
+    ],
+  },
+  {
+    matcher: "/store/me/group-deals/:id/settlement",
+    method: "POST",
+    middlewares: [validateAndTransformBody(PostStoreMeGroupDealSettlement)],
   },
   {
     matcher: "/store/me/bank-account",

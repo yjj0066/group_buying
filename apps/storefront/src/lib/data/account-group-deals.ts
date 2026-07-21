@@ -84,6 +84,10 @@ const readRefundBankAccountFromMetadata = (
   return {
     bank_name: record.bank_name,
     bank_code: record.bank_code,
+    account_number:
+      typeof record.account_number === "string"
+        ? record.account_number
+        : record.account_number_masked,
     account_number_masked: record.account_number_masked,
     account_holder: record.account_holder,
     registered_at:
@@ -739,6 +743,7 @@ export async function saveBankAccount(input: {
   const bankAccount: RefundBankAccount = {
     bank_name: input.bank_name,
     bank_code: input.bank_code,
+    account_number: input.account_number.trim(),
     account_number_masked: maskAccountNumber(input.account_number),
     account_holder: input.account_holder,
     registered_at: new Date().toISOString(),
@@ -893,6 +898,43 @@ export async function confirmParticipantDelivery(participantId: string) {
         )
 
         return confirmMockParticipationDelivery(participantId)
+      }
+    }
+
+    return throwOnUnauthorized(error)
+  }
+}
+
+export async function cancelMyParticipation(participantId: string) {
+  try {
+    const response = await authedFetch<{ participation: AccountParticipation }>(
+      `/store/me/group-deals/participations/${participantId}/cancel`,
+      {
+        method: "POST",
+      }
+    )
+
+    const customerCacheTag = await getCacheTag("customers")
+
+    if (customerCacheTag) {
+      revalidateTag(customerCacheTag)
+    }
+
+    return response
+  } catch (error) {
+    if (isMockFallbackEnabled()) {
+      console.warn(
+        "[participations] Cancel participation API unavailable, using mock fallback.",
+        error
+      )
+
+      return {
+        participation: {
+          ...(getMockParticipations().find(
+            (participation) => participation.participant_id === participantId
+          ) ?? getMockParticipations()[0]),
+          status: "cancelled",
+        },
       }
     }
 

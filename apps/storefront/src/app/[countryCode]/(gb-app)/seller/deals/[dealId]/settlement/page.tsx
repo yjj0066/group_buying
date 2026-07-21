@@ -8,6 +8,7 @@ import {
   getLeaderGroupDealForPage,
   requireCustomerForGbApp,
 } from "@lib/data/group-deal-pages"
+import { getBankAccount } from "@lib/data/account-group-deals"
 import { listHostedDealParticipations } from "@lib/data/leader-deal-participations"
 import { resolveCountryCode } from "@lib/util/country-code"
 import LeaderSettlementView from "@modules/group-buying/components/leader-settlement-view"
@@ -32,6 +33,13 @@ export default async function SellerSettlementPage(props: Props) {
     dealId,
     deal.deal_price
   )
+  const registeredBankAccount = await getBankAccount()
 
-  return <LeaderSettlementView deal={deal} participations={participations} />
+  return (
+    <LeaderSettlementView
+      deal={deal}
+      participations={participations}
+      registeredBankAccount={registeredBankAccount}
+    />
+  )
 }

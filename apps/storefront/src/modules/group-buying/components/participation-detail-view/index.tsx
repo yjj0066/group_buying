@@ -12,8 +12,12 @@ import {
   resolveParticipationProgressStage,
   shouldShowParticipationTracking,
 } from "@lib/util/participation-progress-stage"
-import { canShowPurchaseConfirm } from "@lib/util/participation-status"
+import {
+  canCancelParticipation,
+  canShowPurchaseConfirm,
+} from "@lib/util/participation-status"
 import ParticipationAddressModal from "@modules/group-buying/components/participation-address-modal"
+import ParticipationCancelButton from "@modules/group-buying/components/participation-cancel-button"
 import ParticipationProgressStepper from "@modules/group-buying/components/participation-progress-stepper"
 import PurchaseConfirmButton from "@modules/group-buying/components/purchase-confirm-button"
 import {
@@ -81,6 +85,7 @@ const ParticipationDetailView = ({
     participation.tracking_number
   )
   const showPurchaseConfirm = canShowPurchaseConfirm(participation)
+  const showCancelParticipation = canCancelParticipation(participation)
 
   const purchaseConfirmLabels = {
     button: labels.confirmPurchase,
@@ -88,6 +93,15 @@ const ParticipationDetailView = ({
     dialogMessage: labels.confirmPurchaseMessage,
     dialogConfirm: labels.confirmPurchaseConfirm,
     dialogCancel: labels.confirmPurchaseCancel,
+  }
+
+  const cancelParticipationLabels = {
+    button: labels.cancelParticipation,
+    dialogTitle: labels.cancelParticipationTitle,
+    dialogMessage: labels.cancelParticipationMessage,
+    dialogConfirm: labels.cancelParticipationConfirm,
+    dialogCancel: labels.cancelParticipationDismiss,
+    errorMessage: labels.cancelParticipationError,
   }
 
   const trackingUrl = useMemo(() => {
@@ -148,6 +162,14 @@ const ParticipationDetailView = ({
       </BbCard>
 
       <ParticipationProgressStepper stage={progressStage} />
+
+      {showCancelParticipation && (
+        <ParticipationCancelButton
+          participation={participation}
+          countryCode={countryCode}
+          labels={cancelParticipationLabels}
+        />
+      )}
 
       <BbCard padding="md">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -236,6 +258,17 @@ const ParticipationDetailView = ({
           </Text>
         </BbCard>
       )}
+
+      {deal.status === "settled" || deal.settled_at ? (
+        <BbCard padding="md">
+          <BbSectionHeader title={labels.escrowTitle} className="mb-2" />
+          <Text className="text-sm text-[var(--bb-ink)]">
+            {labels.settlementCompletedMessage}
+          </Text>
+        </BbCard>
+      ) : deal.settlement_submitted_at ? (
+        <BbAlert variant="info">{labels.settlementPendingMessage}</BbAlert>
+      ) : null}
 
       {showPurchaseConfirm && (
         <PurchaseConfirmButton

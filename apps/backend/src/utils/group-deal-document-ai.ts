@@ -1,5 +1,5 @@
 import { MedusaContainer } from "@medusajs/framework/types"
-import { MedusaError } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 
 import { GROUP_BUYING_MODULE } from "../modules/group-buying"
 import GroupBuyingModuleService from "../modules/group-buying/service"
@@ -267,6 +267,143 @@ const normalizeName = (value: string | null | undefined): string | null => {
   return value.trim().toLowerCase().replace(/\s+/g, "")
 }
 
+const normalizeAddress = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null
+  }
+
+  return value.trim().toLowerCase().replace(/\s+/g, "")
+}
+
+const scoreNameMatch = (
+  recipientName: string | null | undefined,
+  participantName: string | null | undefined
+): number => {
+  const recipient = normalizeName(recipientName)
+  const participant = normalizeName(participantName)
+
+  if (!recipient || !participant) {
+    return 0
+  }
+
+  if (recipient === participant) {
+    return 100
+  }
+
+  if (recipient.includes(participant) || participant.includes(recipient)) {
+    return 80
+  }
+
+  return 0
+}
+
+const scoreAddressMatch = (
+  addressHint: string | null | undefined,
+  participantAddress: string | null | undefined
+): number => {
+  const hint = normalizeAddress(addressHint)
+  const address = normalizeAddress(participantAddress)
+
+  if (!hint || !address) {
+    return 0
+  }
+
+  if (address.includes(hint) || hint.includes(address)) {
+    return 80
+  }
+
+  const hintPostal = hint.match(/\d{5}/)?.[0] ?? null
+  const addressPostal = address.match(/\d{5}/)?.[0] ?? null
+
+  if (hintPostal && addressPostal && hintPostal === addressPostal) {
+    return 60
+  }
+
+  return 0
+}
+
+const formatParticipantRecipientName = (address: {
+  first_name?: string | null
+  last_name?: string | null
+} | null | undefined): string | null => {
+  if (!address) {
+    return null
+  }
+
+  const name = [address.first_name, address.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+
+  return name || null
+}
+
+const formatParticipantAddressLine = (address: {
+  address_1?: string | null
+  address_2?: string | null
+  city?: string | null
+  province?: string | null
+  postal_code?: string | null
+} | null | undefined): string | null => {
+  if (!address) {
+    return null
+  }
+
+  const line = [
+    address.postal_code,
+    address.address_1,
+    address.address_2,
+    address.city,
+    address.province,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+
+  return line || null
+}
+
+const resolveInvoiceRowParticipantMatches = (
+  row: StructuredInvoiceRow,
+  participants: Array<{
+    id: string
+    recipient_name: string | null
+    address_line: string | null
+  }>
+): string[] => {
+  const nameCandidates = participants.filter(
+    (participant) =>
+      scoreNameMatch(row.recipient_name, participant.recipient_name) >= 80
+  )
+
+  if (nameCandidates.length === 0) {
+    return []
+  }
+
+  if (nameCandidates.length === 1) {
+    return [nameCandidates[0].id]
+  }
+
+  const addressHint = row.address_hint?.trim()
+
+  if (addressHint) {
+    const addressMatches = nameCandidates.filter(
+      (participant) =>
+        scoreAddressMatch(addressHint, participant.address_line) > 0
+    )
+
+    if (addressMatches.length === 1) {
+      return [addressMatches[0].id]
+    }
+
+    if (addressMatches.length > 1) {
+      return addressMatches.map((participant) => participant.id)
+    }
+  }
+
+  return nameCandidates.map((participant) => participant.id)
+}
+
 const matchParticipantsToInvoiceRows = async (
   scope: MedusaContainer,
   groupDealId: string,
@@ -274,8 +411,53 @@ const matchParticipantsToInvoiceRows = async (
 ) => {
   const groupBuyingService: GroupBuyingModuleService =
     scope.resolve(GROUP_BUYING_MODULE)
+  const query = scope.resolve(ContainerRegistrationKeys.QUERY)
   const participants = await groupBuyingService.listGroupDealParticipants({
     group_deal_id: groupDealId,
+  })
+
+  const orderIds = participants
+    .map((participant) => participant.order_id)
+    .filter((orderId): orderId is string => Boolean(orderId))
+
+  const ordersById = new Map<string, Record<string, unknown>>()
+
+  if (orderIds.length) {
+    const { data: orders } = await query.graph({
+      entity: "order",
+      fields: [
+        "id",
+        "shipping_address.first_name",
+        "shipping_address.last_name",
+        "shipping_address.address_1",
+        "shipping_address.address_2",
+        "shipping_address.city",
+        "shipping_address.province",
+        "shipping_address.postal_code",
+      ],
+      filters: { id: orderIds },
+    })
+
+    for (const order of orders ?? []) {
+      if (order?.id) {
+        ordersById.set(String(order.id), order as Record<string, unknown>)
+      }
+    }
+  }
+
+  const participantProfiles = participants.map((participant) => {
+    const order = participant.order_id
+      ? ordersById.get(participant.order_id)
+      : undefined
+    const shippingAddress = (order?.shipping_address ?? null) as
+      | Record<string, string | null>
+      | null
+
+    return {
+      id: participant.id,
+      recipient_name: formatParticipantRecipientName(shippingAddress),
+      address_line: formatParticipantAddressLine(shippingAddress),
+    }
   })
 
   const autoMatchedParticipantIds: string[] = []
@@ -295,34 +477,25 @@ const matchParticipantsToInvoiceRows = async (
       continue
     }
 
-    const normalizedRecipient = normalizeName(row.recipient_name)
-    const matches = participants.filter((participant) => {
-      const emailPrefix = normalizeName(participant.email.split("@")[0])
-      return (
-        normalizedRecipient &&
-        emailPrefix &&
-        (normalizedRecipient.includes(emailPrefix) ||
-          emailPrefix.includes(normalizedRecipient))
-      )
-    })
+    const matches = resolveInvoiceRowParticipantMatches(row, participantProfiles)
 
     if (matches.length !== 1) {
       reviewConflicts.push({
         reason: matches.length > 1 ? "MULTIPLE_MATCHES" : "NO_MATCH",
         row,
-        candidate_participant_ids: matches.map((item) => item.id),
+        candidate_participant_ids: matches,
       })
       continue
     }
 
-    const participant = matches[0]
+    const participantId = matches[0]
 
     entries.push({
-      participant_id: participant.id,
+      participant_id: participantId,
       tracking_number: row.tracking_number,
       carrier: row.carrier,
     })
-    autoMatchedParticipantIds.push(participant.id)
+    autoMatchedParticipantIds.push(participantId)
   }
 
   if (entries.length) {
@@ -330,6 +503,12 @@ const matchParticipantsToInvoiceRows = async (
       group_deal_id: groupDealId,
       entries,
     })
+
+    const { markGroupDealShippingCompletedIfReady } = await import(
+      "./group-deal-leader-ops"
+    )
+
+    await markGroupDealShippingCompletedIfReady(scope, groupDealId)
   }
 
   return { autoMatchedParticipantIds, reviewConflicts }
@@ -579,7 +758,18 @@ export const processGroupDealTrackingParse = async (
     }, null)
 
   const { autoMatchedParticipantIds, reviewConflicts } =
-    await matchParticipantsToInvoiceRows(scope, input.groupDealId, invoiceRows)
+    await matchParticipantsToInvoiceRows(scope, input.groupDealId, invoiceRows).catch(
+      (error) => ({
+        autoMatchedParticipantIds: [] as string[],
+        reviewConflicts: [
+          {
+            reason: "AUTO_MATCH_FAILED",
+            error_message:
+              error instanceof Error ? error.message : "Participant auto-match failed",
+          },
+        ],
+      })
+    )
 
   const nextReportStage =
     reviewConflicts.length || aiStatus === GroupDealDocumentAiStatus.NEEDS_REVIEW

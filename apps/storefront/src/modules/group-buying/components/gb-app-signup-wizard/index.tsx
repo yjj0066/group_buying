@@ -1,11 +1,14 @@
 "use client"
 
-import { useActionState, useMemo, useState, startTransition } from "react"
+import { useActionState, useEffect, useState, startTransition } from "react"
+import { useRouter } from "next/navigation"
 
 import {
   checkNicknameAvailability,
   signupGbAppUser,
 } from "@lib/data/gb-app-auth-flow"
+import { formatGbAppSignupError } from "@lib/util/format-gb-app-signup-error"
+import { gbAppRoutes } from "@lib/wireframe/routes"
 import { useDictionary } from "@i18n/provider"
 import {
   BbAlert,
@@ -31,6 +34,7 @@ type NicknameCheckState = "idle" | "checking" | "available" | "taken"
 const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardProps) => {
   const t = useDictionary()
   const auth = t.gbApp.auth
+  const router = useRouter()
   const [step, setStep] = useState(resume ? 1 : 0)
   const [nickname, setNickname] = useState("")
   const [nicknameCheckState, setNicknameCheckState] =
@@ -48,36 +52,71 @@ const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardPro
   const [requireNicknameCheckHint, setRequireNicknameCheckHint] = useState(false)
   const [message, formAction, isPending] = useActionState(signupGbAppUser, null)
 
+  useEffect(() => {
+    if (message?.state !== "success") {
+      return
+    }
+
+    router.replace(gbAppRoutes.bankAccount(countryCode))
+  }, [message?.state, countryCode, router])
+
   const primaryFavorite = favorites[0]
   const passwordMismatch =
     passwordConfirm.length > 0 && password !== passwordConfirm
+  const passwordTooShort = password.length > 0 && password.length < 8
 
-  const canProceedStep0 = useMemo(() => {
+  const validateStep0 = (): string | null => {
     if (resume) {
-      return true
+      return null
     }
 
-    return (
-      nickname.trim().length > 0 &&
-      nicknameCheckState === "available" &&
-      email.trim().length > 0 &&
-      password.length >= 8 &&
-      password === passwordConfirm &&
-      agreeTerms &&
-      agreePrivacy
-    )
-  }, [
-    resume,
-    nickname,
-    nicknameCheckState,
-    email,
-    password,
-    passwordConfirm,
-    agreeTerms,
-    agreePrivacy,
-  ])
+    if (!nickname.trim()) {
+      return auth.step0Error
+    }
 
+    if (nicknameCheckState !== "available") {
+      return auth.nicknameCheckRequired
+    }
+
+    if (!email.trim()) {
+      return auth.step0Error
+    }
+
+    if (password.length < 8) {
+      return auth.passwordMinLengthError
+    }
+
+    if (!passwordConfirm.trim()) {
+      return auth.passwordConfirmRequiredError
+    }
+
+    if (password !== passwordConfirm) {
+      return auth.passwordMismatchError
+    }
+
+    if (!agreeTerms || !agreePrivacy) {
+      return auth.termsRequiredError
+    }
+
+    return null
+  }
+
+  const canProceedStep0 = validateStep0() === null
   const canProceedStep1 = favorites.length > 0
+
+  const resolveDisplayedError = (): string | null => {
+    if (localError) {
+      return localError
+    }
+
+    if (message?.state === "error") {
+      return formatGbAppSignupError(message.error, auth.submitError)
+    }
+
+    return null
+  }
+
+  const displayedError = resolveDisplayedError()
 
   const handleNicknameChange = (value: string) => {
     setNickname(value)
@@ -146,18 +185,14 @@ const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardPro
     setLocalError(null)
 
     if (step === 0 && !resume) {
-      if (nicknameCheckState !== "available") {
-        setRequireNicknameCheckHint(true)
-        return
-      }
+      const step0Error = validateStep0()
 
-      if (passwordMismatch) {
-        setLocalError(auth.passwordMismatchError)
-        return
-      }
+      if (step0Error) {
+        if (step0Error === auth.nicknameCheckRequired) {
+          setRequireNicknameCheckHint(true)
+        }
 
-      if (!canProceedStep0) {
-        setLocalError(auth.step0Error)
+        setLocalError(step0Error)
         return
       }
     }
@@ -170,11 +205,28 @@ const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardPro
     setStep((current) => Math.min(current + 1, 2))
   }
 
+  const handleBack = () => {
+    setLocalError(null)
+    setStep((current) => Math.max(resume ? 1 : 0, current - 1))
+  }
+
   const handleSubmit = () => {
     setLocalError(null)
 
-    if (!canProceedStep0 || !canProceedStep1) {
-      setLocalError(auth.submitError)
+    const step0Error = validateStep0()
+
+    if (step0Error) {
+      setStep(0)
+      if (step0Error === auth.nicknameCheckRequired) {
+        setRequireNicknameCheckHint(true)
+      }
+      setLocalError(step0Error)
+      return
+    }
+
+    if (!canProceedStep1) {
+      setStep(1)
+      setLocalError(auth.step1Error)
       return
     }
 
@@ -205,11 +257,8 @@ const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardPro
         </BbAlert>
       )}
 
-      {(localError || message?.state === "error") && (
-        <BbAlert variant="error">
-          {localError ??
-            (message?.state === "error" ? message.error : auth.submitError)}
-        </BbAlert>
+      {(displayedError) && (
+        <BbAlert variant="error">{displayedError}</BbAlert>
       )}
 
       <form
@@ -306,6 +355,10 @@ const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardPro
               className="bb-input w-full"
               data-testid="signup-password-confirm-input"
             />
+
+            {passwordTooShort && (
+              <BbAlert variant="error">{auth.passwordMinLengthError}</BbAlert>
+            )}
 
             {passwordMismatch && (
               <BbAlert variant="error">{auth.passwordMismatchError}</BbAlert>
@@ -424,6 +477,18 @@ const GbAppSignupWizard = ({ countryCode, resume = false }: GbAppSignupWizardPro
       </form>
 
       <div className="flex flex-col gap-2">
+        {step > (resume ? 1 : 0) && (
+          <BbButton
+            type="button"
+            variant="secondary"
+            fullWidth
+            onClick={handleBack}
+            data-testid="signup-back-button"
+          >
+            {auth.back}
+          </BbButton>
+        )}
+
         {step < 2 ? (
           <BbButton type="button" fullWidth onClick={handleNext}>
             {auth.next}

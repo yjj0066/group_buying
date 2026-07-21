@@ -24,11 +24,8 @@ export type LeaderTrackingEntry = {
 
 export type LeaderTrackingDraft = Record<string, LeaderTrackingEntry>
 
-const POST_ALLOCATION_STAGES = new Set([
-  "opening",
-  "shipping",
-  "delivery_confirmed",
-])
+/** Only exclude participants who have not finished payment yet. */
+const SHIPPING_EXCLUDED_STAGES = new Set(["recruiting"])
 
 const escapeCsvCell = (value: string | number | null | undefined) => {
   const text = value == null ? "" : String(value)
@@ -49,6 +46,17 @@ export const resolveAssignedQuantity = (
   return Number.isFinite(assigned) ? Math.max(0, assigned) : 0
 }
 
+const resolveDraftAssignedQuantity = (
+  participation: LeaderDealParticipation,
+  assignedByParticipantId: Map<string, number>
+): number => {
+  if (assignedByParticipantId.has(participation.participant_id)) {
+    return assignedByParticipantId.get(participation.participant_id) ?? 0
+  }
+
+  return resolveAssignedQuantity(participation)
+}
+
 export const applyAllocationDraftsToParticipations = (
   dealId: string,
   participations: LeaderDealParticipation[]
@@ -65,8 +73,10 @@ export const applyAllocationDraftsToParticipations = (
 
     return participations.map((participation) => ({
       ...participation,
-      assigned_quantity:
-        assignedByParticipantId.get(participation.participant_id) ?? 0,
+      assigned_quantity: resolveDraftAssignedQuantity(
+        participation,
+        assignedByParticipantId
+      ),
       stage: participation.stage ?? "opening",
     }))
   }
@@ -74,17 +84,22 @@ export const applyAllocationDraftsToParticipations = (
   const distributionDraft = loadLeaderDistributionDraft(dealId)
 
   if (distributionDraft?.autoAllocation) {
-    const assignedByParticipantId = new Map(
-      distributionDraft.autoAllocation.assigned.map((entry) => [
-        entry.participantId,
-        entry.assignedQuantity,
-      ])
-    )
+    const assignedByParticipantId = new Map<string, number>()
+
+    for (const entry of distributionDraft.autoAllocation.assigned) {
+      assignedByParticipantId.set(entry.participantId, entry.assignedQuantity)
+    }
+
+    for (const entry of distributionDraft.autoAllocation.refunded) {
+      assignedByParticipantId.set(entry.participantId, 0)
+    }
 
     return participations.map((participation) => ({
       ...participation,
-      assigned_quantity:
-        assignedByParticipantId.get(participation.participant_id) ?? 0,
+      assigned_quantity: resolveDraftAssignedQuantity(
+        participation,
+        assignedByParticipantId
+      ),
       stage: participation.stage ?? "opening",
     }))
   }
@@ -105,11 +120,14 @@ export const filterAllocatedShippingParticipants = (
       return false
     }
 
-    if (!participation.stage) {
-      return true
+    if (
+      participation.stage &&
+      SHIPPING_EXCLUDED_STAGES.has(participation.stage)
+    ) {
+      return false
     }
 
-    return POST_ALLOCATION_STAGES.has(participation.stage)
+    return true
   })
 
 export const toLeaderShippingParticipantRows = (

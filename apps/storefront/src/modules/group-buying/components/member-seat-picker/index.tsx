@@ -144,6 +144,7 @@ const MemberSeatPicker = ({
               status={status}
               statusLabel={statusLabel}
               remaining={remaining}
+              disabled={status === "full"}
               onClick={() => selectSeat(option)}
             />
           )

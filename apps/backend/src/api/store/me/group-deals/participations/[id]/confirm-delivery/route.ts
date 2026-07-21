@@ -52,9 +52,17 @@ export const POST = async (
     input: { participant_id: req.params.id },
   })
 
+  const groupBuyingService: GroupBuyingModuleService = req.scope.resolve(
+    GROUP_BUYING_MODULE
+  )
+
+  const updatedDeal = await groupBuyingService.retrieveGroupDeal(
+    String(result.participant.group_deal_id)
+  )
+
   const participation = serializeAccountParticipation({
     participant: result.participant as unknown as Record<string, unknown>,
-    deal: resolved.deal as unknown as Record<string, unknown>,
+    deal: updatedDeal as unknown as Record<string, unknown>,
   })
 
   res.status(200).json({

@@ -2,7 +2,7 @@ import fs from "fs"
 import path from "path"
 
 import { MedusaContainer } from "@medusajs/framework/types"
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
 
 import { GROUP_BUYING_MODULE } from "../modules/group-buying"
 import GroupBuyingModuleService from "../modules/group-buying/service"
@@ -12,6 +12,12 @@ import {
   GroupDealReceiptStatus,
   GroupDealStatus,
 } from "../types/group-buying"
+import { emitGroupDealUpdated } from "../workflows/group-deal-billing"
+import {
+  formatGroupDealDocumentMaxUploadLabel,
+  GROUP_DEAL_DOCUMENT_MAX_UPLOAD_BYTES,
+} from "./group-deal-document-upload"
+import { buildPurchaseReceiptShippingBlockMessage } from "./purchase-receipt-guard-message"
 
 const PAID_PARTICIPANT_STATUSES = [
   GroupDealParticipantStatus.CONFIRMED,
@@ -65,24 +71,27 @@ export const saveGroupDealDocumentImage = (input: {
   prefix: string
 }): string => {
   const match = input.imageBase64.match(
-    /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/
+    /^data:((?:image\/[a-zA-Z0-9.+-]+)|application\/pdf);base64,(.+)$/
   )
 
   if (!match) {
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
-      "image_base64 must be a data URL (data:image/...;base64,...)"
+      "image_base64 must be a data URL (data:image/... or data:application/pdf;base64,...)"
     )
   }
 
   const mimeType = match[1]
-  const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg"
+  const extension =
+    mimeType === "application/pdf"
+      ? "pdf"
+      : mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg"
   const buffer = Buffer.from(match[2], "base64")
 
-  if (buffer.length > 8 * 1024 * 1024) {
+  if (buffer.length > GROUP_DEAL_DOCUMENT_MAX_UPLOAD_BYTES) {
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
-      "Document image must be 8MB or smaller"
+      `Document image must be ${formatGroupDealDocumentMaxUploadLabel()} or smaller`
     )
   }
 
@@ -92,9 +101,10 @@ export const saveGroupDealDocumentImage = (input: {
     fs.mkdirSync(documentsDir, { recursive: true })
   }
 
-  const safeName =
+  const rawSafeName =
     input.filename?.replace(/[^a-zA-Z0-9._-]/g, "_") ??
     `${input.prefix}_${input.groupDealId}`
+  const safeName = rawSafeName.replace(/\.(png|jpe?g|gif|webp|pdf)$/i, "")
   const storedFilename = `${Date.now()}-${safeName}.${extension}`
   const absolutePath = path.join(documentsDir, storedFilename)
 
@@ -144,6 +154,54 @@ export const assertAllParticipantsPaid = async (
   return activeParticipants
 }
 
+export const markGroupDealShippingCompletedIfReady = async (
+  scope: MedusaContainer,
+  groupDealId: string
+) => {
+  const groupBuyingService: GroupBuyingModuleService =
+    scope.resolve(GROUP_BUYING_MODULE)
+
+  const deal = await groupBuyingService.retrieveGroupDeal(groupDealId)
+  const metadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+
+  if (metadata.shipping_completed_at) {
+    return false
+  }
+
+  const participants = await groupBuyingService.listGroupDealParticipants({
+    group_deal_id: groupDealId,
+  })
+
+  const activeParticipants = participants.filter(
+    (participant) =>
+      participant.status !== GroupDealParticipantStatus.CANCELLED &&
+      participant.status !== GroupDealParticipantStatus.CAPTURE_FAILED
+  )
+
+  if (!activeParticipants.length) {
+    return false
+  }
+
+  const allHaveTracking = activeParticipants.every((participant) =>
+    Boolean(participant.tracking_number?.trim())
+  )
+
+  if (!allHaveTracking) {
+    return false
+  }
+
+  await groupBuyingService.updateGroupDeals({
+    id: groupDealId,
+    metadata: {
+      ...metadata,
+      opening_status: "completed",
+      shipping_completed_at: new Date().toISOString(),
+    },
+  })
+
+  return true
+}
+
 export const assertPurchaseReceiptVerified = async (
   scope: MedusaContainer,
   groupDealId: string
@@ -156,7 +214,13 @@ export const assertPurchaseReceiptVerified = async (
   if (deal.purchase_receipt_status !== GroupDealReceiptStatus.VERIFIED) {
     throw new MedusaError(
       MedusaError.Types.NOT_ALLOWED,
-      "Purchase receipt must be verified before shipping"
+      buildPurchaseReceiptShippingBlockMessage({
+        purchase_receipt_status: deal.purchase_receipt_status,
+        purchase_receipt_url: deal.purchase_receipt_url,
+        receipt_ai_status: deal.receipt_ai_status,
+        receipt_ai_confidence: deal.receipt_ai_confidence,
+        receipt_ai_result: deal.receipt_ai_result,
+      })
     )
   }
 
@@ -338,5 +402,155 @@ export const resolveReceiptStatusLabel = (
       return "Rejected"
     default:
       return "Pending"
+  }
+}
+
+export type GroupDealShippingCompleteInput = {
+  groupDealId: string
+  customerId: string
+  entries: Array<{
+    participant_id: string
+    carrier: string
+    tracking_number: string
+  }>
+}
+
+export type GroupDealShippingCompleteResult = {
+  updated_count: number
+  notified_count: number
+  updated_participant_ids: string[]
+}
+
+const emitGroupDealParticipantShippingRegistered = async (
+  scope: MedusaContainer,
+  input: {
+    group_deal_id: string
+    participant_id: string
+    email: string
+    tracking_number: string
+    carrier: string | null
+  }
+) => {
+  try {
+    const eventBus = scope.resolve(Modules.EVENT_BUS) as {
+      emit: (event: {
+        name: string
+        data: Record<string, unknown>
+      }) => Promise<void>
+    }
+
+    await eventBus.emit({
+      name: "group_deal.participant_shipping_registered",
+      data: {
+        group_deal_id: input.group_deal_id,
+        participant_id: input.participant_id,
+        email: input.email,
+        tracking_number: input.tracking_number,
+        carrier: input.carrier,
+        notified_at: new Date().toISOString(),
+      },
+    })
+  } catch {
+    // Event bus may be unavailable in isolated tests.
+  }
+}
+
+export const processGroupDealShippingComplete = async (
+  scope: MedusaContainer,
+  input: GroupDealShippingCompleteInput
+): Promise<GroupDealShippingCompleteResult> => {
+  const groupBuyingService: GroupBuyingModuleService =
+    scope.resolve(GROUP_BUYING_MODULE)
+
+  const deal = await groupBuyingService.retrieveGroupDeal(input.groupDealId)
+
+  if (String(deal.leader_customer_id ?? "") !== input.customerId) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "Only the deal leader can complete shipping for this group deal"
+    )
+  }
+
+  await assertPurchaseReceiptVerified(scope, input.groupDealId)
+
+  const participants = await groupBuyingService.listGroupDealParticipants({
+    group_deal_id: input.groupDealId,
+  })
+  const activeParticipants = participants.filter(
+    (participant) =>
+      participant.status !== GroupDealParticipantStatus.CANCELLED &&
+      participant.status !== GroupDealParticipantStatus.CAPTURE_FAILED
+  )
+  const participantsById = new Map(
+    activeParticipants.map((participant) => [participant.id, participant])
+  )
+
+  if (!input.entries.length) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "등록할 운송장 정보가 없습니다."
+    )
+  }
+
+  for (const entry of input.entries) {
+    if (!participantsById.has(entry.participant_id)) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Participant ${entry.participant_id} does not belong to this group deal`
+      )
+    }
+  }
+
+  const updatedParticipantIds =
+    await groupBuyingService.bulkUpdateParticipantTracking({
+      group_deal_id: input.groupDealId,
+      entries: input.entries,
+    })
+
+  let notifiedCount = 0
+
+  for (const participantId of updatedParticipantIds) {
+    const participant = participantsById.get(participantId)
+
+    if (!participant?.email) {
+      continue
+    }
+
+    const entry = input.entries.find(
+      (item) => item.participant_id === participantId
+    )
+
+    if (!entry) {
+      continue
+    }
+
+    await emitGroupDealParticipantShippingRegistered(scope, {
+      group_deal_id: input.groupDealId,
+      participant_id: participantId,
+      email: participant.email,
+      tracking_number: entry.tracking_number.trim(),
+      carrier: entry.carrier.trim(),
+    })
+
+    notifiedCount += 1
+  }
+
+  const dealMetadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+
+  await groupBuyingService.updateGroupDeals({
+    id: input.groupDealId,
+    metadata: {
+      ...dealMetadata,
+      opening_status: "completed",
+      shipping_completed_at: new Date().toISOString(),
+    },
+  })
+
+  await emitGroupDealUpdated(scope, input.groupDealId)
+
+  return {
+    updated_count: updatedParticipantIds.length,
+    notified_count: notifiedCount,
+    updated_participant_ids: updatedParticipantIds,
   }
 }

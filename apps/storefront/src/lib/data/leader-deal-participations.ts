@@ -66,6 +66,12 @@ const mapApiParticipation = (
     status,
     stage:
       typeof participation.stage === "string" ? participation.stage : undefined,
+    tracking_number:
+      participation.tracking_number != null
+        ? String(participation.tracking_number)
+        : null,
+    carrier:
+      participation.carrier != null ? String(participation.carrier) : null,
   }
 }
 

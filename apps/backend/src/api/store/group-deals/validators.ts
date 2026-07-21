@@ -45,8 +45,14 @@ export type PostStoreConfirmVirtualAccountDepositType = z.infer<
   typeof PostStoreConfirmVirtualAccountDeposit
 >
 
+const optionalOptionId = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().min(1).optional()
+)
+
 export const PostStoreApplyGroupDeal = z.object({
-  option_id: z.string().min(1),
+  option_id: optionalOptionId,
   member_label: z.string().min(1),
   quantity: z.number().int().positive().optional(),
   recipient_name: z.string().min(1),
