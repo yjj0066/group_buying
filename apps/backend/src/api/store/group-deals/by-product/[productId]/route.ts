@@ -7,7 +7,7 @@ import {
   isStoreVisibleGroupDealStatus,
   serializeStoreGroupDeal,
 } from "../../../../../utils/group-deal-store"
-import { resolveLeaderHostingStats } from "../../../../../utils/group-deal-leader-stats"
+import { enrichStoreGroupDealWithLeaderContext } from "../../../../../utils/enrich-store-group-deal-leader-context"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const groupBuyingService: GroupBuyingModuleService = req.scope.resolve(
@@ -38,15 +38,18 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     options as unknown as Record<string, unknown>[]
   )
 
-  const leaderStats = await resolveLeaderHostingStats(groupBuyingService, {
-    id: String(deal.id),
-    leader_customer_id: serialized.leader_customer_id,
-  })
+  const leaderContext = await enrichStoreGroupDealWithLeaderContext(
+    groupBuyingService,
+    {
+      id: String(deal.id),
+      leader_customer_id: serialized.leader_customer_id,
+    }
+  )
 
   res.json({
     group_deal: {
       ...serialized,
-      ...leaderStats,
+      ...leaderContext,
     },
   })
 }

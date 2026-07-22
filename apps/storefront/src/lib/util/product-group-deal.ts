@@ -29,6 +29,33 @@ const rewriteLocalhostMediaUrl = (url: string): string => {
   }
 }
 
+const normalizePublicMediaPath = (url: string): string => {
+  try {
+    const parsed = new URL(url)
+
+    if (!parsed.hostname.endsWith(".r2.dev")) {
+      return url
+    }
+
+    const segments = parsed.pathname.split("/").filter(Boolean)
+    const normalized: string[] = []
+
+    for (const segment of segments) {
+      if (normalized[normalized.length - 1] === segment) {
+        continue
+      }
+
+      normalized.push(segment)
+    }
+
+    parsed.pathname = `/${normalized.join("/")}`
+
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
 export const resolveMediaUrl = (
   url: string | null | undefined
 ): string | null => {
@@ -54,7 +81,7 @@ export const resolveMediaUrl = (
     resolved = trimmed
   }
 
-  return rewriteLocalhostMediaUrl(resolved)
+  return normalizePublicMediaPath(rewriteLocalhostMediaUrl(resolved))
 }
 
 const DEFAULT_MIN_PARTICIPANTS = 10

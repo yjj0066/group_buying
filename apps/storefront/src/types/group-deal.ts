@@ -157,6 +157,10 @@ export const isDepositSecured = (deal: GroupDeal): boolean =>
   deal.deposit_status === "deposited" || deal.deposit_status === "secured"
 
 export const isFirstTimeLeader = (deal: GroupDeal): boolean => {
+  if (deal.is_first_time_leader === false) {
+    return false
+  }
+
   if (deal.leader_role_number != null && deal.leader_role_number > 1) {
     return false
   }
