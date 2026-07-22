@@ -1,19 +1,44 @@
-const DEFAULT_HYBRID_API_URL = "http://localhost:5000"
-
 export const HYBRID_PARTNER_SOURCE = "medusa_group_buying"
+
+const isLoopbackHybridApiUrl = (url: string): boolean => {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      hostname === "::1"
+    )
+  } catch {
+    return false
+  }
+}
 
 export const getHybridApiUrl = (): string | null => {
   const url =
     process.env.HYBRID_API_URL ??
     process.env.AI_ENGINE_URL ??
     process.env.FLASK_API_URL ??
-    (process.env.NODE_ENV === "production" ? DEFAULT_HYBRID_API_URL : null)
+    null
 
   if (!url?.trim()) {
     return null
   }
 
-  return url.replace(/\/$/, "")
+  const normalized = url.replace(/\/$/, "")
+
+  if (isLoopbackHybridApiUrl(normalized)) {
+    const allowLocalBff =
+      process.env.NODE_ENV === "development" &&
+      isDocumentAiExplicitlyEnabled()
+
+    if (!allowLocalBff) {
+      return null
+    }
+  }
+
+  return normalized
 }
 
 export const getHybridApiSharedSecret = (): string | null => {

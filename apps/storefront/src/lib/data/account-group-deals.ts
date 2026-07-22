@@ -1,5 +1,3 @@
-"use server"
-
 import { sdk } from "@lib/config"
 import { getAuthHeaders, getCacheTag, removeAuthToken } from "@lib/data/cookies"
 import { retrieveCustomer } from "@lib/data/customer"
@@ -217,6 +215,8 @@ export type CreateHostedGroupDealInput = {
 }
 
 export async function createHostedGroupDeal(input: CreateHostedGroupDealInput) {
+  "use server"
+
   const headers = await getAuthHeaders()
   const hasAuth = "authorization" in headers && headers.authorization
   const primarySeller = input.primary_seller?.trim()
@@ -294,6 +294,8 @@ export async function recordLeaderDeposit(
     deposit_payment_key: string
   }
 ) {
+  "use server"
+
   try {
     const response = await authedFetch<{
       group_deal: AccountGroupDeal

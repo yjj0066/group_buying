@@ -3,7 +3,6 @@
 import { sdk } from "@lib/config"
 import { getAuthHeaders } from "@lib/data/cookies"
 import { resolveMedusaErrorMessage } from "@lib/util/medusa-error"
-import { revalidateTag } from "next/cache"
 import type { GroupDealDocumentParseResponse } from "types/group-deal-document-ai"
 
 export type GroupDealDocumentParseActionResult =
@@ -58,8 +57,6 @@ const runDocumentAiAction = async <T>(
     }
 
     const data = await action()
-
-    revalidateTag("group-deals")
 
     return { ok: true, data }
   } catch (error) {
