@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import {
   applyPriceRecommendations,
-} from "@lib/data/account-group-deals"
+} from "@lib/data/account-group-deals-actions"
 import { Button, Text } from "@modules/common/components/ui"
 import { convertToLocale } from "@lib/util/money"
 import type { OptionPriceRecommendation } from "types/account-group-deals"

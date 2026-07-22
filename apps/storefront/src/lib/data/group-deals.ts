@@ -348,25 +348,6 @@ export const getStoreGroupDeal = async (
 /** @deprecated Use getStoreGroupDeal */
 export const getMockGroupDeal = getStoreGroupDeal
 
-export const loadHomeDashboardData = async () => {
-  const [dealsResult, customer] = await Promise.all([
-    listGroupDeals(),
-    retrieveCustomer(),
-  ])
-
-  let hostedDeals: GroupDeal[]
-
-  if (customer) {
-    const { listHostedGroupDeals } = await import("@lib/data/account-group-deals")
-    const accountDeals = await listHostedGroupDeals()
-    hostedDeals = accountDeals.map(mapAccountGroupDealToGroupDeal)
-  } else {
-    hostedDeals = await listMockHostedDeals()
-  }
-
-  return { deals: dealsResult.group_deals, hostedDeals }
-}
-
 export const createMockVirtualAccount = (
   deal: GroupDeal,
   amount: number

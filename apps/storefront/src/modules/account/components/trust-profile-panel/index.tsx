@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { reportLeaderReview } from "@lib/data/account-group-deals"
+import { reportLeaderReview } from "@lib/data/account-group-deals-actions"
 import { Button, Text } from "@modules/common/components/ui"
 import type { LeaderReview, LeaderTrustProfile } from "types/account-group-deals"
 

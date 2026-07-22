@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { saveBankAccount } from "@lib/data/account-group-deals"
+import { saveBankAccount } from "@lib/data/account-group-deals-actions"
 import { KOREAN_BANK_OPTIONS } from "@lib/constants/korean-banks"
 import { useDictionary } from "@i18n/provider"
 import { BbAlert, BbButton } from "@modules/design-system"

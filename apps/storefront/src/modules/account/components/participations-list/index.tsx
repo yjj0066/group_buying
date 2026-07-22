@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 
-import { confirmParticipantDelivery } from "@lib/data/account-group-deals"
+import { confirmParticipantDelivery } from "@lib/data/account-group-deals-actions"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import {
   canCancelParticipation,

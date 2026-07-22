@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { submitParticipationDispute } from "@lib/data/account-group-deals"
+import { submitParticipationDispute } from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { Button, Label, Text } from "@modules/common/components/ui"
 

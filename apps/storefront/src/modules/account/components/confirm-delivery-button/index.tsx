@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { confirmParticipantDelivery } from "@lib/data/account-group-deals"
+import { confirmParticipantDelivery } from "@lib/data/account-group-deals-actions"
 import { Button } from "@modules/common/components/ui"
 
 type ConfirmDeliveryButtonProps = {

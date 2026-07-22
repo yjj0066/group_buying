@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import type { HttpTypes } from "@medusajs/types"
 
-import { createHostedGroupDeal, recordLeaderDeposit } from "@lib/data/account-group-deals"
+import { createHostedGroupDeal, recordLeaderDeposit } from "@lib/data/account-group-deals-actions"
 import { formatMessage } from "@i18n/provider"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { Button, Text } from "@modules/common/components/ui"
