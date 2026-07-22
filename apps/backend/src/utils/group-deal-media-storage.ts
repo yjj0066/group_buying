@@ -65,21 +65,20 @@ const buildS3Client = () => {
 
   if (process.env.S3_ENDPOINT) {
     config.endpoint = process.env.S3_ENDPOINT
-    config.forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true"
+    config.forcePathStyle = usesPathStylePublicUrls()
   }
 
   return new S3Client(config)
 }
 
+const usesPathStylePublicUrls = (): boolean =>
+  process.env.S3_FORCE_PATH_STYLE === "true" || isCloudflareR2Configured()
+
 const resolvePublicObjectKey = (objectKey: string): string => {
   const bucket = process.env.S3_BUCKET?.trim()
   let key = objectKey.replace(/^\/+/, "")
 
-  if (
-    process.env.S3_FORCE_PATH_STYLE === "true" &&
-    bucket &&
-    !key.startsWith(`${bucket}/`)
-  ) {
+  if (usesPathStylePublicUrls() && bucket && !key.startsWith(`${bucket}/`)) {
     key = `${bucket}/${key}`
   }
 
@@ -134,15 +133,27 @@ const assertObjectStorageClientConfig = () => {
   }
 }
 
-const verifyPublicObjectUrl = async (publicUrl: string) => {
-  try {
-    const response = await fetch(publicUrl, { method: "HEAD" })
+const isPublicObjectUrlReachable = async (publicUrl: string): Promise<boolean> => {
+  const probes: RequestInit[] = [{ method: "HEAD" }, { method: "GET", headers: { Range: "bytes=0-0" } }]
 
-    if (response.ok) {
-      return
+  for (const init of probes) {
+    try {
+      const response = await fetch(publicUrl, init)
+
+      if (response.ok || response.status === 206) {
+        return true
+      }
+    } catch {
+      // Try the next probe.
     }
-  } catch {
-    // Fall through to the error below.
+  }
+
+  return false
+}
+
+const verifyPublicObjectUrl = async (publicUrl: string) => {
+  if (await isPublicObjectUrlReachable(publicUrl)) {
+    return
   }
 
   throw new MedusaError(

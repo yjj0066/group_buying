@@ -47,6 +47,18 @@ describe("buildPublicObjectUrl", () => {
     )
   })
 
+  it("includes the bucket segment for R2 public URLs without S3_FORCE_PATH_STYLE", () => {
+    process.env.S3_FILE_URL = "https://pub-example.r2.dev"
+    process.env.S3_BUCKET = "groupbuyingmedia"
+    delete process.env.S3_FORCE_PATH_STYLE
+
+    expect(
+      buildPublicObjectUrl("group-buying/receipts/receipt.jpg")
+    ).toBe(
+      "https://pub-example.r2.dev/groupbuyingmedia/group-buying/receipts/receipt.jpg"
+    )
+  })
+
   it("does not duplicate the public path prefix", () => {
     process.env.S3_FILE_URL = "https://pub-example.r2.dev/group-buying"
 
