@@ -331,3 +331,25 @@ export const resolveDocumentAiStatusLabel = (
       return t.groupBuying.documentAiStatusPending
   }
 }
+
+export type ReceiptStructuredDraft = {
+  seller: string
+  order_number: string
+  ordered_at: string
+  album_quantity: string
+  total_amount: string
+}
+
+export const buildReceiptStructuredDraft = (
+  structured?: StructuredReceiptFields | null
+): ReceiptStructuredDraft => ({
+  seller: structured?.seller ?? "",
+  order_number: structured?.order_number ?? "",
+  ordered_at: structured?.ordered_at ?? "",
+  album_quantity:
+    structured?.album_quantity != null
+      ? String(structured.album_quantity)
+      : "",
+  total_amount:
+    structured?.total_amount != null ? String(structured.total_amount) : "",
+})

@@ -612,6 +612,31 @@ export type Dictionary = {
       confirmAnalysisButton: string
       proceedButton: string
       failedButton: string
+      manualEntryTitle: string
+      manualEntryHint: string
+      editExtractedButton: string
+      saveManualEntryButton: string
+      manualEntryRequiredError: string
+      manualEntrySuccess: string
+      manualEntrySubmitting: string
+      manualSellerPlaceholder: string
+      manualOrderNumberPlaceholder: string
+      manualAlbumQuantityPlaceholder: string
+      manualTotalAmountPlaceholder: string
+      manualAlbumQuantityError: string
+      manualTotalAmountError: string
+      cancelEditButton: string
+    }
+    leaderPurchaseFailed: {
+      title: string
+      alertMessage: string
+      reasonSectionTitle: string
+      reasonHint: string
+      manualEntryHint: string
+      explanationPlaceholder: string
+      retryUploadButton: string
+      backToDashboardButton: string
+      submittedMessage: string
     }
     leaderPurchaseProof: {
       title: string

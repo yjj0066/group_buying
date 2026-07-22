@@ -524,6 +524,36 @@ const dictionary: Dictionary = {
       confirmAnalysisButton: "Review receipt analysis",
       proceedButton: "Publish proof and continue",
       failedButton: "Verification failed · explain",
+      manualEntryTitle: "Enter receipt details manually",
+      manualEntryHint:
+        "If recognition failed or extracted values are wrong, enter or correct the fields below and save.",
+      editExtractedButton: "Edit",
+      saveManualEntryButton: "Save receipt details",
+      manualEntryRequiredError: "Order number and album quantity are required.",
+      manualEntrySuccess: "Receipt details were saved.",
+      manualEntrySubmitting: "Saving…",
+      manualSellerPlaceholder: "Seller name",
+      manualOrderNumberPlaceholder: "Order number",
+      manualAlbumQuantityPlaceholder: "Album quantity purchased",
+      manualTotalAmountPlaceholder: "Total amount paid (KRW)",
+      manualAlbumQuantityError: "Album quantity must be a positive whole number.",
+      manualTotalAmountError: "Total amount must be at least 1.",
+      cancelEditButton: "Cancel",
+    },
+    leaderPurchaseFailed: {
+      title: "Receipt verification failed",
+      alertMessage:
+        "Automatic receipt verification failed. Return to the proof screen to edit values manually or upload again.",
+      reasonSectionTitle: "Failure details",
+      reasonHint:
+        "Check that declared album quantity, primary seller, and paid amount match the receipt.",
+      manualEntryHint:
+        "On the proof screen you can enter order number, quantity, and other fields manually.",
+      explanationPlaceholder: "Explanation (optional)",
+      retryUploadButton: "Back to receipt proof",
+      backToDashboardButton: "Back to dashboard",
+      submittedMessage:
+        "Your explanation was saved. Continue with manual entry or re-upload on the proof screen.",
     },
     leaderPurchaseProof: {
       title: "First purchase proof",
