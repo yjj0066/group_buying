@@ -71,6 +71,29 @@ const buildS3Client = () => {
   return new S3Client(config)
 }
 
+const buildPublicObjectUrl = (objectKey: string): string => {
+  const rawBase = process.env.S3_FILE_URL!.trim().replace(/\/$/, "")
+  const key = objectKey.replace(/^\/+/, "")
+
+  try {
+    const parsed = new URL(rawBase)
+    const origin = parsed.origin
+    const basePath = parsed.pathname.replace(/^\/+|\/+$/g, "")
+
+    if (!basePath) {
+      return `${origin}/${key}`
+    }
+
+    if (key === basePath || key.startsWith(`${basePath}/`)) {
+      return `${origin}/${key}`
+    }
+
+    return `${origin}/${basePath}/${key}`
+  } catch {
+    return `${rawBase}/${key}`
+  }
+}
+
 const uploadObjectStorageGroupDealMedia = async (input: {
   buffer: Buffer
   folder: GroupDealMediaFolder
@@ -100,9 +123,7 @@ const uploadObjectStorageGroupDealMedia = async (input: {
     })
   )
 
-  const baseUrl = process.env.S3_FILE_URL!.replace(/\/$/, "")
-
-  return `${baseUrl}/${key}`
+  return buildPublicObjectUrl(key)
 }
 
 export const storeGroupDealMedia = async (input: {
