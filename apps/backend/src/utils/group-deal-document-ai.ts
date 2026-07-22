@@ -27,9 +27,10 @@ import {
   saveGroupDealDocumentImage,
 } from "./group-deal-leader-ops"
 import {
+  assertDocumentAiBffConfigured,
   buildPublicStaticUrl,
   getDocumentAiAutoVerifyConfidence,
-  isDocumentAiEnabled,
+  shouldUseDocumentAiStub,
 } from "./hybrid-api-config"
 import { serializeAccountGroupDeal } from "./group-deal-account"
 
@@ -238,20 +239,6 @@ const mapStubResultToReceipt = (
 const mapStubResultToInvoiceRows = (
   result: DocumentExtractResult
 ): StructuredInvoiceRow[] => result.invoice_rows ?? []
-
-const isDocumentAiTransportFailure = (error: unknown): boolean => {
-  if (!(error instanceof MedusaError)) {
-    return false
-  }
-
-  const message = error.message.toLowerCase()
-
-  return (
-    message.includes("document ai bff is unreachable") ||
-    message.includes("document ai bff request timed out") ||
-    message.includes("hybrid_api_url is not configured")
-  )
-}
 
 const buildReceiptStubJob = (input: {
   groupDealId: string
@@ -619,30 +606,9 @@ export const processGroupDealReceiptParse = async (
     metadata.primary_seller != null ? String(metadata.primary_seller) : null
 
   try {
-    if (isDocumentAiEnabled()) {
-      try {
-        const response = await parseReceiptDocumentWithFlask({
-          partner_group_deal_id: input.groupDealId,
-          input_url: buildPublicStaticUrl(imageUrl),
-          input_base64: input.imageBase64,
-          input_file_name: input.filename,
-          input_payload_json: {
-            declared_album_quantity: declaredAlbumQuantity,
-            primary_seller: primarySeller,
-          },
-        })
+    assertDocumentAiBffConfigured()
 
-        job = response.job
-        structuredReceipt = mapFlaskExtractToStructuredReceipt(job)
-        source = "flask"
-      } catch (error) {
-        if (!isDocumentAiTransportFailure(error)) {
-          throw error
-        }
-      }
-    }
-
-    if (!job || !structuredReceipt) {
+    if (shouldUseDocumentAiStub()) {
       const stubResult = buildReceiptStubJob({
         groupDealId: input.groupDealId,
         imageUrl,
@@ -653,6 +619,21 @@ export const processGroupDealReceiptParse = async (
       job = stubResult.job
       structuredReceipt = stubResult.structuredReceipt
       source = "stub"
+    } else {
+      const response = await parseReceiptDocumentWithFlask({
+        partner_group_deal_id: input.groupDealId,
+        input_url: buildPublicStaticUrl(imageUrl),
+        input_base64: input.imageBase64,
+        input_file_name: input.filename,
+        input_payload_json: {
+          declared_album_quantity: declaredAlbumQuantity,
+          primary_seller: primarySeller,
+        },
+      })
+
+      job = response.job
+      structuredReceipt = mapFlaskExtractToStructuredReceipt(job)
+      source = "flask"
     }
   } catch (error) {
     await groupBuyingService.updateGroupDeals({
@@ -770,26 +751,9 @@ export const processGroupDealTrackingParse = async (
   let source: "flask" | "stub" = "stub"
 
   try {
-    if (isDocumentAiEnabled()) {
-      try {
-        const response = await parseTrackingDocumentWithFlask({
-          partner_group_deal_id: input.groupDealId,
-          input_url: buildPublicStaticUrl(imageUrl),
-          input_base64: input.imageBase64,
-          input_file_name: input.filename,
-        })
+    assertDocumentAiBffConfigured()
 
-        job = response.job
-        invoiceRows = mapFlaskExtractToInvoiceRows(job)
-        source = "flask"
-      } catch (error) {
-        if (!isDocumentAiTransportFailure(error)) {
-          throw error
-        }
-      }
-    }
-
-    if (!job) {
+    if (shouldUseDocumentAiStub()) {
       const stubResult = buildTrackingStubJob({
         groupDealId: input.groupDealId,
         imageUrl,
@@ -798,6 +762,17 @@ export const processGroupDealTrackingParse = async (
       job = stubResult.job
       invoiceRows = stubResult.invoiceRows
       source = "stub"
+    } else {
+      const response = await parseTrackingDocumentWithFlask({
+        partner_group_deal_id: input.groupDealId,
+        input_url: buildPublicStaticUrl(imageUrl),
+        input_base64: input.imageBase64,
+        input_file_name: input.filename,
+      })
+
+      job = response.job
+      invoiceRows = mapFlaskExtractToInvoiceRows(job)
+      source = "flask"
     }
   } catch (error) {
     await groupBuyingService.updateGroupDeals({

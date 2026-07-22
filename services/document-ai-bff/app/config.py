@@ -19,7 +19,11 @@ class Settings:
 
 def get_settings() -> Settings:
     api_key = (os.getenv("UPSTAGE_API_KEY") or "").strip()
-    secret = (os.getenv("HYBRID_SHARED_SECRET") or "").strip()
+    secret = (
+        os.getenv("HYBRID_SHARED_SECRET")
+        or os.getenv("HYBRID_API_SHARED_SECRET")
+        or ""
+    ).strip()
     mode = (os.getenv("UPSTAGE_RECEIPT_MODE") or "custom-schema").strip()
 
     timeout_raw = os.getenv("UPSTAGE_TIMEOUT_SEC", "90")

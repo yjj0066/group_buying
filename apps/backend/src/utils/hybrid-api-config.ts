@@ -1,3 +1,5 @@
+import { MedusaError } from "@medusajs/framework/utils"
+
 export const HYBRID_PARTNER_SOURCE = "medusa_group_buying"
 
 const isLoopbackHybridApiUrl = (url: string): boolean => {
@@ -68,6 +70,34 @@ export const isDocumentAiEnabled = (): boolean => {
   }
 
   return Boolean(getHybridApiUrl())
+}
+
+/** Dev-only stub parsing. Production receipt/tracking verification requires Upstage via BFF. */
+export const shouldUseDocumentAiStub = (): boolean => {
+  if (isDocumentAiExplicitlyEnabled()) {
+    return false
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return false
+  }
+
+  return !isDocumentAiEnabled()
+}
+
+export const assertDocumentAiBffConfigured = (): void => {
+  if (shouldUseDocumentAiStub()) {
+    return
+  }
+
+  if (isDocumentAiEnabled()) {
+    return
+  }
+
+  throw new MedusaError(
+    MedusaError.Types.INVALID_DATA,
+    "Document AI BFF (Upstage) is required. Deploy services/document-ai-bff, set DOCUMENT_AI_ENABLED=true, HYBRID_API_URL to the BFF HTTPS URL, and HYBRID_API_SHARED_SECRET on the Medusa backend."
+  )
 }
 
 export const getDocumentAiRequestTimeoutMs = (): number => {
