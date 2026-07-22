@@ -66,13 +66,6 @@ export default function Nav({
             <div className="hidden small:flex items-center gap-x-4 h-full shrink-0">
               <LocalizedClientLink
                 className="hover:text-ui-fg-base whitespace-nowrap shrink-0"
-                href="/store"
-                data-testid="nav-all-products-link"
-              >
-                {dictionary.nav.allProducts}
-              </LocalizedClientLink>
-              <LocalizedClientLink
-                className="hover:text-ui-fg-base whitespace-nowrap shrink-0"
                 href="/group-buying"
                 data-testid="nav-group-buying-link"
               >
