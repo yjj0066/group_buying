@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1200" viewBox="0 0 960 1200" fill="none" role="img" aria-label="Concert venue">
+  <defs>
+    <linearGradient id="sky" x1="480" y1="0" x2="480" y2="1200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E1033"/>
+      <stop offset="0.45" stop-color="#4C1D95"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="stageGlow" x1="480" y1="760" x2="480" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EC4899" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#6B46E5" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="spotlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(480 220) rotate(90) scale(420 520)">
+      <stop stop-color="#F9A8D4" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#F9A8D4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beamPink" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#F472B6" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#F472B6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="beamPurple" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#A78BFA" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#A78BFA" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="1200" fill="url(#sky)"/>
+  <ellipse cx="480" cy="260" rx="360" ry="420" fill="url(#spotlight)"/>
+
+  <path d="M120 0 L320 760 L160 760 Z" fill="url(#beamPink)" opacity="0.7"/>
+  <path d="M840 0 L640 760 L800 760 Z" fill="url(#beamPurple)" opacity="0.7"/>
+  <path d="M420 0 L520 820 L460 820 Z" fill="url(#beamPink)" opacity="0.35"/>
+  <path d="M540 0 L620 820 L580 820 Z" fill="url(#beamPurple)" opacity="0.35"/>
+
+  <ellipse cx="480" cy="900" rx="420" ry="120" fill="url(#stageGlow)"/>
+  <rect x="180" y="860" width="600" height="28" rx="14" fill="#312E81" opacity="0.8"/>
+  <rect x="260" y="888" width="440" height="18" rx="9" fill="#4338CA" opacity="0.55"/>
+
+  <path d="M0 980 C120 920, 220 960, 320 940 C420 920, 520 970, 640 930 C760 890, 860 930, 960 900 L960 1200 L0 1200 Z" fill="#0F172A" opacity="0.92"/>
+  <path d="M0 1020 C140 980, 260 1010, 380 990 C500 970, 620 1010, 760 980 C860 960, 920 990, 960 970 L960 1200 L0 1200 Z" fill="#111827"/>
+
+  <g opacity="0.85">
+    <circle cx="120" cy="1010" r="7" fill="#F472B6"/>
+    <circle cx="180" cy="990" r="6" fill="#A78BFA"/>
+    <circle cx="240" cy="1015" r="5" fill="#34D399"/>
+    <circle cx="310" cy="985" r="7" fill="#F472B6"/>
+    <circle cx="380" cy="1005" r="6" fill="#60A5FA"/>
+    <circle cx="450" cy="975" r="7" fill="#F472B6"/>
+    <circle cx="520" cy="1000" r="6" fill="#A78BFA"/>
+    <circle cx="590" cy="980" r="7" fill="#34D399"/>
+    <circle cx="660" cy="1010" r="6" fill="#F472B6"/>
+    <circle cx="730" cy="990" r="7" fill="#60A5FA"/>
+    <circle cx="800" cy="1005" r="6" fill="#A78BFA"/>
+    <circle cx="860" cy="985" r="7" fill="#F472B6"/>
+  </g>
+
+  <g opacity="0.25">
+    <circle cx="160" cy="760" r="120" stroke="#F9A8D4" stroke-width="2"/>
+    <circle cx="800" cy="760" r="120" stroke="#C4B5FD" stroke-width="2"/>
+  </g>
+</svg>
