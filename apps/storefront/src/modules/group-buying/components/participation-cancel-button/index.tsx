@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useParams, usePathname, useRouter } from "next/navigation"
 
-import { cancelMyParticipation } from "@lib/data/account-group-deals"
+import { cancelMyParticipation } from "@lib/data/account-group-deals-actions"
 import useToggleState from "@lib/hooks/use-toggle-state"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import { BbButton } from "@modules/design-system"

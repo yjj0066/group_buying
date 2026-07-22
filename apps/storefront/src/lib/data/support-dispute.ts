@@ -1,6 +1,6 @@
-"use client"
+"use server"
 
-import { submitParticipationDispute } from "@lib/data/account-group-deals"
+import { submitParticipationDispute } from "@lib/data/account-group-deals-actions"
 import { registerDisputeSettlementHold } from "@lib/data/dispute-settlement-hold"
 
 export type SubmitSupportDisputeInput = {

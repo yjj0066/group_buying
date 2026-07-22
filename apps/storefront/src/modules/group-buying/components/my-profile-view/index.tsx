@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import {
   requestCustomerWithdrawal,
   saveMyProfileSettings,
-} from "@lib/data/account-group-deals"
+} from "@lib/data/account-group-deals-actions"
 import { signout } from "@lib/data/customer"
 import { useDictionary } from "@i18n/provider"
 import {

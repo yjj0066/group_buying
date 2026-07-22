@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 
-import { saveBankAccount } from "@lib/data/account-group-deals"
+import { saveBankAccount } from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { Button, Input, Label, Text } from "@modules/common/components/ui"
 import type { RefundBankAccount } from "types/account-group-deals"

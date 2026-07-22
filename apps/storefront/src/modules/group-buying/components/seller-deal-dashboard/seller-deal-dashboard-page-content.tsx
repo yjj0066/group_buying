@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 import { useParams } from "next/navigation"
 
-import { listHostedDealParticipations } from "@lib/data/account-group-deals"
+import { listHostedDealParticipations } from "@lib/data/account-group-deals-actions"
 
 import { useDictionary } from "@i18n/provider"
 

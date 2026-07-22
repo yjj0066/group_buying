@@ -19,12 +19,9 @@ import {
 import { GROUP_BUYING_DEMO_PRODUCT_ID } from "@lib/constants/group-buying-demo-product"
 
 import {
-
   createHostedGroupDeal,
-
   recordLeaderDeposit,
-
-} from "@lib/data/account-group-deals"
+} from "@lib/data/account-group-deals-actions"
 
 import { useDictionary, formatMessage } from "@i18n/provider"
 

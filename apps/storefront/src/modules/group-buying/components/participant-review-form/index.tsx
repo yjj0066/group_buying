@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation"
 
 
 
-import { submitParticipationReview } from "@lib/data/account-group-deals"
+import { submitParticipationReview } from "@lib/data/account-group-deals-actions"
 
 import { useDictionary } from "@i18n/provider"
 

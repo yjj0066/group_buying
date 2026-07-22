@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 
-import { confirmParticipantDelivery } from "@lib/data/account-group-deals"
+import { confirmParticipantDelivery } from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import { buildTrackingUrl } from "@lib/util/tracking-link"

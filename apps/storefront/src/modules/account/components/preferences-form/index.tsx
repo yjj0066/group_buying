@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 
-import { updateGroupBuyingPreferences } from "@lib/data/account-group-deals"
+import { updateGroupBuyingPreferences } from "@lib/data/account-group-deals-actions"
 import { setGroupBuyingModeCookie } from "@lib/data/group-buying-mode"
 import { useDictionary } from "@i18n/provider"
 import { Button, Input, Label, Text } from "@modules/common/components/ui"

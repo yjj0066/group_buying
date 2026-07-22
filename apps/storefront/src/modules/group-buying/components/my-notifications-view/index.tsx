@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-import { updateGroupBuyingPreferences } from "@lib/data/account-group-deals"
+import { updateGroupBuyingPreferences } from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { BbAlert } from "@modules/design-system"
 import { Text } from "@modules/common/components/ui"

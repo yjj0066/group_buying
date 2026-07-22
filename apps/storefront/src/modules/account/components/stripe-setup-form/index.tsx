@@ -12,7 +12,7 @@ import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js"
 import {
   completeStripeSetup,
   createStripeSetupSession,
-} from "@lib/data/account-group-deals"
+} from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { Button, Text } from "@modules/common/components/ui"
 import type { SavedPaymentMethod } from "types/account-group-deals"
