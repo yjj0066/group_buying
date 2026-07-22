@@ -29,6 +29,9 @@ const rewriteLocalhostMediaUrl = (url: string): string => {
   }
 }
 
+const getObjectStorageBucketName = () =>
+  process.env.NEXT_PUBLIC_S3_BUCKET?.trim() ?? ""
+
 const normalizePublicMediaPath = (url: string): string => {
   try {
     const parsed = new URL(url)
@@ -38,6 +41,16 @@ const normalizePublicMediaPath = (url: string): string => {
     }
 
     const segments = parsed.pathname.split("/").filter(Boolean)
+    const bucket = getObjectStorageBucketName()
+
+    if (
+      bucket &&
+      segments[0] !== bucket &&
+      (segments[0] === "group-buying" || segments[0] === "static")
+    ) {
+      segments.unshift(bucket)
+    }
+
     const normalized: string[] = []
 
     for (const segment of segments) {
