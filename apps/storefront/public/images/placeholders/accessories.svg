@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" fill="none">
+  <rect width="800" height="800" fill="#EDE9FE"/>
+  <circle cx="400" cy="360" r="120" stroke="#6B46E5" stroke-width="24" fill="none" opacity="0.5"/>
+  <rect x="360" y="460" width="80" height="60" rx="12" fill="#6B46E5" opacity="0.4"/>
+  <circle cx="400" cy="360" r="30" fill="#6B46E5" opacity="0.6"/>
+  <path d="M280 280 L320 320 M520 280 L480 320" stroke="#6B46E5" stroke-width="16" stroke-linecap="round" opacity="0.35"/>
+  <text x="400" y="640" text-anchor="middle" font-family="system-ui, sans-serif" font-size="48" font-weight="600" fill="#6B46E5">Accessories</text>
+</svg>

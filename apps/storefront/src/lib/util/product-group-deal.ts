@@ -5,6 +5,30 @@ import type { GroupDeal } from "types/group-deal"
 const getBackendUrl = () =>
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
 
+const getBackendBaseUrl = () => getBackendUrl().replace(/\/$/, "")
+
+const isLocalhostUrl = (url: string): boolean => {
+  try {
+    const { hostname } = new URL(url)
+    return hostname === "localhost" || hostname === "127.0.0.1"
+  } catch {
+    return false
+  }
+}
+
+const rewriteLocalhostMediaUrl = (url: string): string => {
+  if (!isLocalhostUrl(url)) {
+    return url
+  }
+
+  try {
+    const { pathname, search, hash } = new URL(url)
+    return `${getBackendBaseUrl()}${pathname}${search}${hash}`
+  } catch {
+    return url
+  }
+}
+
 export const resolveMediaUrl = (
   url: string | null | undefined
 ): string | null => {
@@ -18,19 +42,19 @@ export const resolveMediaUrl = (
     return null
   }
 
+  let resolved: string
+
   if (trimmed.startsWith("//")) {
-    return `https:${trimmed}`
+    resolved = `https:${trimmed}`
+  } else if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    resolved = trimmed
+  } else if (trimmed.startsWith("/")) {
+    resolved = `${getBackendUrl().replace(/\/$/, "")}${trimmed}`
+  } else {
+    resolved = trimmed
   }
 
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed
-  }
-
-  if (trimmed.startsWith("/")) {
-    return `${getBackendUrl().replace(/\/$/, "")}${trimmed}`
-  }
-
-  return trimmed
+  return rewriteLocalhostMediaUrl(resolved)
 }
 
 const DEFAULT_MIN_PARTICIPANTS = 10

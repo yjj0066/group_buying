@@ -5,6 +5,9 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd())
 const isProduction = process.env.NODE_ENV === "production"
 const useDatabaseSsl =
   isProduction || process.env.DATABASE_SSL === "true"
+const backendUrl =
+  process.env.MEDUSA_BACKEND_URL?.replace(/\/$/, "") ||
+  "http://localhost:9000"
 
 module.exports = defineConfig({
   projectConfig: {
@@ -31,6 +34,20 @@ module.exports = defineConfig({
     },
   },
   modules: [
+    {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/file-local",
+            id: "local",
+            options: {
+              backend_url: `${backendUrl}/static`,
+            },
+          },
+        ],
+      },
+    },
     {
       resolve: "./src/modules/group-buying",
     },
