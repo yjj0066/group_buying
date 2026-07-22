@@ -5,12 +5,27 @@ import type { GroupDeal } from "types/group-deal"
 const getBackendUrl = () =>
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
 
+const getBackendBaseUrl = () => getBackendUrl().replace(/\/$/, "")
+
 const isLocalhostUrl = (url: string): boolean => {
   try {
     const { hostname } = new URL(url)
     return hostname === "localhost" || hostname === "127.0.0.1"
   } catch {
     return false
+  }
+}
+
+const rewriteLocalhostMediaUrl = (url: string): string => {
+  if (!isLocalhostUrl(url)) {
+    return url
+  }
+
+  try {
+    const { pathname, search, hash } = new URL(url)
+    return `${getBackendBaseUrl()}${pathname}${search}${hash}`
+  } catch {
+    return url
   }
 }
 
@@ -39,14 +54,7 @@ export const resolveMediaUrl = (
     resolved = trimmed
   }
 
-  if (
-    process.env.NODE_ENV === "production" &&
-    isLocalhostUrl(resolved)
-  ) {
-    return null
-  }
-
-  return resolved
+  return rewriteLocalhostMediaUrl(resolved)
 }
 
 const DEFAULT_MIN_PARTICIPANTS = 10
