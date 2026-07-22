@@ -3,6 +3,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 
 import { GROUP_BUYING_MODULE } from "../../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../../modules/group-buying/service"
+import { enrichStoreGroupDealWithLeaderContext } from "../../../../utils/enrich-store-group-deal-leader-context"
 import {
   isStoreVisibleGroupDeal,
   serializeStoreGroupDeal,
@@ -35,10 +36,23 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
   const options = await groupBuyingService.listDealOptions(String(deal.id))
 
+  const serialized = serializeStoreGroupDeal(
+    dealRecord,
+    options as unknown as Record<string, unknown>[]
+  )
+
+  const leaderContext = await enrichStoreGroupDealWithLeaderContext(
+    groupBuyingService,
+    {
+      id: String(deal.id),
+      leader_customer_id: serialized.leader_customer_id,
+    }
+  )
+
   res.status(200).json({
-    group_deal: serializeStoreGroupDeal(
-      dealRecord,
-      options as unknown as Record<string, unknown>[]
-    ),
+    group_deal: {
+      ...serialized,
+      ...leaderContext,
+    },
   })
 }

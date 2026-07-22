@@ -2,6 +2,7 @@
 
 import {
   calculateLeaderTrustScore,
+  getLeaderRoleNumber,
   getLeaderTrustDescriptionKey,
   isFirstTimeLeader,
 } from "@lib/util/group-deal-trust"
@@ -28,6 +29,7 @@ const LeaderTrustPanel = ({ deal }: LeaderTrustPanelProps) => {
   const trustLabelKey = getLeaderTrustDescriptionKey(trust.tier)
   const depositSecured = isDepositSecured(deal)
   const firstTimeLeader = isFirstTimeLeader(deal)
+  const roleNumber = getLeaderRoleNumber(deal)
 
   const completedDeals = deal.leader_completed_deals ?? 0
   const avgShipDays =
@@ -73,7 +75,21 @@ const LeaderTrustPanel = ({ deal }: LeaderTrustPanelProps) => {
       <p className="mt-3 text-xs leading-relaxed text-[#6B7280]">
         {firstTimeLeader
           ? t.groupBuying.leaderFirstTimeDescription
-          : statsLine}
+          : (
+            <>
+              {roleNumber > 1 && (
+                <span className="block font-medium text-[#374151]">
+                  {t.groupBuying.leaderRoleNumber.replace(
+                    "{count}",
+                    String(roleNumber)
+                  )}
+                </span>
+              )}
+              <span className={roleNumber > 1 ? "mt-1 block" : undefined}>
+                {statsLine}
+              </span>
+            </>
+          )}
       </p>
     </div>
   )
