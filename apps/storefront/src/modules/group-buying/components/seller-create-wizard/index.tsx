@@ -8,7 +8,7 @@ import {
   GROUP_BUYING_LEADER_DEPOSIT_AMOUNT,
   LEADER_DEPOSIT_DEADLINE_MINUTES,
 } from "@lib/constants/group-buying-fees"
-import { createHostedGroupDeal } from "@lib/data/account-group-deals"
+import { createHostedGroupDeal } from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import {

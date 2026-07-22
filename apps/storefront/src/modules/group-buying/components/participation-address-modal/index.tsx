@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 
-import { updateParticipationShippingAddress } from "@lib/data/account-group-deals"
+import { updateParticipationShippingAddress } from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { BbAlert, BbButton } from "@modules/design-system"
 import { Text } from "@modules/common/components/ui"

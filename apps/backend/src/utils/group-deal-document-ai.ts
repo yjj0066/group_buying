@@ -27,9 +27,10 @@ import {
   saveGroupDealDocumentImage,
 } from "./group-deal-leader-ops"
 import {
+  assertDocumentAiBffConfigured,
   buildPublicStaticUrl,
   getDocumentAiAutoVerifyConfidence,
-  isDocumentAiEnabled,
+  shouldUseDocumentAiStub,
 } from "./hybrid-api-config"
 import { serializeAccountGroupDeal } from "./group-deal-account"
 
@@ -238,6 +239,62 @@ const mapStubResultToReceipt = (
 const mapStubResultToInvoiceRows = (
   result: DocumentExtractResult
 ): StructuredInvoiceRow[] => result.invoice_rows ?? []
+
+const buildReceiptStubJob = (input: {
+  groupDealId: string
+  imageUrl: string
+  declaredAlbumQuantity: number
+  primarySeller: string | null
+}): {
+  job: FlaskDocumentAiJob
+  structuredReceipt: StructuredReceiptFields | null
+} => {
+  const stub = extractDocumentStub({
+    kind: "purchase_receipt",
+    image_url: input.imageUrl,
+    declared_album_quantity: input.declaredAlbumQuantity,
+    primary_seller: input.primarySeller,
+  })
+
+  const structuredReceipt = mapStubResultToReceipt(stub)
+
+  return {
+    structuredReceipt,
+    job: {
+      id: `stub-receipt-${input.groupDealId}`,
+      job_type: "receipt_parse",
+      status: "completed",
+      confidence: structuredReceipt?.confidence ?? null,
+      needs_review: stub.requires_confirmation,
+    },
+  }
+}
+
+const buildTrackingStubJob = (input: {
+  groupDealId: string
+  imageUrl: string
+}): {
+  job: FlaskDocumentAiJob
+  invoiceRows: StructuredInvoiceRow[]
+} => {
+  const stub = extractDocumentStub({
+    kind: "shipping_invoice",
+    image_url: input.imageUrl,
+  })
+
+  const invoiceRows = mapStubResultToInvoiceRows(stub)
+
+  return {
+    invoiceRows,
+    job: {
+      id: `stub-tracking-${input.groupDealId}`,
+      job_type: "tracking_parse",
+      status: "completed",
+      confidence: invoiceRows[0]?.confidence ?? null,
+      needs_review: stub.requires_confirmation,
+    },
+  }
+}
 
 export const buildDocumentAiResultPayload = (input: {
   job: FlaskDocumentAiJob | null
@@ -541,51 +598,42 @@ export const processGroupDealReceiptParse = async (
   let job: FlaskDocumentAiJob | null = null
   let structuredReceipt: StructuredReceiptFields | null = null
   let source: "flask" | "stub" = "stub"
+  const declaredAlbumQuantity =
+    metadata.declared_album_quantity != null
+      ? Number(metadata.declared_album_quantity)
+      : Number(deal.target_quantity ?? 0)
+  const primarySeller =
+    metadata.primary_seller != null ? String(metadata.primary_seller) : null
 
   try {
-    if (isDocumentAiEnabled()) {
+    assertDocumentAiBffConfigured()
+
+    if (shouldUseDocumentAiStub()) {
+      const stubResult = buildReceiptStubJob({
+        groupDealId: input.groupDealId,
+        imageUrl,
+        declaredAlbumQuantity,
+        primarySeller,
+      })
+
+      job = stubResult.job
+      structuredReceipt = stubResult.structuredReceipt
+      source = "stub"
+    } else {
       const response = await parseReceiptDocumentWithFlask({
         partner_group_deal_id: input.groupDealId,
         input_url: buildPublicStaticUrl(imageUrl),
         input_base64: input.imageBase64,
         input_file_name: input.filename,
         input_payload_json: {
-          declared_album_quantity:
-            metadata.declared_album_quantity != null
-              ? Number(metadata.declared_album_quantity)
-              : Number(deal.target_quantity ?? 0),
-          primary_seller:
-            metadata.primary_seller != null
-              ? String(metadata.primary_seller)
-              : null,
+          declared_album_quantity: declaredAlbumQuantity,
+          primary_seller: primarySeller,
         },
       })
 
       job = response.job
       structuredReceipt = mapFlaskExtractToStructuredReceipt(job)
       source = "flask"
-    } else {
-      const stub = extractDocumentStub({
-        kind: "purchase_receipt",
-        image_url: imageUrl,
-        declared_album_quantity:
-          metadata.declared_album_quantity != null
-            ? Number(metadata.declared_album_quantity)
-            : Number(deal.target_quantity ?? 0),
-        primary_seller:
-          metadata.primary_seller != null
-            ? String(metadata.primary_seller)
-            : null,
-      })
-
-      structuredReceipt = mapStubResultToReceipt(stub)
-      job = {
-        id: `stub-receipt-${input.groupDealId}`,
-        job_type: "receipt_parse",
-        status: "completed",
-        confidence: structuredReceipt?.confidence ?? null,
-        needs_review: stub.requires_confirmation,
-      }
     }
   } catch (error) {
     await groupBuyingService.updateGroupDeals({
@@ -703,7 +751,18 @@ export const processGroupDealTrackingParse = async (
   let source: "flask" | "stub" = "stub"
 
   try {
-    if (isDocumentAiEnabled()) {
+    assertDocumentAiBffConfigured()
+
+    if (shouldUseDocumentAiStub()) {
+      const stubResult = buildTrackingStubJob({
+        groupDealId: input.groupDealId,
+        imageUrl,
+      })
+
+      job = stubResult.job
+      invoiceRows = stubResult.invoiceRows
+      source = "stub"
+    } else {
       const response = await parseTrackingDocumentWithFlask({
         partner_group_deal_id: input.groupDealId,
         input_url: buildPublicStaticUrl(imageUrl),
@@ -714,20 +773,6 @@ export const processGroupDealTrackingParse = async (
       job = response.job
       invoiceRows = mapFlaskExtractToInvoiceRows(job)
       source = "flask"
-    } else {
-      const stub = extractDocumentStub({
-        kind: "shipping_invoice",
-        image_url: imageUrl,
-      })
-
-      invoiceRows = mapStubResultToInvoiceRows(stub)
-      job = {
-        id: `stub-tracking-${input.groupDealId}`,
-        job_type: "tracking_parse",
-        status: "completed",
-        confidence: invoiceRows[0]?.confidence ?? null,
-        needs_review: stub.requires_confirmation,
-      }
     }
   } catch (error) {
     await groupBuyingService.updateGroupDeals({

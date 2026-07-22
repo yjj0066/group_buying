@@ -6,7 +6,7 @@ import {
   addSavedPaymentMethod,
   createTossBillingSession,
   deleteSavedPaymentMethod,
-} from "@lib/data/account-group-deals"
+} from "@lib/data/account-group-deals-actions"
 import { useDictionary } from "@i18n/provider"
 import { Badge, Button, Input, Label, Text } from "@modules/common/components/ui"
 import StripeSetupForm from "@modules/account/components/stripe-setup-form"

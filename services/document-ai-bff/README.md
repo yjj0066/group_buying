@@ -44,3 +44,23 @@ python scripts/test_receipt_extract.py C:\path\to\receipt.png
 | `UPSTAGE_API_KEY` | Upstage Console API Key |
 | `HYBRID_SHARED_SECRET` | Medusa `HYBRID_API_SHARED_SECRET` 와 동일 |
 | `UPSTAGE_RECEIPT_MODE` | `custom-schema` (앱 주문 캡처) 또는 `receipt-extraction` (종이 영수증) |
+
+## Render 배포
+
+1. Render에서 **New Web Service** → 같은 GitHub repo 연결
+2. **Root Directory:** `services/document-ai-bff`
+3. **Runtime:** Docker (repo의 `Dockerfile` 사용)
+4. **Environment:**
+   - `UPSTAGE_API_KEY` — Upstage Console Secret Key
+   - `HYBRID_SHARED_SECRET` — Medusa `HYBRID_API_SHARED_SECRET` 와 **동일한 값**
+   - `UPSTAGE_RECEIPT_MODE=custom-schema`
+   - `UPSTAGE_TIMEOUT_SEC=90`
+5. 배포 URL 확인 (예: `https://document-ai-bff-xxxx.onrender.com`)
+6. Medusa 백엔드(Render)에 설정:
+   - `DOCUMENT_AI_ENABLED=true`
+   - `HYBRID_API_URL=https://document-ai-bff-xxxx.onrender.com`
+   - `HYBRID_API_SHARED_SECRET=<4번과 동일>`
+   - `MEDUSA_BACKEND_URL=https://your-medusa.onrender.com`
+7. Medusa 백엔드 **Manual Deploy** 후 총대 영수증 업로드 테스트
+
+헬스체크: `GET https://document-ai-bff-xxxx.onrender.com/health` → `"upstage_configured": true`
