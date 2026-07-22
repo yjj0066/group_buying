@@ -71,9 +71,24 @@ const buildS3Client = () => {
   return new S3Client(config)
 }
 
+const resolvePublicObjectKey = (objectKey: string): string => {
+  const bucket = process.env.S3_BUCKET?.trim()
+  let key = objectKey.replace(/^\/+/, "")
+
+  if (
+    process.env.S3_FORCE_PATH_STYLE === "true" &&
+    bucket &&
+    !key.startsWith(`${bucket}/`)
+  ) {
+    key = `${bucket}/${key}`
+  }
+
+  return key
+}
+
 export const buildPublicObjectUrl = (objectKey: string): string => {
   const rawBase = process.env.S3_FILE_URL!.trim().replace(/\/$/, "")
-  const key = objectKey.replace(/^\/+/, "")
+  const key = resolvePublicObjectKey(objectKey)
 
   try {
     const parsed = new URL(rawBase)
