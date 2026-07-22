@@ -1,6 +1,6 @@
 # Medusa backend (monorepo)
 FROM node:20-alpine AS base
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 
 FROM base AS deps
@@ -15,15 +15,13 @@ COPY . .
 WORKDIR /app/apps/backend
 RUN pnpm run build
 
-FROM base AS runner
+# Medusa production output lives in .medusa/server (see Medusa deploy docs)
+FROM node:20-alpine AS runner
 ENV NODE_ENV=production
-WORKDIR /app/apps/backend
+WORKDIR /app/server
 
-COPY --from=builder /app/apps/backend/.medusa ./.medusa
-COPY --from=builder /app/apps/backend/medusa-config.ts ./
-COPY --from=builder /app/apps/backend/package.json ./
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/apps/backend/node_modules ./node_modules
+COPY --from=builder /app/apps/backend/.medusa/server ./
+RUN npm install --omit=dev
 
 EXPOSE 9000
-CMD ["pnpm", "start"]
+CMD ["sh", "-c", "npm run predeploy && npm run start"]
