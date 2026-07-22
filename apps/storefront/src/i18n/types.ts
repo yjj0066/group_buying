@@ -52,9 +52,9 @@ export type Dictionary = {
       cta: string
       featuredCta: string
       liveParticipants: string
-      weeklyPopularTitle: string
-      summaryExpectedPrice: string
-      summaryAchievementRate: string
+      visualAlt: string
+      visualEyebrow: string
+      visualCaption: string
     }
     ticker: {
       joined: string
