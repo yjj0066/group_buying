@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" fill="none">
+  <rect width="800" height="800" fill="#EDE9FE"/>
+  <path d="M280 220 L400 180 L520 220 L560 320 L480 340 L480 520 L320 520 L320 340 L240 320 Z" fill="#6B46E5" opacity="0.4"/>
+  <path d="M340 220 L400 200 L460 220 L440 300 L360 300 Z" fill="#6B46E5" opacity="0.6"/>
+  <rect x="360" y="340" width="80" height="180" rx="8" fill="#6B46E5" opacity="0.35"/>
+  <text x="400" y="640" text-anchor="middle" font-family="system-ui, sans-serif" font-size="48" font-weight="600" fill="#6B46E5">Clothing</text>
+</svg>

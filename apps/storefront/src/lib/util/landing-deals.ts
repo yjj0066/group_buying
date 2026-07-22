@@ -8,18 +8,12 @@ import type {
 } from "types/landing-deal"
 
 const CATEGORY_IMAGES: Record<LandingDealCategory, string> = {
-  albums:
-    "https://images.unsplash.com/photo-1619983081563-430f6360275f?w=800&h=800&fit=crop",
-  lightsticks:
-    "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=800&fit=crop",
-  photocards:
-    "https://images.unsplash.com/photo-1571330737116-fde987fa9327?w=800&h=800&fit=crop",
-  dolls:
-    "https://images.unsplash.com/photo-1511379938546-c1f69419868d?w=800&h=800&fit=crop",
-  clothing:
-    "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=800&fit=crop",
-  accessories:
-    "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=800&h=800&fit=crop",
+  albums: "/images/placeholders/albums.svg",
+  lightsticks: "/images/placeholders/lightsticks.svg",
+  photocards: "/images/placeholders/photocards.svg",
+  dolls: "/images/placeholders/dolls.svg",
+  clothing: "/images/placeholders/clothing.svg",
+  accessories: "/images/placeholders/accessories.svg",
 }
 
 const resolveCategory = (
