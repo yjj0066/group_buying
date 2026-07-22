@@ -50,23 +50,27 @@ const SellerPurchaseView = ({ deal }: SellerPurchaseViewProps) => {
     return deal.deal_price * (deal.target_quantity || deal.current_participants || 0)
   }, [deal])
 
-  const isAutoVerified =
+  const isVerified =
     result?.group_deal.purchase_receipt_status === "verified" ||
-    result?.document_ai.status === "parsed"
+    result?.document_ai.validation?.passed === true
 
-  const isFailed = result?.document_ai.status === "failed"
-  const canProceed = Boolean(result && (isAutoVerified || hasReviewedAnalysis))
+  const isFailed =
+    result?.document_ai.status === "failed" && !isVerified
+
+  const canProceed = Boolean(
+    result && (isVerified || hasReviewedAnalysis)
+  )
 
   useEffect(() => {
     setHasReviewedAnalysis(false)
-  }, [result?.document_ai.job_id])
+  }, [result?.document_ai.job_id, result?.document_ai.status])
 
   const handlePrimaryAction = () => {
     if (!result) {
       return
     }
 
-    if (isFailed) {
+    if (isFailed && !hasReviewedAnalysis && !isVerified) {
       router.push(gbAppRoutes.sellerPurchaseFailed(countryCode, deal.id))
       return
     }
@@ -82,7 +86,7 @@ const SellerPurchaseView = ({ deal }: SellerPurchaseViewProps) => {
       ?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
-  const buttonLabel = isFailed
+  const buttonLabel = isFailed && !hasReviewedAnalysis && !isVerified
     ? labels.failedButton
     : canProceed
       ? labels.proceedButton

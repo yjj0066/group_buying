@@ -13,6 +13,7 @@ import {
 import {
   PostStoreCreateGroupDeal,
   PostStoreMeGroupDealDocumentParse,
+  PostStoreMeGroupDealReceiptConfirm,
   PostStoreMeGroupDealSettlement,
   PostStoreMeGroupDealShippingComplete,
 } from "./group-deals/validators"
@@ -59,6 +60,11 @@ export const storeMeRoutesMiddlewares: MiddlewareRoute[] = [
       sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
     },
     middlewares: [validateAndTransformBody(PostStoreMeGroupDealDocumentParse)],
+  },
+  {
+    matcher: "/store/me/group-deals/:id/receipt/confirm",
+    method: "POST",
+    middlewares: [validateAndTransformBody(PostStoreMeGroupDealReceiptConfirm)],
   },
   {
     matcher: "/store/me/group-deals/:id/shipping/complete",

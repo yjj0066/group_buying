@@ -63,6 +63,18 @@ export type PostStoreMeGroupDealShippingCompleteType = z.infer<
   typeof PostStoreMeGroupDealShippingComplete
 >
 
+export const PostStoreMeGroupDealReceiptConfirm = z.object({
+  order_number: z.string().min(1),
+  seller: z.string().optional().nullable(),
+  ordered_at: z.string().optional().nullable(),
+  album_quantity: z.number().int().positive(),
+  total_amount: z.number().positive().optional().nullable(),
+})
+
+export type PostStoreMeGroupDealReceiptConfirmType = z.infer<
+  typeof PostStoreMeGroupDealReceiptConfirm
+>
+
 export const PostStoreMeGroupDealSettlement = z.object({
   bank_code: z.string().min(1),
   bank_name: z.string().min(1),
