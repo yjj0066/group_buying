@@ -11,6 +11,7 @@ import {
 } from "../../../../types/group-buying"
 import { GROUP_BUYING_MODULE } from "../../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../../modules/group-buying/service"
+import { saveGroupDealCoverImage } from "../../../../utils/group-deal-leader-ops"
 import { calculateLeaderDepositAmount } from "../../../../utils/group-deal-leader-deposit"
 import { generateLeaderDepositVirtualAccount } from "../../../../utils/virtual-account"
 import { serializeAccountGroupDeal } from "../../../../utils/group-deal-account"
@@ -73,6 +74,8 @@ export const POST = async (
     member_seats,
     idol_group,
     goods_type,
+    image_base64,
+    image_filename,
     ...dealInput
   } = body
 
@@ -130,11 +133,22 @@ export const POST = async (
     currency_code: body.currency_code,
   })
 
+  let imageUrl: string | null = null
+
+  if (image_base64) {
+    imageUrl = saveGroupDealCoverImage({
+      groupDealId: dealId,
+      imageBase64: image_base64,
+      filename: image_filename,
+    })
+  }
+
   await groupBuyingService.updateGroupDeals({
     id: dealId,
     metadata: {
       ...metadata,
       leader_deposit_virtual_account: leaderDepositVirtualAccount,
+      ...(imageUrl ? { image_url: imageUrl } : {}),
     },
   })
 

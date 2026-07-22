@@ -91,11 +91,25 @@ export const saveGroupDealReceiptImage = (input: {
   })
 }
 
+export const saveGroupDealCoverImage = (input: {
+  groupDealId: string
+  imageBase64: string
+  filename?: string
+}): string => {
+  return saveGroupDealDocumentImage({
+    groupDealId: input.groupDealId,
+    imageBase64: input.imageBase64,
+    filename: input.filename,
+    folder: "deal-images",
+    prefix: "cover",
+  })
+}
+
 export const saveGroupDealDocumentImage = (input: {
   groupDealId: string
   imageBase64: string
   filename?: string
-  folder: "receipts" | "tracking"
+  folder: "receipts" | "tracking" | "deal-images"
   prefix: string
 }): string => {
   const match = input.imageBase64.match(

@@ -52,9 +52,17 @@ export async function loadLeaderCreateWizardDraftFromAccount(): Promise<LeaderCr
   return normalizeDraft(raw as Partial<LeaderCreateDraft>)
 }
 
+const stripDraftImageForAccountSync = (
+  draft: LeaderCreateDraft
+): LeaderCreateDraft => ({
+  ...draft,
+  productImageDataUrl: null,
+})
+
 export async function saveLeaderCreateWizardDraftToAccount(
   draft: LeaderCreateDraft
 ): Promise<void> {
+  const draftForAccount = stripDraftImageForAccountSync(draft)
   const headers = await getAuthHeaders()
 
   if (!("authorization" in headers) || !headers.authorization) {
@@ -72,7 +80,7 @@ export async function saveLeaderCreateWizardDraftToAccount(
       string,
       unknown
     >),
-    [METADATA_KEY]: draft,
+    [METADATA_KEY]: draftForAccount,
   }
 
   await sdk.store.customer

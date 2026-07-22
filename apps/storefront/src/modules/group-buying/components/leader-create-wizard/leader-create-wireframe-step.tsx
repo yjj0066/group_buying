@@ -1,11 +1,16 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
+import { useEffect, useMemo, useState, type ChangeEvent } from "react"
 import { useParams, useRouter } from "next/navigation"
 
 import { useDictionary } from "@i18n/provider"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import { convertToLocale } from "@lib/util/money"
+import {
+  assertDocumentUploadSize,
+  readFileAsDataUrl,
+} from "@lib/util/file-to-data-url"
 import {
   loadLeaderCreateWizardDraftFromAccount,
   saveLeaderCreateWizardDraftToAccount,
@@ -77,6 +82,8 @@ export const LeaderCreateWireframeStep = ({
 
   const [draft, setDraft] = useState<LeaderCreateDraft>(() => loadLeaderCreateDraft())
   const [error, setError] = useState<string | null>(null)
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null)
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -212,6 +219,41 @@ export const LeaderCreateWireframeStep = ({
     })
   }
 
+  const handleProductPhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+
+    if (!file) {
+      return
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoUploadError("이미지 파일만 업로드할 수 있습니다.")
+      return
+    }
+
+    setPhotoUploadError(null)
+    setIsPhotoUploading(true)
+
+    try {
+      assertDocumentUploadSize(file)
+      const dataUrl = await readFileAsDataUrl(file)
+
+      patch({
+        productImageDataUrl: dataUrl,
+        productImageFileName: file.name,
+      })
+    } catch (uploadError) {
+      setPhotoUploadError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "사진 업로드에 실패했습니다."
+      )
+    } finally {
+      setIsPhotoUploading(false)
+    }
+  }
+
   const renderBasicStep = () => (
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-xs text-[#6B7280]">
@@ -249,10 +291,35 @@ export const LeaderCreateWireframeStep = ({
         data-testid="leader-create-title"
       />
 
-      <label className="flex h-24 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#D1D5DB] bg-[#F9FAFB] text-sm text-[#9CA3AF]">
-        <span>{w.photoUploadLabel}</span>
-        <input type="file" accept="image/*" className="sr-only" />
+      <label className="relative flex min-h-24 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#D1D5DB] bg-[#F9FAFB] text-sm text-[#9CA3AF]">
+        {draft.productImageDataUrl ? (
+          <>
+            <Image
+              src={draft.productImageDataUrl}
+              alt={draft.productImageFileName ?? w.photoUploadLabel}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 480px"
+              unoptimized
+            />
+            <span className="relative z-10 rounded-full bg-black/50 px-3 py-1 text-xs text-white">
+              {draft.productImageFileName ?? w.photoUploadLabel}
+            </span>
+          </>
+        ) : (
+          <span>{isPhotoUploading ? "업로드 중..." : w.photoUploadLabel}</span>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          disabled={isPhotoUploading}
+          onChange={handleProductPhotoChange}
+          data-testid="leader-create-product-photo"
+        />
       </label>
+
+      {photoUploadError && <BbAlert variant="warn">{photoUploadError}</BbAlert>}
 
       <input
         className="bb-input w-full"
