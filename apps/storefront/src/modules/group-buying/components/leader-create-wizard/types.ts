@@ -23,6 +23,8 @@ export type LeaderCreateDraft = {
   goodsType: string
   title: string
   primarySeller: string
+  productImageDataUrl?: string | null
+  productImageFileName?: string | null
   recruitmentDeadline: string
   expectedShipDate: string
   expectedShippingFee: string
@@ -71,6 +73,8 @@ export const createEmptyDraft = (): LeaderCreateDraft => ({
   goodsType: "",
   title: "",
   primarySeller: "",
+  productImageDataUrl: null,
+  productImageFileName: null,
   recruitmentDeadline: "",
   expectedShipDate: "",
   expectedShippingFee: "",

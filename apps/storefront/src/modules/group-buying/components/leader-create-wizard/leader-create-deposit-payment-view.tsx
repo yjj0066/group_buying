@@ -496,6 +496,12 @@ export const LeaderCreateDepositPaymentView = () => {
           })),
           idol_group: draft.idolGroup,
           goods_type: draft.goodsType,
+          ...(draft.productImageDataUrl
+            ? {
+                image_base64: draft.productImageDataUrl,
+                image_filename: draft.productImageFileName ?? undefined,
+              }
+            : {}),
         })
 
         dealId = accountDeal.id
