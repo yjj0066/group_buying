@@ -6,7 +6,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { formatMessage, useDictionary } from "@i18n/provider"
 import type { LandingDealCard } from "types/landing-deal"
 
-const HERO_VISUAL_IMAGE = "/images/landing/hero-concert-venue.svg"
+const HERO_VISUAL_IMAGE = "/images/landing/hero-concert-venue.jpg"
 
 type LandingHeroProps = {
   featured: LandingDealCard
@@ -59,18 +59,22 @@ const LandingHero = ({ featured, liveCount }: LandingHeroProps) => {
           </div>
         </div>
 
-        <div className="relative w-full overflow-hidden rounded-3xl border border-white/70 bg-neutral-900 shadow-2xl shadow-brand-purple/20">
+        <div className="relative w-full overflow-hidden rounded-3xl border border-white/70 bg-neutral-900 shadow-2xl shadow-brand-purple/20 ring-1 ring-white/10">
           <div className="relative aspect-[4/5] w-full">
             <Image
               src={HERO_VISUAL_IMAGE}
               alt={t.landing.hero.visualAlt}
               fill
               priority
-              className="object-cover"
+              className="object-cover object-[center_35%] scale-105"
               sizes="(max-width: 768px) 100vw, 50vw"
             />
             <div
-              className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-neutral-950/10 to-transparent"
+              className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-neutral-950/25 to-neutral-900/10"
+              aria-hidden
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-br from-brand-purple/25 via-transparent to-brand-pink/20 mix-blend-soft-light"
               aria-hidden
             />
             <div className="absolute inset-x-0 bottom-0 p-6 small:p-8">
