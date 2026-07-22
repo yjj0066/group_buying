@@ -71,9 +71,24 @@ const buildS3Client = () => {
   return new S3Client(config)
 }
 
-const buildPublicObjectUrl = (objectKey: string): string => {
+const resolvePublicObjectKey = (objectKey: string): string => {
+  const bucket = process.env.S3_BUCKET?.trim()
+  let key = objectKey.replace(/^\/+/, "")
+
+  if (
+    process.env.S3_FORCE_PATH_STYLE === "true" &&
+    bucket &&
+    !key.startsWith(`${bucket}/`)
+  ) {
+    key = `${bucket}/${key}`
+  }
+
+  return key
+}
+
+export const buildPublicObjectUrl = (objectKey: string): string => {
   const rawBase = process.env.S3_FILE_URL!.trim().replace(/\/$/, "")
-  const key = objectKey.replace(/^\/+/, "")
+  const key = resolvePublicObjectKey(objectKey)
 
   try {
     const parsed = new URL(rawBase)
@@ -94,6 +109,48 @@ const buildPublicObjectUrl = (objectKey: string): string => {
   }
 }
 
+const isCloudflareR2Configured = (): boolean => {
+  const fileUrl = process.env.S3_FILE_URL?.toLowerCase() ?? ""
+  const endpoint = process.env.S3_ENDPOINT?.toLowerCase() ?? ""
+
+  return (
+    fileUrl.includes("r2.dev") || endpoint.includes("r2.cloudflarestorage.com")
+  )
+}
+
+const assertObjectStorageClientConfig = () => {
+  if (!process.env.S3_ACCESS_KEY_ID?.trim() || !process.env.S3_SECRET_ACCESS_KEY?.trim()) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "Object storage is configured but S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY are required"
+    )
+  }
+
+  if (isCloudflareR2Configured() && !process.env.S3_ENDPOINT?.trim()) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "Cloudflare R2 is configured but S3_ENDPOINT is missing (use https://<account_id>.r2.cloudflarestorage.com)"
+    )
+  }
+}
+
+const verifyPublicObjectUrl = async (publicUrl: string) => {
+  try {
+    const response = await fetch(publicUrl, { method: "HEAD" })
+
+    if (response.ok) {
+      return
+    }
+  } catch {
+    // Fall through to the error below.
+  }
+
+  throw new MedusaError(
+    MedusaError.Types.INVALID_DATA,
+    `Uploaded media is not publicly accessible at ${publicUrl}. Confirm the object exists in bucket ${process.env.S3_BUCKET}, S3_PREFIX matches the public R2 domain, and public access is enabled for S3_FILE_URL.`
+  )
+}
+
 const uploadObjectStorageGroupDealMedia = async (input: {
   buffer: Buffer
   folder: GroupDealMediaFolder
@@ -102,6 +159,8 @@ const uploadObjectStorageGroupDealMedia = async (input: {
   extension: string
   contentType: string
 }): Promise<string> => {
+  assertObjectStorageClientConfig()
+
   const prefix = (process.env.S3_PREFIX ?? "group-buying").replace(/^\/|\/$/g, "")
   const storedFilename = buildStoredFilename(
     input.filename,
@@ -110,6 +169,7 @@ const uploadObjectStorageGroupDealMedia = async (input: {
   )
   const key = `${prefix}/${input.folder}/${storedFilename}`
   const client = buildS3Client()
+  const useObjectAcl = process.env.S3_ACL !== "false"
 
   await client.send(
     new PutObjectCommand({
@@ -117,13 +177,15 @@ const uploadObjectStorageGroupDealMedia = async (input: {
       Key: key,
       Body: input.buffer,
       ContentType: input.contentType,
-      ...(process.env.S3_ACL === "false"
-        ? {}
-        : { ACL: "public-read" }),
+      ...(useObjectAcl ? { ACL: "public-read" } : {}),
     })
   )
 
-  return buildPublicObjectUrl(key)
+  const publicUrl = buildPublicObjectUrl(key)
+
+  await verifyPublicObjectUrl(publicUrl)
+
+  return publicUrl
 }
 
 export const storeGroupDealMedia = async (input: {
