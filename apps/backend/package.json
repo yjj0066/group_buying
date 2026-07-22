@@ -33,6 +33,7 @@
     "test:smoke:unit": "node ./scripts/run-jest-unit.mjs src/utils/__tests__/group-buying-smoke.spec.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.948.0",
     "@medusajs/admin-sdk": "2.17.2",
     "@medusajs/admin-shared": "2.17.2",
     "@medusajs/caching": "2.17.2",

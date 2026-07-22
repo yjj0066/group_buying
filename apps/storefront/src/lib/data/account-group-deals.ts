@@ -212,6 +212,8 @@ export type CreateHostedGroupDealInput = {
   member_seats?: Array<{ label: string; price: number; quantity: number }>
   idol_group?: string | null
   goods_type?: string | null
+  image_base64?: string
+  image_filename?: string | null
 }
 
 export async function createHostedGroupDeal(input: CreateHostedGroupDealInput) {
@@ -232,6 +234,12 @@ export async function createHostedGroupDeal(input: CreateHostedGroupDealInput) {
     primary_seller: primarySeller ? primarySeller : null,
     declared_album_quantity:
       input.declared_album_quantity ?? input.target_quantity,
+    ...(input.image_base64
+      ? {
+          image_base64: input.image_base64,
+          image_filename: input.image_filename ?? null,
+        }
+      : {}),
   }
 
   if (hasAuth) {

@@ -34,7 +34,7 @@ export const POST = async (
     null
 
   if (body.image_base64) {
-    receiptUrl = saveGroupDealReceiptImage({
+    receiptUrl = await saveGroupDealReceiptImage({
       groupDealId: req.params.id,
       imageBase64: body.image_base64,
       filename: body.filename,
