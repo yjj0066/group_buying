@@ -3,6 +3,10 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { GROUP_BUYING_MODULE } from "../../../modules/group-buying"
 import GroupBuyingModuleService from "../../../modules/group-buying/service"
 import {
+  loadHostedDealsByLeaderCustomerIds,
+  resolveStoreGroupDealLeaderContext,
+} from "../../../utils/enrich-store-group-deal-leader-context"
+import {
   isStoreVisibleGroupDeal,
   isStoreVisibleGroupDealStatus,
   serializeStoreGroupDeal,
@@ -23,14 +27,46 @@ const loadVisibleStoreGroupDeals = async (
     return isStoreVisibleGroupDealStatus(String(deal.status ?? ""))
   })
 
+  const leaderCustomerIds = [
+    ...new Set(
+      visibleDeals
+        .map((deal) =>
+          deal.leader_customer_id != null
+            ? String(deal.leader_customer_id)
+            : null
+        )
+        .filter((value): value is string => Boolean(value))
+    ),
+  ]
+
+  const hostedDealsByLeaderId = await loadHostedDealsByLeaderCustomerIds(
+    groupBuyingService,
+    leaderCustomerIds
+  )
+
   return Promise.all(
     visibleDeals.map(async (deal) => {
       const options = await groupBuyingService.listDealOptions(String(deal.id))
-
-      return serializeStoreGroupDeal(
-        deal as unknown as Record<string, unknown>,
+      const dealRecord = deal as unknown as Record<string, unknown>
+      const serialized = serializeStoreGroupDeal(
+        dealRecord,
         options as unknown as Record<string, unknown>[]
       )
+      const leaderCustomerId = serialized.leader_customer_id
+      const leaderContext = resolveStoreGroupDealLeaderContext(
+        {
+          id: String(deal.id),
+          leader_customer_id: leaderCustomerId,
+        },
+        leaderCustomerId
+          ? hostedDealsByLeaderId.get(leaderCustomerId) ?? []
+          : []
+      )
+
+      return {
+        ...serialized,
+        ...leaderContext,
+      }
     })
   )
 }
