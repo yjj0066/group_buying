@@ -79,12 +79,16 @@ export const getBackendPublicUrl = (): string | null => {
   return base.replace(/\/$/, "")
 }
 
-export const buildPublicStaticUrl = (relativePath: string): string | null => {
+export const buildPublicStaticUrl = (pathOrUrl: string): string | null => {
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+    return pathOrUrl
+  }
+
   const base = getBackendPublicUrl()
 
-  if (!base || !relativePath.startsWith("/")) {
+  if (!base || !pathOrUrl.startsWith("/")) {
     return null
   }
 
-  return `${base}${relativePath}`
+  return `${base}${pathOrUrl}`
 }

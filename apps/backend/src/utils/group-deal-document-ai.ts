@@ -530,7 +530,7 @@ export const processGroupDealReceiptParse = async (
     receipt_ai_status: GroupDealDocumentAiStatus.PROCESSING,
   })
 
-  const imageUrl = saveGroupDealDocumentImage({
+  const imageUrl = await saveGroupDealDocumentImage({
     groupDealId: input.groupDealId,
     imageBase64: input.imageBase64,
     filename: input.filename,
@@ -690,7 +690,7 @@ export const processGroupDealTrackingParse = async (
     tracking_ai_status: GroupDealDocumentAiStatus.PROCESSING,
   })
 
-  const imageUrl = saveGroupDealDocumentImage({
+  const imageUrl = await saveGroupDealDocumentImage({
     groupDealId: input.groupDealId,
     imageBase64: input.imageBase64,
     filename: input.filename,

@@ -136,7 +136,7 @@ export const POST = async (
   let imageUrl: string | null = null
 
   if (image_base64) {
-    imageUrl = saveGroupDealCoverImage({
+    imageUrl = await saveGroupDealCoverImage({
       groupDealId: dealId,
       imageBase64: image_base64,
       filename: image_filename,

@@ -1,6 +1,3 @@
-import fs from "fs"
-import path from "path"
-
 import { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
 
@@ -18,6 +15,10 @@ import {
   GROUP_DEAL_DOCUMENT_MAX_UPLOAD_BYTES,
 } from "./group-deal-document-upload"
 import { buildPurchaseReceiptShippingBlockMessage } from "./purchase-receipt-guard-message"
+import {
+  parseGroupDealMediaBase64,
+  storeGroupDealMedia,
+} from "./group-deal-media-storage"
 
 const PAID_PARTICIPANT_STATUSES = [
   GroupDealParticipantStatus.CONFIRMED,
@@ -77,11 +78,11 @@ const formatRecipientName = (address?: AddressLike | null): string | null => {
   return name || null
 }
 
-export const saveGroupDealReceiptImage = (input: {
+export const saveGroupDealReceiptImage = async (input: {
   groupDealId: string
   imageBase64: string
   filename?: string
-}): string => {
+}): Promise<string> => {
   return saveGroupDealDocumentImage({
     groupDealId: input.groupDealId,
     imageBase64: input.imageBase64,
@@ -91,11 +92,11 @@ export const saveGroupDealReceiptImage = (input: {
   })
 }
 
-export const saveGroupDealCoverImage = (input: {
+export const saveGroupDealCoverImage = async (input: {
   groupDealId: string
   imageBase64: string
   filename?: string
-}): string => {
+}): Promise<string> => {
   return saveGroupDealDocumentImage({
     groupDealId: input.groupDealId,
     imageBase64: input.imageBase64,
@@ -105,30 +106,14 @@ export const saveGroupDealCoverImage = (input: {
   })
 }
 
-export const saveGroupDealDocumentImage = (input: {
+export const saveGroupDealDocumentImage = async (input: {
   groupDealId: string
   imageBase64: string
   filename?: string
   folder: "receipts" | "tracking" | "deal-images"
   prefix: string
-}): string => {
-  const match = input.imageBase64.match(
-    /^data:((?:image\/[a-zA-Z0-9.+-]+)|application\/pdf);base64,(.+)$/
-  )
-
-  if (!match) {
-    throw new MedusaError(
-      MedusaError.Types.INVALID_DATA,
-      "image_base64 must be a data URL (data:image/... or data:application/pdf;base64,...)"
-    )
-  }
-
-  const mimeType = match[1]
-  const extension =
-    mimeType === "application/pdf"
-      ? "pdf"
-      : mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg"
-  const buffer = Buffer.from(match[2], "base64")
+}): Promise<string> => {
+  const { mimeType, buffer } = parseGroupDealMediaBase64(input.imageBase64)
 
   if (buffer.length > GROUP_DEAL_DOCUMENT_MAX_UPLOAD_BYTES) {
     throw new MedusaError(
@@ -137,22 +122,13 @@ export const saveGroupDealDocumentImage = (input: {
     )
   }
 
-  const documentsDir = path.join(process.cwd(), "static", input.folder)
-
-  if (!fs.existsSync(documentsDir)) {
-    fs.mkdirSync(documentsDir, { recursive: true })
-  }
-
-  const rawSafeName =
-    input.filename?.replace(/[^a-zA-Z0-9._-]/g, "_") ??
-    `${input.prefix}_${input.groupDealId}`
-  const safeName = rawSafeName.replace(/\.(png|jpe?g|gif|webp|pdf)$/i, "")
-  const storedFilename = `${Date.now()}-${safeName}.${extension}`
-  const absolutePath = path.join(documentsDir, storedFilename)
-
-  fs.writeFileSync(absolutePath, buffer)
-
-  return `/static/${input.folder}/${storedFilename}`
+  return storeGroupDealMedia({
+    buffer,
+    folder: input.folder,
+    filename: input.filename,
+    fallbackName: `${input.prefix}_${input.groupDealId}`,
+    mimeType,
+  })
 }
 
 export const assertAllParticipantsPaid = async (
