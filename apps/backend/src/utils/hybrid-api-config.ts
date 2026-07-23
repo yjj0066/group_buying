@@ -90,14 +90,19 @@ export const assertDocumentAiBffConfigured = (): void => {
     return
   }
 
-  if (isDocumentAiEnabled()) {
-    return
+  if (!isDocumentAiEnabled()) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "Document AI BFF (Upstage) is required. Deploy services/document-ai-bff, set DOCUMENT_AI_ENABLED=true, HYBRID_API_URL to the BFF HTTPS URL, and HYBRID_API_SHARED_SECRET on the Medusa backend."
+    )
   }
 
-  throw new MedusaError(
-    MedusaError.Types.INVALID_DATA,
-    "Document AI BFF (Upstage) is required. Deploy services/document-ai-bff, set DOCUMENT_AI_ENABLED=true, HYBRID_API_URL to the BFF HTTPS URL, and HYBRID_API_SHARED_SECRET on the Medusa backend."
-  )
+  if (process.env.NODE_ENV === "production" && !getBackendPublicUrl()) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "MEDUSA_BACKEND_URL must be set on the Medusa backend in production so Document AI BFF can fetch uploaded documents via input_url (avoids oversized base64 payloads to Upstage)."
+    )
+  }
 }
 
 export const getDocumentAiRequestTimeoutMs = (): number => {
@@ -107,7 +112,8 @@ export const getDocumentAiRequestTimeoutMs = (): number => {
     return override
   }
 
-  return process.env.NODE_ENV === "development" ? 180000 : 120000
+  // Upstage receipt/tracking can take ~90s; include BFF fetch + cold start headroom.
+  return process.env.NODE_ENV === "development" ? 180000 : 180000
 }
 
 export const getDocumentAiAutoVerifyConfidence = (): number => {

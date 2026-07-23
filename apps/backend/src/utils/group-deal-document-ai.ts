@@ -28,7 +28,6 @@ import {
 } from "./group-deal-leader-ops"
 import {
   assertDocumentAiBffConfigured,
-  buildPublicStaticUrl,
   getDocumentAiAutoVerifyConfidence,
   shouldUseDocumentAiStub,
 } from "./hybrid-api-config"
@@ -632,8 +631,7 @@ export const processGroupDealReceiptParse = async (
     } else {
       const response = await parseReceiptDocumentWithFlask({
         partner_group_deal_id: input.groupDealId,
-        input_url: buildPublicStaticUrl(imageUrl),
-        input_base64: input.imageBase64,
+        stored_document_url: imageUrl,
         input_file_name: input.filename,
         input_payload_json: {
           declared_album_quantity: declaredAlbumQuantity,
@@ -876,8 +874,7 @@ export const processGroupDealTrackingParse = async (
     } else {
       const response = await parseTrackingDocumentWithFlask({
         partner_group_deal_id: input.groupDealId,
-        input_url: buildPublicStaticUrl(imageUrl),
-        input_base64: input.imageBase64,
+        stored_document_url: imageUrl,
         input_file_name: input.filename,
       })
 
