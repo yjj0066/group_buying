@@ -46,6 +46,10 @@ import {
 import { Text } from "@modules/common/components/ui"
 
 import { formatGroupDealValidationError } from "@lib/util/format-group-deal-validation-error"
+import {
+  assertDataUrlUploadSize,
+  isUploadSizeRelatedError,
+} from "@lib/util/upload-size-error"
 import { convertToLocale } from "@lib/util/money"
 import { mapAccountGroupDealToGroupDeal } from "@lib/util/map-account-group-deal"
 import { cacheHostedDeal } from "@lib/data/hosted-deal-session-cache"
@@ -458,6 +462,10 @@ export const LeaderCreateDepositPaymentView = () => {
     setConfirmError(null)
 
     try {
+      if (draft.productImageDataUrl) {
+        assertDataUrlUploadSize(draft.productImageDataUrl)
+      }
+
       let dealId = draft.createdDealId
       let accountDeal: import("types/account-group-deals").AccountGroupDeal | null =
         null
@@ -741,7 +749,9 @@ export const LeaderCreateDepositPaymentView = () => {
         {confirmError ? (
           <BbAlert variant="error">
             <p className="whitespace-pre-line">{confirmError}</p>
-            <p className="mt-2 font-normal">{w.depositValidationBackHint}</p>
+            {!isUploadSizeRelatedError(confirmError) ? (
+              <p className="mt-2 font-normal">{w.depositValidationBackHint}</p>
+            ) : null}
           </BbAlert>
         ) : null}
 

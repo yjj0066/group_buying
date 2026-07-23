@@ -73,9 +73,27 @@ export const loadLeaderCreateDraft = (): LeaderCreateDraft => {
 
 
 export const saveLeaderCreateDraft = (draft: LeaderCreateDraft) => {
+  try {
+    sessionStorage.setItem(
+      LEADER_CREATE_WIZARD_STORAGE_KEY,
+      JSON.stringify(draft)
+    )
+  } catch (error) {
+    const name =
+      error instanceof DOMException
+        ? error.name
+        : error instanceof Error
+          ? error.name
+          : ""
 
-  sessionStorage.setItem(LEADER_CREATE_WIZARD_STORAGE_KEY, JSON.stringify(draft))
+    if (name === "QuotaExceededError") {
+      throw new Error(
+        "브라우저 저장 공간 한도를 초과했습니다. 사진 크기를 줄이거나 사진을 제거한 뒤 다시 시도해 주세요."
+      )
+    }
 
+    throw error
+  }
 }
 
 

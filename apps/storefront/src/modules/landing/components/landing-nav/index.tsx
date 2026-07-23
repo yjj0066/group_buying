@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { PokaCatchLogo } from "@modules/common/components/pokacatch-logo"
 import { useDictionary } from "@i18n/provider"
 
 type LandingNavProps = {
@@ -33,22 +34,16 @@ const LandingNav = ({ isLoggedIn = false }: LandingNavProps) => {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 small:px-6">
-        <LocalizedClientLink href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-pink to-brand-purple text-sm font-black text-white">
-            GB
-          </span>
-          <span className="text-lg font-bold tracking-tight text-neutral-900">
-            {t.landing.brandName}
-          </span>
+        <LocalizedClientLink href="/" className="flex items-center">
+          <PokaCatchLogo
+            variant="light"
+            wordmark={t.landing.brandName}
+            iconSize={36}
+            wordmarkClassName="text-lg"
+          />
         </LocalizedClientLink>
 
         <nav className="hidden items-center gap-8 medium:flex">
-          <LocalizedClientLink
-            href="/store"
-            className="text-sm font-medium text-neutral-600 transition-colors hover:text-brand-pink"
-          >
-            {t.nav.allProducts}
-          </LocalizedClientLink>
           <LocalizedClientLink
             href="/group-buying"
             className="text-sm font-medium text-neutral-600 transition-colors hover:text-brand-pink"

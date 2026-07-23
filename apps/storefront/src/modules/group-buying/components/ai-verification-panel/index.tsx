@@ -22,8 +22,11 @@ import {
 } from "@lib/util/group-deal-document-ai-presenter"
 import { useDictionary } from "@i18n/provider"
 import { formatMessage } from "@i18n/format-message"
+import ReceiptStructuredEntryForm from "@modules/group-buying/components/receipt-structured-entry-form"
 import {
+  BbAlert,
   BbBadge,
+  BbButton,
   BbCard,
   BbKeyValue,
   BbSectionHeader,
@@ -53,12 +56,40 @@ const AiVerificationPanel = ({
   onComplete,
 }: AiVerificationPanelProps) => {
   const t = useDictionary()
+  const purchaseLabels = t.gbApp.leaderPurchase
   const [fileName, setFileName] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [result, setResult] = useState<GroupDealDocumentParseResponse | null>(
     null
   )
+  const [isEditingManual, setIsEditingManual] = useState(false)
+
+  const showManualEntryByDefault = useMemo(() => {
+    if (mode !== "purchase") {
+      return false
+    }
+
+    if (errorMessage) {
+      return true
+    }
+
+    if (!result) {
+      return false
+    }
+
+    return (
+      result.document_ai.status === "failed" ||
+      result.document_ai.status === "needs_review" ||
+      result.document_ai.needs_review
+    )
+  }, [errorMessage, mode, result])
+
+  const showManualEntryForm =
+    mode === "purchase" && (showManualEntryByDefault || isEditingManual)
+
+  const showReadOnlyResults =
+    Boolean(result) && !showManualEntryForm && mode === "purchase"
 
   const extractFields = useMemo(() => {
     if (!result) {
@@ -133,6 +164,15 @@ const AiVerificationPanel = ({
         })
       : null
 
+  const handleManualConfirmSuccess = (
+    nextResult: GroupDealDocumentParseResponse
+  ) => {
+    setResult(nextResult)
+    setErrorMessage(null)
+    setIsEditingManual(false)
+    onComplete?.(nextResult)
+  }
+
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
 
@@ -144,6 +184,7 @@ const AiVerificationPanel = ({
     setFileName(file.name)
     setIsUploading(true)
     setResult(null)
+    setIsEditingManual(false)
 
     try {
       assertDocumentUploadSize(file)
@@ -153,18 +194,18 @@ const AiVerificationPanel = ({
         filename: file.name,
       }
 
-      const result =
+      const parseResult =
         mode === "purchase"
           ? await parseGroupDealReceiptDocument(groupDealId, payload)
           : await parseGroupDealTrackingDocument(groupDealId, payload)
 
-      if (!result.ok) {
-        setErrorMessage(result.error)
+      if (!parseResult.ok) {
+        setErrorMessage(parseResult.error)
         return
       }
 
-      setResult(result.data)
-      onComplete?.(result.data)
+      setResult(parseResult.data)
+      onComplete?.(parseResult.data)
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -175,6 +216,114 @@ const AiVerificationPanel = ({
       setIsUploading(false)
       event.target.value = ""
     }
+  }
+
+  const renderPurchaseResults = () => {
+    if (!result) {
+      return null
+    }
+
+    return (
+      <>
+        <div className="flex flex-wrap items-center gap-2">
+          {statusLabel && (
+            <BbBadge
+              variant={
+                result.document_ai.status === "parsed" &&
+                !result.document_ai.needs_review
+                  ? "success"
+                  : result.document_ai.status === "failed"
+                    ? "warning"
+                    : "default"
+              }
+            >
+              {statusLabel}
+            </BbBadge>
+          )}
+          {confidenceLabel && (
+            <Text className="text-xs font-medium text-[var(--bb-mute)]">
+              {confidenceLabel}
+            </Text>
+          )}
+        </div>
+
+        {showReadOnlyResults && extractFields.length > 0 ? (
+          <section>
+            <div className="flex items-center justify-between gap-3">
+              <BbSectionHeader
+                title={t.groupBuying.receiptStructuredTitle}
+                className="mb-0"
+              />
+              <BbButton
+                type="button"
+                variant="secondary"
+                onClick={() => setIsEditingManual(true)}
+              >
+                {purchaseLabels.editExtractedButton}
+              </BbButton>
+            </div>
+            <BbCard padding="md" className="mt-3">
+              <BbKeyValue
+                items={extractFields.map((field) => ({
+                  label: field.label,
+                  value: field.value,
+                }))}
+              />
+            </BbCard>
+          </section>
+        ) : null}
+
+        {showReadOnlyResults && verificationItems.length > 0 ? (
+          <section>
+            <BbSectionHeader title={t.groupBuying.documentAiVerificationTitle} />
+            <div className="mt-3 flex flex-col gap-2">
+              {verificationItems.map((item) => (
+                <BbCard
+                  key={item.id}
+                  padding="md"
+                  className="flex items-start justify-between gap-3"
+                >
+                  <div>
+                    <Text className="text-sm font-bold text-[var(--bb-ink)]">
+                      {item.label}
+                    </Text>
+                    {item.detail && (
+                      <Text className="mt-0.5 text-xs text-[var(--bb-mute)]">
+                        {item.detail}
+                      </Text>
+                    )}
+                  </div>
+                  <BbBadge variant={statusBadge[item.status].variant}>
+                    {statusBadge[item.status].label}
+                  </BbBadge>
+                </BbCard>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {showReadOnlyResults &&
+        extractFields.some((field) => field.masked) ? (
+          <section>
+            <BbSectionHeader title={t.groupBuying.documentAiMaskingPreview} />
+            <BbCard tone="trust" padding="md" className="mt-3">
+              <div className="grid gap-2 font-mono text-xs">
+                {extractFields
+                  .filter((field) => field.masked)
+                  .map((field) => (
+                    <p key={field.label} className="text-[var(--bb-mute)]">
+                      <span className="font-semibold text-[var(--bb-ink)]">
+                        {field.label}:
+                      </span>{" "}
+                      {field.masked}
+                    </p>
+                  ))}
+              </div>
+            </BbCard>
+          </section>
+        ) : null}
+      </>
+    )
   }
 
   return (
@@ -205,55 +354,21 @@ const AiVerificationPanel = ({
       </label>
 
       {errorMessage && (
-        <BbCard padding="md" tone="warning">
-          <Text className="text-sm font-medium text-[var(--bb-ink)]">
-            {errorMessage}
-          </Text>
-        </BbCard>
+        <BbAlert variant="warn" className="whitespace-pre-wrap">
+          {errorMessage}
+        </BbAlert>
       )}
 
-      {result && (
-        <div
-          id={resultsSectionId}
-          className="flex flex-col gap-5 scroll-mt-24"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            {statusLabel && (
-              <BbBadge
-                variant={
-                  result.document_ai.status === "parsed" &&
-                  !result.document_ai.needs_review
-                    ? "success"
-                    : result.document_ai.status === "failed"
-                      ? "warning"
-                      : "default"
-                }
-              >
-                {statusLabel}
-              </BbBadge>
-            )}
-            {confidenceLabel && (
-              <Text className="text-xs font-medium text-[var(--bb-mute)]">
-                {confidenceLabel}
-              </Text>
-            )}
-          </div>
-
-          {extractFields.length > 0 && (
-            <section>
-              <BbSectionHeader title={t.groupBuying.receiptStructuredTitle} />
-              <BbCard padding="md" className="mt-3">
-                <BbKeyValue
-                  items={extractFields.map((field) => ({
-                    label: field.label,
-                    value: field.value,
-                  }))}
-                />
-              </BbCard>
-            </section>
-          )}
-
-          {verificationItems.length > 0 && (
+      {showManualEntryForm ? (
+        <>
+          <ReceiptStructuredEntryForm
+            groupDealId={groupDealId}
+            initialStructured={result?.document_ai.structured_receipt}
+            onSuccess={handleManualConfirmSuccess}
+            showCancel={isEditingManual && !showManualEntryByDefault}
+            onCancel={() => setIsEditingManual(false)}
+          />
+          {result && verificationItems.length > 0 ? (
             <section>
               <BbSectionHeader title={t.groupBuying.documentAiVerificationTitle} />
               <div className="mt-3 flex flex-col gap-2">
@@ -280,58 +395,146 @@ const AiVerificationPanel = ({
                 ))}
               </div>
             </section>
-          )}
+          ) : null}
+        </>
+      ) : null}
 
-          {extractFields.some((field) => field.masked) && (
-            <section>
-              <BbSectionHeader title={t.groupBuying.documentAiMaskingPreview} />
-              <BbCard tone="trust" padding="md" className="mt-3">
-                <div className="grid gap-2 font-mono text-xs">
-                  {extractFields
-                    .filter((field) => field.masked)
-                    .map((field) => (
-                      <p key={field.label} className="text-[var(--bb-mute)]">
-                        <span className="font-semibold text-[var(--bb-ink)]">
-                          {field.label}:
-                        </span>{" "}
-                        {field.masked}
-                      </p>
+      {(result || mode === "shipping") && !showManualEntryForm ? (
+        <div
+          id={resultsSectionId}
+          className="flex flex-col gap-5 scroll-mt-24"
+        >
+          {mode === "purchase" ? (
+            renderPurchaseResults()
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                {statusLabel && (
+                  <BbBadge
+                    variant={
+                      result?.document_ai.status === "parsed" &&
+                      !result?.document_ai.needs_review
+                        ? "success"
+                        : result?.document_ai.status === "failed"
+                          ? "warning"
+                          : "default"
+                    }
+                  >
+                    {statusLabel}
+                  </BbBadge>
+                )}
+                {confidenceLabel && (
+                  <Text className="text-xs font-medium text-[var(--bb-mute)]">
+                    {confidenceLabel}
+                  </Text>
+                )}
+              </div>
+
+              {extractFields.length > 0 && (
+                <section>
+                  <BbSectionHeader title={t.groupBuying.receiptStructuredTitle} />
+                  <BbCard padding="md" className="mt-3">
+                    <BbKeyValue
+                      items={extractFields.map((field) => ({
+                        label: field.label,
+                        value: field.value,
+                      }))}
+                    />
+                  </BbCard>
+                </section>
+              )}
+
+              {verificationItems.length > 0 && (
+                <section>
+                  <BbSectionHeader
+                    title={t.groupBuying.documentAiVerificationTitle}
+                  />
+                  <div className="mt-3 flex flex-col gap-2">
+                    {verificationItems.map((item) => (
+                      <BbCard
+                        key={item.id}
+                        padding="md"
+                        className="flex items-start justify-between gap-3"
+                      >
+                        <div>
+                          <Text className="text-sm font-bold text-[var(--bb-ink)]">
+                            {item.label}
+                          </Text>
+                          {item.detail && (
+                            <Text className="mt-0.5 text-xs text-[var(--bb-mute)]">
+                              {item.detail}
+                            </Text>
+                          )}
+                        </div>
+                        <BbBadge variant={statusBadge[item.status].variant}>
+                          {statusBadge[item.status].label}
+                        </BbBadge>
+                      </BbCard>
                     ))}
-                </div>
-              </BbCard>
-            </section>
-          )}
+                  </div>
+                </section>
+              )}
 
-          {mode === "shipping" &&
-            (result.document_ai.invoice_rows?.length ?? 0) > 1 && (
-              <section>
-                <BbSectionHeader title="추출된 송장 행" />
-                <div className="mt-3 flex flex-col gap-2">
-                  {result.document_ai.invoice_rows?.map((row, index) => (
-                    <BbCard key={`${row.tracking_number ?? "row"}-${index}`} padding="md">
-                      <BbKeyValue
-                        items={[
-                          {
-                            label: t.groupBuying.documentAiFieldRecipient,
-                            value: row.recipient_name ?? "-",
-                          },
-                          {
-                            label: t.groupBuying.documentAiFieldCarrier,
-                            value: row.carrier ?? "-",
-                          },
-                          {
-                            label: t.groupBuying.documentAiFieldTrackingNumber,
-                            value: row.tracking_number ?? "-",
-                          },
-                        ]}
-                      />
-                    </BbCard>
-                  ))}
-                </div>
-              </section>
-            )}
+              {extractFields.some((field) => field.masked) && (
+                <section>
+                  <BbSectionHeader
+                    title={t.groupBuying.documentAiMaskingPreview}
+                  />
+                  <BbCard tone="trust" padding="md" className="mt-3">
+                    <div className="grid gap-2 font-mono text-xs">
+                      {extractFields
+                        .filter((field) => field.masked)
+                        .map((field) => (
+                          <p key={field.label} className="text-[var(--bb-mute)]">
+                            <span className="font-semibold text-[var(--bb-ink)]">
+                              {field.label}:
+                            </span>{" "}
+                            {field.masked}
+                          </p>
+                        ))}
+                    </div>
+                  </BbCard>
+                </section>
+              )}
+
+              {(result?.document_ai.invoice_rows?.length ?? 0) > 1 && (
+                <section>
+                  <BbSectionHeader title="추출된 송장 행" />
+                  <div className="mt-3 flex flex-col gap-2">
+                    {result?.document_ai.invoice_rows?.map((row, index) => (
+                      <BbCard
+                        key={`${row.tracking_number ?? "row"}-${index}`}
+                        padding="md"
+                      >
+                        <BbKeyValue
+                          items={[
+                            {
+                              label: t.groupBuying.documentAiFieldRecipient,
+                              value: row.recipient_name ?? "-",
+                            },
+                            {
+                              label: t.groupBuying.documentAiFieldCarrier,
+                              value: row.carrier ?? "-",
+                            },
+                            {
+                              label: t.groupBuying.documentAiFieldTrackingNumber,
+                              value: row.tracking_number ?? "-",
+                            },
+                          ]}
+                        />
+                      </BbCard>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
         </div>
-      )}
+      ) : null}
+
+      {mode === "purchase" && result && showManualEntryForm ? (
+        <div id={resultsSectionId} className="scroll-mt-24" />
+      ) : null}
     </div>
   )
 }

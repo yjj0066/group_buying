@@ -3,7 +3,7 @@ import { landingKo } from "./landing-shared"
 
 const dictionary: Dictionary = {
   nav: {
-    storeName: "BiasBuy",
+    storeName: "포카캐치",
     allProducts: "전체 상품",
     groupBuying: "공동구매",
     account: "계정",
@@ -482,7 +482,7 @@ const dictionary: Dictionary = {
     homeNewsBanner: "새로 열린 공구와 인기 마감 임박 공구를 확인해 보세요.",
     homeEmptyFavoriteVacancy: "{member} 빈자리 공구가 없습니다",
     auth: {
-      logo: "아이돌공구",
+      logo: "포카캐치",
       splashLoading: "로딩 중",
       emailPlaceholder: "이메일",
       passwordPlaceholder: "비밀번호 (8자 이상)",
@@ -554,6 +554,36 @@ const dictionary: Dictionary = {
       confirmAnalysisButton: "영수증 분석 결과 확인",
       proceedButton: "증빙 공개하고 다음 단계",
       failedButton: "검증 실패 · 소명 화면으로",
+      manualEntryTitle: "영수증 정보 수동 입력",
+      manualEntryHint:
+        "자동 인식에 실패했거나 값이 잘못된 경우 아래 항목을 직접 입력·수정한 뒤 저장해 주세요.",
+      editExtractedButton: "수정",
+      saveManualEntryButton: "영수증 정보 저장",
+      manualEntryRequiredError: "주문번호와 앨범 수량은 필수입니다.",
+      manualEntrySuccess: "영수증 정보가 저장되었습니다.",
+      manualEntrySubmitting: "저장 중…",
+      manualSellerPlaceholder: "판매처 이름",
+      manualOrderNumberPlaceholder: "주문번호",
+      manualAlbumQuantityPlaceholder: "구매 앨범 수량",
+      manualTotalAmountPlaceholder: "결제 총액 (원)",
+      manualAlbumQuantityError: "앨범 수량은 1 이상의 정수여야 합니다.",
+      manualTotalAmountError: "결제 총액은 1 이상이어야 합니다.",
+      cancelEditButton: "취소",
+    },
+    leaderPurchaseFailed: {
+      title: "영수증 검증 실패",
+      alertMessage:
+        "영수증 자동 검증에 실패했습니다. 영수증 증빙 화면에서 수동 입력으로 값을 수정하거나 영수증을 다시 업로드해 주세요.",
+      reasonSectionTitle: "실패 사유",
+      reasonHint:
+        "선언 앨범 수량·1차 판매처·결제 금액이 영수증과 일치하는지 확인해 주세요.",
+      manualEntryHint:
+        "영수증 증빙 화면으로 돌아가면 수동 입력 폼에서 주문번호·수량 등을 직접 입력할 수 있습니다.",
+      explanationPlaceholder: "소명 내용 (선택)",
+      retryUploadButton: "영수증 증빙 화면으로",
+      backToDashboardButton: "대시보드로 돌아가기",
+      submittedMessage:
+        "소명이 저장되었습니다. 영수증 증빙 화면에서 수동 입력 또는 재업로드를 진행해 주세요.",
     },
     leaderPurchaseProof: {
       title: "1차 구매 증빙",
@@ -1625,7 +1655,7 @@ const dictionary: Dictionary = {
     },
     meta: {
       loginTitle: "로그인",
-      loginDescription: "BiasBuy 계정에 로그인합니다.",
+      loginDescription: "포카캐치 계정에 로그인합니다.",
       verifyTitle: "이메일 인증",
       verifyDescription: "회원가입을 완료하려면 이메일을 인증해 주세요.",
       paymentMethodsTitle: "결제수단 관리",

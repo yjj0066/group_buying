@@ -1,0 +1,9 @@
+<svg width="160" height="32" viewBox="0 0 160 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ÏtêX">
+  <path d="M5.2 6.2L5.75 7.25L6.8 7.8L5.75 8.35L5.2 9.4L4.65 8.35L3.6 7.8L4.65 7.25L5.2 6.2Z" fill="#6C4EF6"/>
+  <path d="M18.75 7.25L24.85 5.15L24.85 11.35L18.75 13.45Z" fill="#FFFFFF" stroke="#6C4EF6" stroke-width="1.75" stroke-linejoin="round"/>
+  <path d="M18.75 9.35C20.4 9.85 22.2 10.55 24.85 11.35" stroke="#6C4EF6" stroke-width="1.15" stroke-linecap="round" opacity="0.45"/>
+  <rect x="7" y="9" width="15" height="20" rx="3.5" fill="#FFFFFF" stroke="#6C4EF6" stroke-width="1.75"/>
+  <rect x="9.5" y="12.25" width="10" height="11.5" rx="1.75" fill="#F0EDFF"/>
+  <path d="M26.4 14.1L26.78 14.72L27.4 15.1L26.78 15.48L26.4 16.1L26.02 15.48L25.4 15.1L26.02 14.72L26.4 14.1Z" fill="#6C4EF6"/>
+  <text x="38" y="22" fill="#111827" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="800" letter-spacing="-0.02em">ÏtêX</text>
+</svg>

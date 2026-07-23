@@ -107,6 +107,32 @@ export async function parseGroupDealTrackingDocument(
   )
 }
 
+export async function confirmGroupDealReceiptStructured(
+  dealId: string,
+  input: {
+    order_number: string
+    seller?: string | null
+    ordered_at?: string | null
+    album_quantity: number
+    total_amount?: number | null
+  }
+): Promise<GroupDealDocumentParseActionResult> {
+  return runDocumentAiAction(async () => {
+    const data = await authedFetch<GroupDealDocumentParseResponse>(
+      `/store/me/group-deals/${dealId}/receipt/confirm`,
+      {
+        method: "POST",
+        body: input,
+      }
+    )
+
+    const { revalidateTag } = await import("next/cache")
+    revalidateTag("group-deals")
+
+    return data
+  })
+}
+
 export async function retrieveGroupDealDocumentAiJob(
   dealId: string,
   jobId: string

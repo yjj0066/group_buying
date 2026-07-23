@@ -1,6 +1,7 @@
 "use client"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { PokaCatchLogo } from "@modules/common/components/pokacatch-logo"
 import GroupBuyingModeSwitcher from "@modules/group-buying/components/group-buying-mode-switcher"
 import { useGroupBuyingMode } from "@modules/group-buying/components/group-buying-mode-provider"
 import { useDictionary } from "@i18n/provider"
@@ -32,13 +33,13 @@ const GbWebNav = ({ isLoggedIn = false }: GbWebNavProps) => {
   return (
     <header className="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white">
       <div className="content-container flex h-16 items-center justify-between gap-6">
-        <LocalizedClientLink href="/" className="flex shrink-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#6B46E5] text-xs font-black text-white">
-            GB
-          </span>
-          <span className="text-lg font-bold tracking-tight text-[#111827]">
-            {t.landing.brandName}
-          </span>
+        <LocalizedClientLink href="/" className="flex shrink-0 items-center">
+          <PokaCatchLogo
+            variant="light"
+            wordmark={t.landing.brandName}
+            iconSize={36}
+            wordmarkClassName="text-lg"
+          />
         </LocalizedClientLink>
 
         <nav className="hidden flex-1 items-center justify-center gap-8 sm:flex">

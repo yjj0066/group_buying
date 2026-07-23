@@ -1,5 +1,7 @@
 import { FetchError } from "@medusajs/js-sdk"
 
+import { formatUploadSizeErrorMessage } from "@lib/util/upload-size-error"
+
 type MedusaError = {
   response?: {
     data: { message?: string } | string
@@ -87,6 +89,12 @@ const isPurchaseReceiptGuardMessage = (message: string): boolean =>
 const resolveFetchErrorMessage = (error: FetchError): string => {
   const bodyMessage = readFetchErrorBodyMessage(error)
   const message = bodyMessage || error.message || error.statusText || "Request failed"
+
+  const uploadSizeMessage = formatUploadSizeErrorMessage(message, error.status)
+
+  if (uploadSizeMessage) {
+    return uploadSizeMessage
+  }
 
   if (
     message === GENERIC_SERVER_ERROR ||

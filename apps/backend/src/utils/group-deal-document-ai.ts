@@ -41,6 +41,16 @@ export type GroupDealDocumentParseInput = {
   filename?: string
 }
 
+export type GroupDealReceiptConfirmInput = {
+  groupDealId: string
+  customerId: string
+  order_number: string
+  seller?: string | null
+  ordered_at?: string | null
+  album_quantity: number
+  total_amount?: number | null
+}
+
 export type GroupDealDocumentParseResult = {
   group_deal: ReturnType<typeof serializeAccountGroupDeal>
   document_ai: {
@@ -303,7 +313,7 @@ export const buildDocumentAiResultPayload = (input: {
   validation?: { passed: boolean; reasons: string[] }
   autoMatchedParticipantIds?: string[]
   reviewConflicts?: Array<Record<string, unknown>>
-  source: "flask" | "stub"
+  source: "flask" | "stub" | "manual"
 }) => ({
   source: input.source,
   job_id: input.job?.id ?? null,
@@ -636,6 +646,12 @@ export const processGroupDealReceiptParse = async (
       source = "flask"
     }
   } catch (error) {
+    await groupBuyingService.updatePurchaseReceipt({
+      group_deal_id: input.groupDealId,
+      receipt_url: imageUrl,
+      status: GroupDealReceiptStatus.UPLOADED,
+    })
+
     await groupBuyingService.updateGroupDeals({
       id: input.groupDealId,
       receipt_ai_status: GroupDealDocumentAiStatus.FAILED,
@@ -716,6 +732,101 @@ export const processGroupDealReceiptParse = async (
       job_id: job.id,
       status: aiStatus,
       confidence,
+      needs_review: aiStatus === GroupDealDocumentAiStatus.NEEDS_REVIEW,
+      structured_receipt: structuredReceipt,
+      validation,
+    },
+  }
+}
+
+export const processGroupDealReceiptConfirm = async (
+  scope: MedusaContainer,
+  input: GroupDealReceiptConfirmInput
+): Promise<GroupDealDocumentParseResult> => {
+  const groupBuyingService: GroupBuyingModuleService =
+    scope.resolve(GROUP_BUYING_MODULE)
+
+  const deal = await assertGroupDealLeader(
+    scope,
+    input.groupDealId,
+    input.customerId
+  )
+
+  if (!deal.purchase_receipt_url) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "Upload a receipt image before confirming receipt details"
+    )
+  }
+
+  const metadata = (deal.metadata as Record<string, unknown> | null) ?? {}
+  const declaredAlbumQuantity =
+    metadata.declared_album_quantity != null
+      ? Number(metadata.declared_album_quantity)
+      : Number(deal.target_quantity ?? 0)
+  const primarySeller =
+    metadata.primary_seller != null ? String(metadata.primary_seller) : null
+
+  const structuredReceipt: StructuredReceiptFields = {
+    seller: input.seller?.trim() ? input.seller.trim() : null,
+    order_number: input.order_number.trim(),
+    ordered_at: input.ordered_at?.trim() ? input.ordered_at.trim() : null,
+    album_quantity: input.album_quantity,
+    total_amount: input.total_amount ?? null,
+    confidence: 1,
+  }
+
+  const validation = validatePurchaseReceiptStub({
+    structured: structuredReceipt,
+    declared_album_quantity: declaredAlbumQuantity,
+    primary_seller: primarySeller,
+    all_participants_paid_at: null,
+  })
+
+  const aiStatus = validation.passed
+    ? GroupDealDocumentAiStatus.PARSED
+    : GroupDealDocumentAiStatus.NEEDS_REVIEW
+
+  const nextReceiptStatus = validation.passed
+    ? GroupDealReceiptStatus.VERIFIED
+    : GroupDealReceiptStatus.UPLOADED
+
+  const nextReportStage = validation.passed
+    ? GroupDealReportStage.SHIPPING
+    : GroupDealReportStage.RECEIPT_REVIEW
+
+  await groupBuyingService.updatePurchaseReceipt({
+    group_deal_id: input.groupDealId,
+    status: nextReceiptStatus,
+  })
+
+  await groupBuyingService.updateGroupDeals({
+    id: input.groupDealId,
+    receipt_ai_status: aiStatus,
+    receipt_ai_confidence: structuredReceipt.confidence,
+    receipt_ai_result: buildDocumentAiResultPayload({
+      job: null,
+      structuredReceipt,
+      validation,
+      source: "manual",
+    }),
+    report_stage: nextReportStage,
+    metadata: {
+      ...(deal.metadata ?? {}),
+      purchase_receipt_structured: structuredReceipt,
+    },
+  })
+
+  const updatedDeal = await groupBuyingService.retrieveGroupDeal(input.groupDealId)
+
+  return {
+    group_deal: serializeAccountGroupDeal(
+      updatedDeal as unknown as Record<string, unknown>
+    ),
+    document_ai: {
+      job_id: null,
+      status: aiStatus,
+      confidence: structuredReceipt.confidence,
       needs_review: aiStatus === GroupDealDocumentAiStatus.NEEDS_REVIEW,
       structured_receipt: structuredReceipt,
       validation,
