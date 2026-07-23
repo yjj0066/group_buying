@@ -115,7 +115,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    U2[참여자] -->|checkout| FE2[/checkout]
+    U2[참여자] -->|checkout| FE2["Checkout 페이지"]
     FE2 -->|placeOrder| SDK2[Medusa SDK]
     SDK2 --> BE3[group-deal-billing workflow]
     BE3 --> PG[Toss / Stripe]
