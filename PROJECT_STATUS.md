@@ -1,12 +1,13 @@
-# Group Buying Site — 프로젝트 상태
+# PokaCatch (포카캐치) — 프로젝트 상태
 
 > **목적:** `group-buying-site` 모노레포의 구현 현황, 최근 변경, 운영 요건, 로드맵을 한 문서에서 파악하기 위한 상태 문서  
-> **최종 갱신:** 2026-07-21  
-> **관련 문서:** [README.md](./README.md) · [CODE_ANALYSIS.md](./CODE_ANALYSIS.md) · [docs/](./docs/)
+> **최종 갱신:** 2026-07-23  
+> **관련 문서:** [README.md](./README.md) · [CODE_ANALYSIS.md](./CODE_ANALYSIS.md) · [docs/MODULES.md](./docs/MODULES.md)
 
 | 문서 | 설명 |
 |------|------|
 | [README.md](./README.md) | 빠른 시작, URL 맵, 트러블슈팅 |
+| [docs/MODULES.md](./docs/MODULES.md) | Upstage·BFF·Medusa·Storefront 모듈 아키텍처 |
 | [CODE_ANALYSIS.md](./CODE_ANALYSIS.md) | 코드 레이어·패턴·파일 맵 |
 | [docs/api-contract-for-merge.md](./docs/api-contract-for-merge.md) | Store API 계약 |
 | [docs/domain-contract-for-merge.md](./docs/domain-contract-for-merge.md) | 도메인 계약 |
@@ -16,9 +17,10 @@
 
 ## 프로젝트 스냅샷
 
-**BiasBuy / 아이돌 공구몰** — Medusa v2 커스텀 모듈 위에 K-POP 굿즈 공동구매(Group Deal) 도메인을 구현한 3-tier 모노레포.
+**PokaCatch (포카캐치)** — Medusa v2 커스텀 모듈 위에 K-POP 굿즈 공동구매(Group Deal) 도메인을 구현한 3-tier 모노레포.
 
-**GitHub:** https://github.com/yjj0066/group_buying
+**GitHub:** https://github.com/yjj0066/group_buying  
+**활성 브랜치:** `fix/render-build-typescript` (최근 커밋: 영수증 수동 입력, 브랜드명 변경, MODULES.md)
 
 ### 기술 스택
 
@@ -29,20 +31,20 @@
 | 스토어프론트 | Next.js App Router + Turbopack | **15.5.18** |
 | UI | React | 19.0.5 |
 | DB | PostgreSQL | 15+ |
-| Document AI BFF | Flask + Upstage (선택) | Python 3.11+ |
+| Document AI BFF | Flask + Upstage | Python 3.11+ |
 | Node.js | — | >= 20 |
 
 ### 저장소 구조 (요약)
 
 ```
-group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + services/document-ai-bff (선택 Flask BFF)
+group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + services/document-ai-bff (Flask BFF)
 ```
 
-| 서비스 | 로컬 URL |
-|--------|----------|
-| 스토어프론트 | http://localhost:8000 |
-| Medusa API / Admin | http://localhost:9000 / http://localhost:9000/app |
-| Document AI BFF (선택) | http://localhost:5000 |
+| 서비스 | 로컬 | 프로덕션 |
+|--------|------|----------|
+| 스토어프론트 | http://localhost:8000 | https://group-buying-storefront-black.vercel.app |
+| Medusa API / Admin | http://localhost:9000 / `/app` | https://group-buying-2hlq.onrender.com |
+| Document AI BFF | http://localhost:5000 | https://group-buying-document-ai-bff.onrender.com |
 
 ---
 
@@ -82,7 +84,7 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 | 1. 개설 | — | [완료] | 총대 공구 생성, 날짜 ISO 정규화, validator |
 | 2. 보증금 | — | [완료] | `deposit_status=deposited` — 목록 노출·신뢰 배지 |
 | 3. 모집 | — | [완료] | OPEN / MINIMUM_REACHED, 참여자 apply |
-| 4. 구매증빙 | PURC | [완료] | `/seller/deals/{id}/purchase-proof`, `receipt/parse` |
+| 4. 구매증빙 | PURC | [완료] | `/seller/deals/{id}/purchase-proof`, `receipt/parse` + **수동 입력·수정** |
 | 5. 개봉/배분 | — | [완료] | `/seller/deals/{id}/opening` |
 | 6. 송장 업로드·매칭 | SHIP | [완료] | `/seller/deals/{id}/shipping`, `tracking/parse` |
 | 7. 발송 확정 | SHIP | [완료] | `POST .../shipping/complete`, `processGroupDealShippingComplete()` |
@@ -94,19 +96,26 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 
 | 항목 | 상태 | 비고 |
 |------|------|------|
-| 영수증 AI 파싱 (PURC) | [완료] | `receipt/parse`, BFF/스텁, `ai-verification-panel/` |
+| 영수증 AI 파싱 (PURC) | [완료] | `receipt/parse`, Upstage BFF/스텁, `ai-verification-panel/` |
+| **영수증 수동 입력 (PURC)** | [완료] | AI 실패 시 `receipt-structured-entry-form/` — 5필드 직접 입력 |
+| **영수증 추출값 수정 (PURC)** | [완료] | 파싱 성공 후 **수정** 토글 → `receipt/confirm` 재검증 |
+| `receipt/confirm` API | [완료] | `processGroupDealReceiptConfirm()`, source=`manual`, confidence=1 |
+| AI 실패 시 영수증 URL 보존 | [완료] | parse catch에서 `updatePurchaseReceipt(UPLOADED)` — 수동 confirm 전제 |
 | 송장 AI 파싱 (SHIP) | [완료] | `tracking/parse`, 참여자 매칭 테이블 자동 채움 |
+| 송장 수동 운송장 입력 | [완료] | `leader-shipping-prep-view/` — 참여자별 carrier/tracking 수동 패치 |
 | 매칭 사유 컬럼 | [완료] | `ShippingMatchReviewReason`, `matchReviewReasons` i18n |
-| Flask BFF (Upstage OCR) | [완료] | `services/document-ai-bff`, `HYBRID_API_URL` + shared secret |
+| Flask BFF (Upstage OCR) | [완료] | `services/document-ai-bff` — **Upstage 키는 BFF에만** |
 | 스텁 모드 (AI OFF) | [완료] | `DOCUMENT_AI_ENABLED=false` → `document-extract-stub` |
 | 업로드 용량 (32mb) | [완료] | `next.config.js` Server Actions, 백엔드 별도 상한 |
-| 자동 매칭 조건 | [완료] | 송장번호·택배사 + 이름(동명이인 시 주소) + confidence ≥ 0.85 |
+| 자동 매칭 조건 (SHIP) | [완료] | 송장번호·택배사 + 이름(동명이인 시 주소) + confidence ≥ 0.85 |
+| 4항목 영수증 검증 | [완료] | `validatePurchaseReceiptStub` — 주문번호, 판매처, 구매일, 수량 |
 
 ### Admin Verify Receipt 게이트
 
 | 항목 | 상태 | 비고 |
 |------|------|------|
 | Admin UI — Verify Receipt | [완료] | `src/admin/routes/group-deals/` |
+| PURC 자동 검증 통과 | [완료] | AI/수동 confirm 후 `purchase_receipt_status=verified` |
 | 송장 파싱 전 게이트 | [완료] | `assertPurchaseReceiptVerified()` |
 | 발송 확정 전 게이트 | [완료] | `purchase_receipt_status === verified` 아니면 NOT_ALLOWED |
 | 한국어 가드 메시지 | [완료] | `purchase-receipt-guard-message.ts` |
@@ -140,6 +149,16 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 | RPTG → `/my/hosted` 백 링크 | [완료] | `report/page.tsx` |
 | localStorage runtime overrides | [부분] | `applyHostedDealRuntimeOverrides()` — dev/demo용 |
 
+### 브랜드 · i18n (6개 로케일)
+
+| 항목 | 상태 | 비고 |
+|------|------|------|
+| 사이트명 **포카캐치** | [완료] | 2026-07-23 — ko: 포카캐치, en: PokaCatch |
+| nav / landing / auth logo | [완료] | `storeName`, `brandName`, `gbApp.auth.logo` |
+| ko / en / es / ru / zh / ja | [완료] | GB App·PURC·SHIP·STLM 라벨 포함 |
+| PURC 수동 입력 i18n | [완료] | `manualEntryTitle`, `editExtractedButton`, `saveManualEntryButton` 등 |
+| locale 헤더·사전 폴백 | [완료] | 언어 전환 하드 네비게이션 |
+
 ### 오류 처리 (`{ ok, error }`, `resolveMedusaErrorMessage`)
 
 | 항목 | 상태 | 비고 |
@@ -148,16 +167,10 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 | `resolveMedusaErrorMessage()` | [완료] | FetchError duck-typing, 한국어 contextual fallback |
 | 백엔드 `respondWithRouteError` | [완료] | MedusaError / ZodError → HTTP JSON |
 | `An unknown error occurred.` 치환 | [완료] | Document AI 503 / generic server 안내 |
+| `Document AI BFF is required` | [완료] | Medusa env 미설정 시 명확한 메시지 |
 | Vitest — `medusa-error.spec.ts` | [완료] | — |
+| `receipt/parse` route 공통 handler | [부분] | route-local duplicate — `route-error.ts` 미적용 |
 | `tracking/parse` route 공통 handler | [부분] | route-local duplicate — `route-error.ts` 미적용 |
-
-### i18n (6개 로케일)
-
-| 항목 | 상태 | 비고 |
-|------|------|------|
-| ko / en / es / ru / zh / ja | [완료] | GB App·SHIP·STLM 라벨 포함 |
-| locale 헤더·사전 폴백 | [완료] | 언어 전환 하드 네비게이션 |
-| 2026-07-21 추가 키 | [완료] | `matchReviewReasons.*`, `stageClosed`, Document AI 오류 문구 |
 
 ### Cron / Maintenance
 
@@ -174,12 +187,27 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 | Flask product search (`/store?q=`) | [부분] | 기본 OFF (`lib/config/flask-search.ts`) |
 | 카트 checkout PG 경로 | [부분] | `(checkout)` route group, VA 경로가 v3 기본 |
 | `(main)` vs `(gb-app)` 이중 라우트 | [부분] | 목록·상세·마이 경로 병행 |
+| `leader-purchase-proof-form` (와이어프레임) | [미사용] | sessionStorage 전용 구버전 — PURC는 `seller-purchase-view` 경로 |
+
+---
+
+## 2026-07-23 변경 이력
+
+- **브랜드명 변경:** BiasBuy / 아이돌공구 → **PokaCatch (포카캐치)** — i18n 전역 (`ko.ts`, `en.ts`, `landing-shared.ts` 등)
+- **영수증 수동 입력 (PURC):** AI 인식 실패 시 판매처·주문번호·구매일·수량·금액 직접 입력 (`receipt-structured-entry-form/`)
+- **영수증 추출값 수정:** AI 파싱 후 **수정** 버튼 → 값 교정 → `POST .../receipt/confirm` 저장
+- **`processGroupDealReceiptConfirm`:** 수동/수정 structured receipt 저장, `validatePurchaseReceiptStub` 재실행, `receipt_ai_status` 갱신
+- **parse 실패 시 영수증 URL 보존:** AI 오류 catch에서 `purchase_receipt_url` 저장 — confirm API 전제 조건
+- **`buildDocumentAiResultPayload`:** source 타입에 `"manual"` 추가
+- **PURC-F 화면:** i18n 적용 + 수동 입력 안내 (purchase-proof로 복귀)
+- **문서:** [docs/MODULES.md](./docs/MODULES.md) — Upstage·BFF·PURC/SHIP 아키텍처 다이어그램
+- **README 갱신:** 프로덕션 URL, receipt/confirm API, PURC 체크리스트
 
 ---
 
 ## 2026-07-21 변경 이력
 
-- **Document AI — 영수증 (PURC):** BFF/스텁 파싱, Admin 검증 게이트 (`receipt/parse`, `group-deal-document-ai.ts`)
+- **Document AI — 영수증 (PURC):** BFF/Upstage 파싱, Admin 검증 게이트 (`receipt/parse`, `group-deal-document-ai.ts`)
 - **Document AI — 송장 (SHIP):** 송장 OCR → 참여자 매칭 테이블 자동 채움 (`tracking/parse`, `leader-tracking-match.ts`, `leader-shipping-prep-view/`)
 - **매칭 사유 컬럼:** `확인 필요` 행에 미매칭·택배사 누락 등 사유 표시 (`ShippingMatchReviewReason`, `matchReviewReasons` i18n)
 - **발송 확정:** workflow 제거, `processGroupDealShippingComplete()` route에서 직접 호출 + try/catch
@@ -190,6 +218,7 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 - **영수증 미검증 가드:** 송장/발송 차단 한국어 메시지 (`purchase-receipt-guard-message.ts`)
 - **업로드 용량:** Server Actions 32mb, 백엔드 문서 업로드 상한 별도 설정
 - **3프로세스 dev:** `DOCUMENT_AI_ENABLED=true` 시 BFF 별도 실행 필요 문서화
+- **MODULES.md (초안):** Upstage 연동 모듈 맵
 
 ---
 
@@ -211,13 +240,16 @@ group-buying-site/  →  apps/backend (Medusa) + apps/storefront (Next.js) + ser
 | **VA webhook stub (CHKO-02)** | 가상계좌 입금 자동 확인 미구현. `deposit-confirm`은 수동/스텁. 실제 은행 webhook adapter 필요 |
 | **레거시 bank accounts** | 예전 등록 계좌는 `account_number_masked`만 저장. STLM 「이 계좌 사용하기」 시 재저장 안내 |
 | **이중 route tree** | `(main)/group-buying` + `(gb-app)/deals` 병행. 목록·상세·마이 URL이 두 벌 존재 |
+| **`/kr/home` 서버 오류** | 일부 auth 상태에서 digest `894050647` — nav 「공동구매 앱 참여자」 진입 시 발생 가능 |
+| **Render Medusa deploy** | health check 중 `medusa db:migrate` + start 시 Deploying 단계 hang 가능 — Cancel + Manual Deploy |
 | **localStorage runtime overrides** | `applyHostedDealRuntimeOverrides()` — hosted deal stage가 client storage에 의존 (dev/demo) |
 | **Document AI 3프로세스** | `DOCUMENT_AI_ENABLED=true` 시 Medusa + Next.js + Flask BFF 동시 기동 필요 |
-| **Vitest path alias** | 일부 storefront 테스트에서 path alias 해석 이슈 가능 (`leader-tracking-match.spec.ts` 등) |
+| **primary_seller 미설정** | 공구 metadata `primary_seller` 없으면 PURC 판매처 검증(SELLER_MISMATCH) 실패 가능 |
 | **CHKO-03** | 5분 payment hold가 client-only — 서버 사이드 seat hold 미구현 |
 | **MTRS Reviews** | metadata 기반 — 정규화된 Review 엔티티 없음 |
 | **정산 계좌 보안** | 전체 `account_number`가 customer metadata에 저장 — production at-rest 암호화 정책 검토 필요 |
-| **소셜 로그인** | [미구현] |
+| **소셜 로그인** | [미구현] — 카카오/Apple UI만 준비 |
+| **입금 예금주 법인명** | UI 브랜드는 포카캐치, VA 예금주는 `(주)아이돌공구` — 법인명과 서비스명 분리 유지 |
 
 ---
 
@@ -239,6 +271,17 @@ python -m app.main        # :5000
 
 루트 `pnpm dev`는 백엔드 + 스토어프론트만 기동한다.
 
+### 프로덕션 Document AI env (Render Medusa)
+
+```env
+DOCUMENT_AI_ENABLED=true
+HYBRID_API_URL=https://group-buying-document-ai-bff.onrender.com
+HYBRID_API_SHARED_SECRET=<BFF HYBRID_SHARED_SECRET과 동일>
+MEDUSA_BACKEND_URL=https://group-buying-2hlq.onrender.com
+```
+
+BFF env: `UPSTAGE_API_KEY`, `HYBRID_SHARED_SECRET` (Medusa와 일치)
+
 ### DB 초기 설정 (최초 1회)
 
 ```bash
@@ -255,19 +298,26 @@ pnpm seed:group-buy-demo-product
 
 1. Admin → **Settings → Publishable API Keys** → Create
 2. `pk_` 토큰 → Sales Channel 연결
-3. `apps/storefront/.env.local` 반영 후 **스토어프론트 재시작**
+3. `apps/storefront/.env.local` (또는 Vercel env) 반영 후 **스토어프론트 재시작**
 
-### 총대 SHIP 단계 전 Verify Receipt
+### PURC (구매 증빙) 체크리스트
 
-1. Admin → Group Deals → Leader Management → **Verify Receipt** 완료
+1. 공구 metadata에 `primary_seller`, `declared_album_quantity` 설정 확인
+2. PURC 화면에서 영수증 업로드 → AI 파싱 또는 **수동 입력/수정**
+3. 4항목 검증 통과 → `purchase_receipt_status=verified` (또는 Admin Verify Receipt)
+4. 이후 SHIP(송장) 단계 진행
+
+### SHIP 단계 전 Verify Receipt
+
+1. PURC 자동/수동 검증 통과 **또는** Admin → **Verify Receipt** 완료
 2. `purchase_receipt_status === verified` 확인
-3. 이후 송장 파싱·발송 확정 진행 가능
+3. 송장 파싱·발송 확정 진행
 
 ### 환경 변수 요약
 
 | 파일 | 필수 변수 | 선택 변수 |
 |------|-----------|-----------|
-| `apps/backend/.env` | `DATABASE_URL`, `STORE_CORS`, `JWT_SECRET`, `COOKIE_SECRET` | `DOCUMENT_AI_ENABLED`, `HYBRID_API_URL`, `HYBRID_API_SHARED_SECRET` |
+| `apps/backend/.env` | `DATABASE_URL`, `STORE_CORS`, `JWT_SECRET`, `COOKIE_SECRET` | `DOCUMENT_AI_ENABLED`, `HYBRID_API_URL`, `HYBRID_API_SHARED_SECRET`, `MEDUSA_BACKEND_URL` |
 | `apps/storefront/.env.local` | `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_MEDUSA_BACKEND_URL` | `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_BASE_URL` |
 | `services/document-ai-bff/.env` | — (AI 사용 시) | `UPSTAGE_API_KEY`, `HYBRID_API_SHARED_SECRET` |
 
@@ -276,10 +326,14 @@ pnpm seed:group-buy-demo-product
 | 증상 | 확인 사항 |
 |------|-----------|
 | `An unknown error occurred.` | 백엔드 로그, Verify Receipt, BFF 실행, 스토어프론트 재시작 |
-| 송장 업로드 실패 | BFF `:5000`, `DOCUMENT_AI_ENABLED`, shared secret 일치 |
-| 발송 확정 실패 | Admin Verify Receipt, 모든 참여자 운송장 입력 |
+| `Document AI BFF is required` | Medusa `DOCUMENT_AI_ENABLED`, `HYBRID_API_URL`, shared secret |
+| 영수증 AI 실패 | PURC **수동 입력** 또는 **수정** → `receipt/confirm` |
+| SELLER_MISMATCH | 공구 `primary_seller` metadata 설정 |
+| 송장 업로드 실패 | BFF 실행, `DOCUMENT_AI_ENABLED`, shared secret 일치 |
+| 발송 확정 실패 | Verify Receipt, 모든 참여자 운송장 입력 |
 | Admin Error -102 | `pnpm backend:dev` 미기동 |
 | Body exceeded 1 MB | `next.config.js` `serverActions.bodySizeLimit: "32mb"` |
+| Render Deploying hang | Cancel → Manual Deploy (이전 인스턴스가 서빙 중일 수 있음) |
 
 ---
 
@@ -288,27 +342,29 @@ pnpm seed:group-buy-demo-product
 CODE_ANALYSIS 기술 부채·확장 가이드 기준 우선순위:
 
 1. **CHKO-02 VA webhook** — 실제 은행 입금 webhook adapter + 서버 사이드 seat hold (CHKO-03)
-2. **Route error handler 통합** — `receipt/parse`, `tracking/parse` → 공유 `respondWithRouteError`
-3. **Route tree consolidation** — `(main)/group-buying` vs `(gb-app)/deals` 단일화
-4. **서버 사이드 SRCH 필터** — `GET /store/group-deals` query params 확장, URL param 유지
-5. **Bank account metadata 암호화** — production at-rest 정책
-6. **Integration tests** — receipt verify → tracking parse → shipping complete → settlement E2E
-7. **MTRS Review 엔티티** — metadata 의존 → 정규화된 Review 모델
+2. **Route error handler 통합** — `receipt/parse`, `receipt/confirm`, `tracking/parse` → 공유 `respondWithRouteError`
+3. **`/kr/home` 서버 오류** — auth 상태별 digest `894050647` 재현·수정
+4. **Route tree consolidation** — `(main)/group-buying` vs `(gb-app)/deals` 단일화
+5. **서버 사이드 SRCH 필터** — `GET /store/group-deals` query params 확장, URL param 유지
+6. **Bank account metadata 암호화** — production at-rest 정책
+7. **Integration tests** — receipt parse/confirm → tracking parse → shipping complete → settlement E2E
+8. **MTRS Review 엔티티** — metadata 의존 → 정규화된 Review 모델
+9. **`main` 브랜치 merge** — `fix/render-build-typescript` → Vercel/Render 프로덕션 반영
 
 ---
 
 ## 배포 상태
 
-| 대상 | 요건 |
-|------|------|
-| **최종 사용자** | 웹 브라우저만 필요. 별도 클라이언트 설치 없음 |
-| **개발 환경** | Node.js 20+, pnpm 10+, PostgreSQL 15+ |
-| **Document AI 사용 시** | Python 3.11+, Flask BFF 프로세스 추가 |
-| **프로덕션 (권장)** | Medusa backend + Next.js storefront + PostgreSQL. BFF는 OCR 필요 시에만 |
-| **Admin** | Medusa Admin UI (`/app`) — Verify Receipt 등 운영 기능 |
+| 대상 | 상태 | URL / 비고 |
+|------|------|------------|
+| **스토어프론트** | [운영 중] | Vercel — `group-buying-storefront-black.vercel.app` |
+| **Medusa API + Admin** | [운영 중] | Render — `group-buying-2hlq.onrender.com` |
+| **Document AI BFF** | [운영 중] | Render — `group-buying-document-ai-bff.onrender.com` |
+| **Upstage OCR** | [연동 완료] | BFF 경유 — 프로덕션 env 설정 후 receipt/tracking parse 동작 확인됨 |
+| **최종 사용자** | — | 웹 브라우저만 필요. 별도 클라이언트 설치 없음 |
 
-현재 저장소는 **로컬 개발·데모 기준**으로 문서화되어 있으며, 프로덕션 배포 파이프라인(CI/CD, 호스팅)은 별도 구성이 필요하다.
+**미반영 (main 미머지 시):** 최신 `fix/render-build-typescript` 커밋(영수증 수동 입력, 포카캐치 브랜드)은 PR/merge 후 Vercel·Render 재배포 필요.
 
 ---
 
-*본 문서는 2026-07-21 시점 README·CODE_ANALYSIS·코드베이스 정적 분석을 바탕으로 작성되었습니다.*
+*본 문서는 2026-07-23 시점 README·MODULES.md·코드베이스·프로덕션 검증 결과를 바탕으로 작성되었습니다.*
