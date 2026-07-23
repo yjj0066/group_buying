@@ -1,3 +1,5 @@
+import { formatUploadSizeErrorMessage } from "@lib/util/upload-size-error"
+
 const FIELD_LABELS: Record<string, string> = {
   primary_seller: "1차 판매처",
   expected_ship_date: "예상 발송일",
@@ -122,6 +124,12 @@ export const formatGroupDealValidationError = (raw: string): string => {
 
   if (!normalized) {
     return "공구 개설 정보를 확인해 주세요."
+  }
+
+  const uploadSizeMessage = formatUploadSizeErrorMessage(normalized)
+
+  if (uploadSizeMessage) {
+    return uploadSizeMessage
   }
 
   const segments = normalized.includes(";")
