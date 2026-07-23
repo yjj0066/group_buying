@@ -1,6 +1,7 @@
 "use client"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { PokaCatchLogo } from "@modules/common/components/pokacatch-logo"
 import { useDictionary } from "@i18n/provider"
 
 type LandingFooterProps = {
@@ -19,14 +20,12 @@ const LandingFooter = ({ isLoggedIn = false }: LandingFooterProps) => {
       <div className="mx-auto max-w-7xl px-4 py-16 small:px-6">
         <div className="grid gap-10 medium:grid-cols-4">
           <div className="medium:col-span-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-pink to-brand-purple text-sm font-black text-white">
-                GB
-              </span>
-              <span className="text-lg font-bold text-neutral-900">
-                {t.landing.brandName}
-              </span>
-            </div>
+            <PokaCatchLogo
+              variant="light"
+              wordmark={t.landing.brandName}
+              iconSize={36}
+              wordmarkClassName="text-lg"
+            />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-500">
               {t.landing.footer.tagline}
             </p>

@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import type { Dictionary } from "@i18n/types"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { PokaCatchLogo } from "@modules/common/components/pokacatch-logo"
 import CartButton from "@modules/layout/components/cart-button"
 import LanguageSwitcherSlot from "@modules/layout/components/language-switcher/slot"
 import NavGroupBuyEntry from "@modules/layout/components/nav-group-buy-entry"
@@ -44,15 +45,14 @@ export default function Nav({
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="flex items-center gap-2 transition-opacity hover:opacity-90"
+              className="flex items-center transition-opacity hover:opacity-90"
               data-testid="nav-store-link"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-pink to-brand-purple text-xs font-black text-white">
-                GB
-              </span>
-              <span className="text-base font-bold tracking-tight text-neutral-900">
-                {dictionary.landing.brandName}
-              </span>
+              <PokaCatchLogo
+                variant="light"
+                wordmark={dictionary.landing.brandName}
+                iconSize={32}
+              />
             </LocalizedClientLink>
           </div>
 

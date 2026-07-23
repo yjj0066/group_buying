@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 import { getGbAppSplashRedirect } from "@lib/data/gb-app-auth-flow"
+import { PokaCatchLogo } from "@modules/common/components/pokacatch-logo"
 import { useDictionary } from "@i18n/provider"
 
 type GbAppSplashProps = {
@@ -38,9 +39,12 @@ const GbAppSplash = ({ countryCode }: GbAppSplashProps) => {
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-8">
-      <h1 className="text-2xl font-black tracking-tight bb-gradient-text">
-        {auth.logo}
-      </h1>
+      <PokaCatchLogo
+        variant="light"
+        wordmark={auth.logo}
+        iconSize={48}
+        wordmarkClassName="text-2xl"
+      />
 
       <div
         className="h-8 w-8 animate-spin rounded-full border-2 border-brand-purple/30 border-t-brand-purple"
