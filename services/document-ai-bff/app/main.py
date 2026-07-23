@@ -2,6 +2,7 @@ import os
 import time
 
 from flask import Flask, jsonify, request
+from werkzeug.exceptions import HTTPException
 
 from app.config import get_settings
 from app.tracking_mapper import build_receipt_job, build_tracking_job
@@ -12,6 +13,17 @@ from app.upstage_client import (
 )
 
 app = Flask(__name__)
+
+
+@app.errorhandler(HTTPException)
+def handle_http_exception(error: HTTPException):
+    return jsonify({"message": error.description or error.name}), error.code
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_exception(error: Exception):
+    app.logger.exception("document-ai-bff unhandled error")
+    return jsonify({"message": f"Internal server error: {error}"}), 500
 
 
 def _require_shared_secret() -> tuple[bool, tuple]:
