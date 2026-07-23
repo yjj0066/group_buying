@@ -40,9 +40,22 @@ def decode_input_bytes(
         return raw, "document.bin", "application/octet-stream"
 
     if input_url:
-        response = requests.get(input_url, timeout=30)
-        response.raise_for_status()
+        try:
+            response = requests.get(input_url, timeout=60)
+            response.raise_for_status()
+        except requests.RequestException as error:
+            raise ValueError(
+                f"Failed to download document from input_url ({input_url}): {error}"
+            ) from error
+
         content_type = response.headers.get("Content-Type", "image/jpeg")
+
+        if "text/html" in content_type.lower():
+            raise ValueError(
+                f"input_url returned HTML instead of an image ({input_url}). "
+                "Check MEDUSA_BACKEND_URL and that uploaded files are publicly reachable."
+            )
+
         ext = "png" if "png" in content_type else "jpg"
         return response.content, f"document.{ext}", content_type
 

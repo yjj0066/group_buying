@@ -112,8 +112,8 @@ export const getDocumentAiRequestTimeoutMs = (): number => {
     return override
   }
 
-  // Upstage receipt/tracking can take ~90s; include BFF fetch + cold start headroom.
-  return process.env.NODE_ENV === "development" ? 180000 : 180000
+  // Upstage receipt/tracking can take ~90s per step; tracking runs parse + extract (~180s).
+  return process.env.NODE_ENV === "development" ? 240000 : 240000
 }
 
 export const getDocumentAiAutoVerifyConfidence = (): number => {
