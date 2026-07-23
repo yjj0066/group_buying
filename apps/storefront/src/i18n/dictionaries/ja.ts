@@ -3,7 +3,7 @@ import { landingEn } from "./landing-shared"
 
 const dictionary: Dictionary = {
   nav: {
-    storeName: "共同購入モール",
+    storeName: "PokaCatch",
     allProducts: "すべての商品",
     groupBuying: "共同購入",
     account: "アカウント",

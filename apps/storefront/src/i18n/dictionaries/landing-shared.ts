@@ -1,10 +1,10 @@
 import type { Dictionary } from "../types"
 
 export const landingKo: Dictionary["landing"] = {
-  metaTitle: "K-POP 공동구매 | 함께 모일수록 저렴해지는 굿즈",
+  metaTitle: "포카캐치 | K-POP 공동구매 | 함께 모일수록 저렴해지는 굿즈",
   metaDescription:
     "BTS, IVE, NewJeans, aespa 등 인기 K-POP 굿즈를 공동구매로 더 저렴하게. 실시간 참여 현황과 한정 특가를 확인하세요.",
-  brandName: "BiasBuy",
+  brandName: "포카캐치",
   groupBuyLabel: "공동구매",
   joinButton: "공구 참여하기",
   newBadge: "NEW",
@@ -75,7 +75,7 @@ export const landingKo: Dictionary["landing"] = {
   aiRecommendationsSubtitle: "마감 임박·인기도 기반 하이브리드 추천",
   aiRecommendationsForIdol: "관심 아이돌 {idol} 기준으로 추천·인기 공구를 우선 노출합니다",
   why: {
-    title: "왜 BiasBuy인가요?",
+    title: "왜 포카캐치인가요?",
     authentic: {
       title: "정품 보장",
       description: "공식 유통 경로 기반 정품 굿즈만 공동구매로 진행합니다.",
@@ -122,7 +122,7 @@ export const landingKo: Dictionary["landing"] = {
     support: "고객 지원",
     securePayment: "안전 결제 안내",
     authenticGoods: "정품 굿즈 정책",
-    copyright: "© 2026 BiasBuy. All rights reserved.",
+    copyright: "© 2026 포카캐치. All rights reserved.",
   },
   hub: {
     title: "홈",
@@ -137,10 +137,10 @@ export const landingKo: Dictionary["landing"] = {
 }
 
 export const landingEn: Dictionary["landing"] = {
-  metaTitle: "K-POP Group Buy | Cheaper Together",
+  metaTitle: "PokaCatch | K-POP Group Buy | Cheaper Together",
   metaDescription:
     "Join group buys for BTS, IVE, NewJeans, aespa merch at lower prices with live participation tracking.",
-  brandName: "BiasBuy",
+  brandName: "PokaCatch",
   groupBuyLabel: "Group Buy",
   joinButton: "Join Group Buy",
   newBadge: "NEW",
@@ -212,7 +212,7 @@ export const landingEn: Dictionary["landing"] = {
   aiRecommendationsForIdol:
     "Prioritizing deals and recommendations for {idol}",
   why: {
-    title: "Why BiasBuy?",
+    title: "Why PokaCatch?",
     authentic: {
       title: "Authentic products",
       description: "Official goods sourced through verified channels only.",
@@ -259,7 +259,7 @@ export const landingEn: Dictionary["landing"] = {
     support: "Support",
     securePayment: "Secure payment",
     authenticGoods: "Authentic goods policy",
-    copyright: "© 2026 BiasBuy. All rights reserved.",
+    copyright: "© 2026 PokaCatch. All rights reserved.",
   },
   hub: {
     title: "Home",

@@ -3,7 +3,7 @@ import { landingKo } from "./landing-shared"
 
 const dictionary: Dictionary = {
   nav: {
-    storeName: "BiasBuy",
+    storeName: "포카캐치",
     allProducts: "전체 상품",
     groupBuying: "공동구매",
     account: "계정",
@@ -482,7 +482,7 @@ const dictionary: Dictionary = {
     homeNewsBanner: "새로 열린 공구와 인기 마감 임박 공구를 확인해 보세요.",
     homeEmptyFavoriteVacancy: "{member} 빈자리 공구가 없습니다",
     auth: {
-      logo: "아이돌공구",
+      logo: "포카캐치",
       splashLoading: "로딩 중",
       emailPlaceholder: "이메일",
       passwordPlaceholder: "비밀번호 (8자 이상)",
@@ -1655,7 +1655,7 @@ const dictionary: Dictionary = {
     },
     meta: {
       loginTitle: "로그인",
-      loginDescription: "BiasBuy 계정에 로그인합니다.",
+      loginDescription: "포카캐치 계정에 로그인합니다.",
       verifyTitle: "이메일 인증",
       verifyDescription: "회원가입을 완료하려면 이메일을 인증해 주세요.",
       paymentMethodsTitle: "결제수단 관리",

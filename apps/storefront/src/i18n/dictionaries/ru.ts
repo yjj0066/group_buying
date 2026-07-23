@@ -3,7 +3,7 @@ import { landingEn } from "./landing-shared"
 
 const dictionary: Dictionary = {
   nav: {
-    storeName: "Совместные покупки",
+    storeName: "PokaCatch",
     allProducts: "Все товары",
     groupBuying: "Совместная покупка",
     account: "Аккаунт",

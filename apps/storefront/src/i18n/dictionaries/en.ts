@@ -3,7 +3,7 @@ import { landingEn } from "./landing-shared"
 
 const dictionary: Dictionary = {
   nav: {
-    storeName: "BiasBuy",
+    storeName: "PokaCatch",
     allProducts: "All Products",
     groupBuying: "Group Buying",
     account: "Account",
@@ -451,7 +451,7 @@ const dictionary: Dictionary = {
     homeNewsBanner: "See newly opened deals and popular closing-soon group buys.",
     homeEmptyFavoriteVacancy: "No vacant deals for {member}",
     auth: {
-      logo: "Idol Group Buy",
+      logo: "PokaCatch",
       splashLoading: "Loading",
       emailPlaceholder: "Email",
       passwordPlaceholder: "Password (8+ characters)",
@@ -1571,7 +1571,7 @@ const dictionary: Dictionary = {
     },
     meta: {
       loginTitle: "Sign in",
-      loginDescription: "Sign in to your account.",
+      loginDescription: "Sign in to your PokaCatch account.",
       verifyTitle: "Verify your email",
       verifyDescription: "Verify your email to complete registration.",
       paymentMethodsTitle: "Payment methods",
