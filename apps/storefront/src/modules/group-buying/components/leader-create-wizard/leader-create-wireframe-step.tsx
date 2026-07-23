@@ -11,6 +11,7 @@ import {
   assertDocumentUploadSize,
   readFileAsDataUrl,
 } from "@lib/util/file-to-data-url"
+import { formatGroupDealValidationError } from "@lib/util/format-group-deal-validation-error"
 import {
   loadLeaderCreateWizardDraftFromAccount,
   saveLeaderCreateWizardDraftToAccount,
@@ -111,7 +112,15 @@ export const LeaderCreateWireframeStep = ({
   }, [])
 
   useEffect(() => {
-    saveLeaderCreateDraft(draft)
+    try {
+      saveLeaderCreateDraft(draft)
+    } catch (error) {
+      setPhotoUploadError(
+        error instanceof Error
+          ? formatGroupDealValidationError(error.message)
+          : "사진 저장에 실패했습니다."
+      )
+    }
 
     const timer = window.setTimeout(() => {
       saveLeaderCreateWizardDraftToAccount(draft).catch(() => {
@@ -246,7 +255,7 @@ export const LeaderCreateWireframeStep = ({
     } catch (uploadError) {
       setPhotoUploadError(
         uploadError instanceof Error
-          ? uploadError.message
+          ? formatGroupDealValidationError(uploadError.message)
           : "사진 업로드에 실패했습니다."
       )
     } finally {

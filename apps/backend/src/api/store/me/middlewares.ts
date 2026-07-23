@@ -38,6 +38,9 @@ export const storeMeRoutesMiddlewares: MiddlewareRoute[] = [
   {
     matcher: "/store/me/group-deals",
     method: "POST",
+    bodyParser: {
+      sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
+    },
     middlewares: [validateAndTransformBody(PostStoreCreateGroupDeal)],
   },
   {
