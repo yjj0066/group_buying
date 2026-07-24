@@ -25,14 +25,59 @@ export async function getParticipationById(...args: any[]) {
   return (mod.getParticipationById as (...a: any[]) => any)(...args)
 }
 
-export async function createHostedGroupDeal(...args: any[]) {
-  const mod = await import("./account-group-deals-queries")
-  return (mod.createHostedGroupDeal as (...a: any[]) => any)(...args)
+export type CreateHostedGroupDealActionResult =
+  | {
+      ok: true
+      group_deal: import("types/account-group-deals").AccountGroupDeal
+    }
+  | {
+      ok: false
+      error: string
+    }
+
+export type RecordLeaderDepositActionResult =
+  | {
+      ok: true
+      group_deal: import("types/account-group-deals").AccountGroupDeal
+      deposit_recorded: boolean
+    }
+  | {
+      ok: false
+      error: string
+    }
+
+export async function createHostedGroupDeal(
+  input: import("./account-group-deals-queries").CreateHostedGroupDealInput
+): Promise<CreateHostedGroupDealActionResult> {
+  try {
+    const mod = await import("./account-group-deals-queries")
+    const group_deal = await mod.createHostedGroupDeal(input)
+
+    return { ok: true, group_deal }
+  } catch (error) {
+    const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
+
+    return { ok: false, error: resolveMedusaErrorMessage(error) }
+  }
 }
 
-export async function recordLeaderDeposit(...args: any[]) {
-  const mod = await import("./account-group-deals-queries")
-  return (mod.recordLeaderDeposit as (...a: any[]) => any)(...args)
+export async function recordLeaderDeposit(
+  dealId: string,
+  input: {
+    deposit_amount: number
+    deposit_payment_key: string
+  }
+): Promise<RecordLeaderDepositActionResult> {
+  try {
+    const mod = await import("./account-group-deals-queries")
+    const result = await mod.recordLeaderDeposit(dealId, input)
+
+    return { ok: true, ...result }
+  } catch (error) {
+    const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
+
+    return { ok: false, error: resolveMedusaErrorMessage(error) }
+  }
 }
 
 export async function confirmParticipantDelivery(...args: any[]) {

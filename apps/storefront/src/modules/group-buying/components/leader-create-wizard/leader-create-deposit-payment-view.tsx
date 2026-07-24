@@ -484,7 +484,7 @@ export const LeaderCreateDepositPaymentView = () => {
         const activeSeats = draft.memberSeats.filter((seat) => seat.quantity > 0)
         const primaryPrice = activeSeats[0]?.price ?? 0
 
-        accountDeal = await createHostedGroupDeal({
+        const createResult = await createHostedGroupDeal({
           title: buildDealTitle(draft),
           description: `${draft.idolGroup} · ${draft.goodsType}`,
           product_id: GROUP_BUYING_DEMO_PRODUCT_ID,
@@ -513,6 +513,13 @@ export const LeaderCreateDepositPaymentView = () => {
             : {}),
         })
 
+        if (!createResult.ok) {
+          setConfirmError(formatGroupDealValidationError(createResult.error))
+          setIsConfirming(false)
+          return
+        }
+
+        accountDeal = createResult.group_deal
         dealId = accountDeal.id
       }
 
@@ -524,6 +531,12 @@ export const LeaderCreateDepositPaymentView = () => {
         deposit_amount: depositAmount,
         deposit_payment_key: `mock-leader-deposit-${Date.now()}`,
       })
+
+      if (!depositResult.ok) {
+        setConfirmError(formatGroupDealValidationError(depositResult.error))
+        setIsConfirming(false)
+        return
+      }
 
       accountDeal = depositResult.group_deal
 
