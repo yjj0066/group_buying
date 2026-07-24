@@ -11,9 +11,10 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 type GbAppLoginFormProps = {
   countryCode: string
+  returnTo?: string | null
 }
 
-const GbAppLoginForm = ({ countryCode }: GbAppLoginFormProps) => {
+const GbAppLoginForm = ({ countryCode, returnTo = null }: GbAppLoginFormProps) => {
   const t = useDictionary()
   const router = useRouter()
   const auth = t.gbApp.auth
@@ -25,11 +26,11 @@ const GbAppLoginForm = ({ countryCode }: GbAppLoginFormProps) => {
       return
     }
 
-    void resolvePostLoginRedirect(countryCode).then((destination) => {
+    void resolvePostLoginRedirect(countryCode, { returnTo }).then((destination) => {
       router.refresh()
       router.replace(destination)
     })
-  }, [message?.state, countryCode, router])
+  }, [message?.state, countryCode, returnTo, router])
 
   const handleSocialLogin = () => {
     setSocialNotice(auth.socialLoginComingSoon)

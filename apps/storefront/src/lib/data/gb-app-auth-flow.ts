@@ -16,6 +16,20 @@ import { resolveCountryCode } from "@lib/util/country-code"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import type { PreferredRole } from "types/account-group-deals"
 
+const isSafeReturnTo = (
+  countryCode: string,
+  returnTo: string | null | undefined
+) => {
+  if (!returnTo?.startsWith("/")) {
+    return false
+  }
+
+  const cc = resolveCountryCode(countryCode)
+  const prefix = `/${cc}/`
+
+  return returnTo === `/${cc}` || returnTo.startsWith(prefix)
+}
+
 export async function hasValidAuthSession(): Promise<boolean> {
   const headers = await getAuthHeaders()
 
@@ -49,9 +63,13 @@ export async function resolveGbAppEntryRedirect(
 
 export async function resolvePostLoginRedirect(
   countryCode: string,
-  options?: { fromSignup?: boolean }
+  options?: { fromSignup?: boolean; returnTo?: string | null }
 ): Promise<string> {
   const cc = resolveCountryCode(countryCode)
+
+  if (isSafeReturnTo(cc, options?.returnTo)) {
+    return options!.returnTo!
+  }
 
   if (options?.fromSignup) {
     return gbAppRoutes.bankAccount(cc)

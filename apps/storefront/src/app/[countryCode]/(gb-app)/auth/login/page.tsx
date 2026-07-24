@@ -7,10 +7,20 @@ import { resolveCountryCode } from "@lib/util/country-code"
 
 type LoginPageProps = {
   params: Promise<{ countryCode: string }>
+  searchParams: Promise<{ returnTo?: string }>
 }
 
-export default async function LoginPage({ params }: LoginPageProps) {
+export default async function LoginPage({
+  params,
+  searchParams,
+}: LoginPageProps) {
   const { countryCode } = await params
+  const { returnTo } = await searchParams
 
-  return <GbAppLoginForm countryCode={resolveCountryCode(countryCode)} />
+  return (
+    <GbAppLoginForm
+      countryCode={resolveCountryCode(countryCode)}
+      returnTo={returnTo ?? null}
+    />
+  )
 }
