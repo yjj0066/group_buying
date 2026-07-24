@@ -21,6 +21,7 @@ import {
   validateGroupDealSchedule,
 } from "../../../../utils/validate-group-deal-product"
 import { createGroupDealWorkflow } from "../../../../workflows/group-deals"
+import { recordLeaderDepositWorkflow } from "../../../../workflows/group-deal-escrow"
 import {
   PostStoreCreateGroupDeal,
   PostStoreCreateGroupDealType,
@@ -78,6 +79,8 @@ export const POST = async (
     goods_type,
     image_base64,
     image_filename,
+    confirm_leader_deposit,
+    deposit_payment_key,
     ...dealInput
   } = body
 
@@ -170,6 +173,17 @@ export const POST = async (
     },
   })
 
+  if (confirm_leader_deposit && deposit_payment_key) {
+    await recordLeaderDepositWorkflow(req.scope).run({
+      input: {
+        group_deal_id: dealId,
+        leader_customer_id: customerId,
+        deposit_amount: depositAmount,
+        deposit_payment_key,
+      },
+    })
+  }
+
   const updatedDeal = await groupBuyingService.retrieveGroupDeal(dealId)
 
   res.status(201).json({
@@ -177,6 +191,7 @@ export const POST = async (
       updatedDeal as unknown as Record<string, unknown>
     ),
     leader_deposit_virtual_account: leaderDepositVirtualAccount,
+    deposit_recorded: Boolean(confirm_leader_deposit && deposit_payment_key),
   })
   } catch (error) {
     respondWithRouteError(res, error, {

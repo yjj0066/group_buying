@@ -211,6 +211,29 @@ export type CreateHostedGroupDealInput = {
   goods_type?: string | null
   image_base64?: string
   image_filename?: string | null
+  confirm_leader_deposit?: boolean
+  deposit_payment_key?: string
+}
+
+export async function uploadHostedGroupDealCoverImage(
+  dealId: string,
+  input: {
+    image_base64: string
+    image_filename?: string | null
+  }
+) {
+  const response = await authedFetch<{
+    group_deal: AccountGroupDeal
+    image_url: string
+  }>(`/store/me/group-deals/${dealId}/cover-image`, {
+    method: "POST",
+    body: {
+      image_base64: input.image_base64,
+      image_filename: input.image_filename ?? null,
+    },
+  })
+
+  return response.group_deal
 }
 
 export async function createHostedGroupDeal(input: CreateHostedGroupDealInput) {

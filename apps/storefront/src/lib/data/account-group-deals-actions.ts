@@ -29,6 +29,7 @@ export type CreateHostedGroupDealActionResult =
   | {
       ok: true
       group_deal: import("types/account-group-deals").AccountGroupDeal
+      deposit_recorded?: boolean
     }
   | {
       ok: false
@@ -53,7 +54,32 @@ export async function createHostedGroupDeal(
     const mod = await import("./account-group-deals-queries")
     const group_deal = await mod.createHostedGroupDeal(input)
 
-    return { ok: true, group_deal }
+    return {
+      ok: true,
+      group_deal,
+      deposit_recorded: Boolean(
+        input.confirm_leader_deposit && input.deposit_payment_key
+      ),
+    }
+  } catch (error) {
+    const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
+
+    return { ok: false, error: resolveMedusaErrorMessage(error) }
+  }
+}
+
+export async function uploadHostedGroupDealCoverImage(
+  dealId: string,
+  input: {
+    image_base64: string
+    image_filename?: string | null
+  }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const mod = await import("./account-group-deals-queries")
+    await mod.uploadHostedGroupDealCoverImage(dealId, input)
+
+    return { ok: true }
   } catch (error) {
     const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
 

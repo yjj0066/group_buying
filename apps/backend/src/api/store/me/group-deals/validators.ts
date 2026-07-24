@@ -32,6 +32,8 @@ export const PostStoreCreateGroupDeal = z.object({
   goods_type: z.string().min(1).optional().nullable(),
   image_base64: z.string().min(1).optional(),
   image_filename: z.string().optional(),
+  confirm_leader_deposit: z.boolean().optional(),
+  deposit_payment_key: z.string().min(1).optional(),
 })
 
 export type PostStoreCreateGroupDealType = z.infer<

@@ -14,12 +14,12 @@ import {
   LEADER_DEPOSIT_DEADLINE_MINUTES,
 } from "@lib/constants/group-buying-fees"
 
-import { GROUP_BUYING_DEMO_PRODUCT_ID } from "@lib/constants/group-buying-demo-product"
+import { GROUP_BUYING_DEMO_PRODUCT_ID, GROUP_BUYING_DEMO_VARIANT_ID } from "@lib/constants/group-buying-demo-product"
 import { DEFAULT_GROUP_BUYING_GOODS_TYPE } from "@lib/constants/group-buying-catalog"
 
 import {
   createHostedGroupDeal,
-  recordLeaderDeposit,
+  uploadHostedGroupDealCoverImage,
 } from "@lib/data/account-group-deals-actions"
 
 import { useDictionary, formatMessage } from "@i18n/provider"
@@ -484,10 +484,13 @@ export const LeaderCreateDepositPaymentView = () => {
         const activeSeats = draft.memberSeats.filter((seat) => seat.quantity > 0)
         const primaryPrice = activeSeats[0]?.price ?? 0
 
+        const depositPaymentKey = `mock-leader-deposit-${Date.now()}`
+
         const createResult = await createHostedGroupDeal({
           title: buildDealTitle(draft),
           description: `${draft.idolGroup} · ${draft.goodsType}`,
           product_id: GROUP_BUYING_DEMO_PRODUCT_ID,
+          variant_id: GROUP_BUYING_DEMO_VARIANT_ID,
           min_participants: totalSeatsCount,
           target_quantity: totalSeatsCount,
           original_price: primaryPrice,
@@ -505,12 +508,8 @@ export const LeaderCreateDepositPaymentView = () => {
           })),
           idol_group: draft.idolGroup,
           goods_type: draft.goodsType?.trim() || DEFAULT_GROUP_BUYING_GOODS_TYPE,
-          ...(draft.productImageDataUrl
-            ? {
-                image_base64: draft.productImageDataUrl,
-                image_filename: draft.productImageFileName ?? undefined,
-              }
-            : {}),
+          confirm_leader_deposit: true,
+          deposit_payment_key: depositPaymentKey,
         })
 
         if (!createResult.ok) {
@@ -523,22 +522,12 @@ export const LeaderCreateDepositPaymentView = () => {
         dealId = accountDeal.id
       }
 
-      const depositAmount =
-        accountDeal?.deposit_amount ??
-        (draft ? resolveLeaderDepositAmount(draft) : GROUP_BUYING_LEADER_DEPOSIT_AMOUNT)
-
-      const depositResult = await recordLeaderDeposit(dealId, {
-        deposit_amount: depositAmount,
-        deposit_payment_key: `mock-leader-deposit-${Date.now()}`,
-      })
-
-      if (!depositResult.ok) {
-        setConfirmError(formatGroupDealValidationError(depositResult.error))
-        setIsConfirming(false)
-        return
+      if (draft.productImageDataUrl && dealId) {
+        void uploadHostedGroupDealCoverImage(dealId, {
+          image_base64: draft.productImageDataUrl,
+          image_filename: draft.productImageFileName ?? undefined,
+        })
       }
-
-      accountDeal = depositResult.group_deal
 
       cacheHostedDeal(buildGroupDealFromDraft(draft, accountDeal))
       clearLeaderCreateDraft()
