@@ -10,11 +10,7 @@ import GroupBuyingModuleService from "../../../../../../modules/group-buying/ser
 import { saveGroupDealCoverImage } from "../../../../../../utils/group-deal-leader-ops"
 import { respondWithRouteError } from "../../../../../../utils/route-error"
 import { serializeAccountGroupDeal } from "../../../../../../utils/group-deal-account"
-
-const PostStoreMeGroupDealCoverImage = z.object({
-  image_base64: z.string().min(1),
-  image_filename: z.string().optional(),
-})
+import { PostStoreMeGroupDealCoverImage } from "../../validators"
 
 export const POST = async (
   req: AuthenticatedMedusaRequest,

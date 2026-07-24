@@ -19,6 +19,7 @@ import { DEFAULT_GROUP_BUYING_GOODS_TYPE } from "@lib/constants/group-buying-cat
 
 import {
   createHostedGroupDeal,
+  probeLeaderCreateAccess,
   uploadHostedGroupDealCoverImage,
 } from "@lib/data/account-group-deals-actions"
 
@@ -294,6 +295,22 @@ export const LeaderCreateDepositPaymentView = () => {
     }
 
     hydrateDraft()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void probeLeaderCreateAccess().then((result) => {
+      if (cancelled || result.ok) {
+        return
+      }
+
+      setConfirmError(formatGroupDealValidationError(result.error))
+    })
 
     return () => {
       cancelled = true

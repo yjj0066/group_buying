@@ -36,6 +36,15 @@ export const PostStoreCreateGroupDeal = z.object({
   deposit_payment_key: z.string().min(1).optional(),
 })
 
+export const PostStoreMeGroupDealCoverImage = z.object({
+  image_base64: z.string().min(1),
+  image_filename: z.string().optional(),
+})
+
+export type PostStoreMeGroupDealCoverImageType = z.infer<
+  typeof PostStoreMeGroupDealCoverImage
+>
+
 export type PostStoreCreateGroupDealType = z.infer<
   typeof PostStoreCreateGroupDeal
 >

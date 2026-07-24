@@ -25,6 +25,21 @@ export async function getParticipationById(...args: any[]) {
   return (mod.getParticipationById as (...a: any[]) => any)(...args)
 }
 
+export async function probeLeaderCreateAccess(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  try {
+    const mod = await import("./account-group-deals-queries")
+    await mod.listHostedGroupDeals()
+
+    return { ok: true }
+  } catch (error) {
+    const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
+
+    return { ok: false, error: resolveMedusaErrorMessage(error) }
+  }
+}
+
 export type CreateHostedGroupDealActionResult =
   | {
       ok: true

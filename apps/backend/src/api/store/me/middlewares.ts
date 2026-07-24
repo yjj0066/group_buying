@@ -12,6 +12,7 @@ import {
 } from "./validators"
 import {
   PostStoreCreateGroupDeal,
+  PostStoreMeGroupDealCoverImage,
   PostStoreMeGroupDealDocumentParse,
   PostStoreMeGroupDealReceiptConfirm,
   PostStoreMeGroupDealSettlement,
@@ -47,6 +48,14 @@ export const storeMeRoutesMiddlewares: MiddlewareRoute[] = [
     matcher: "/store/me/group-deals/:id/deposit",
     method: "POST",
     middlewares: [validateAndTransformBody(PostStoreMeLeaderDeposit)],
+  },
+  {
+    matcher: "/store/me/group-deals/:id/cover-image",
+    method: "POST",
+    bodyParser: {
+      sizeLimit: GROUP_DEAL_DOCUMENT_MAX_REQUEST_BODY_LIMIT,
+    },
+    middlewares: [validateAndTransformBody(PostStoreMeGroupDealCoverImage)],
   },
   {
     matcher: "/store/me/group-deals/:id/receipt/parse",
