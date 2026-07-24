@@ -24,7 +24,6 @@ import {
 import { Text } from "@modules/common/components/ui"
 
 import {
-  GOODS_TYPE_OPTIONS,
   LEADER_CREATE_WIZARD_STEP_INDEX,
   resolveLeaderCreateStepTitle,
 } from "./constants"
@@ -162,7 +161,7 @@ export const LeaderCreateWireframeStep = ({
 
   const validateStep = () => {
     if (stepIndex === LEADER_CREATE_WIZARD_STEP_INDEX.basic) {
-      return Boolean(draft.idolGroup.trim() && draft.goodsType && draft.title.trim())
+      return Boolean(draft.idolGroup.trim() && draft.title.trim())
     }
 
     if (stepIndex === LEADER_CREATE_WIZARD_STEP_INDEX.product) {
@@ -275,22 +274,6 @@ export const LeaderCreateWireframeStep = ({
           data-testid="leader-create-idol-group"
         />
       </label>
-
-      <select
-        className="bb-input w-full"
-        value={draft.goodsType}
-        onChange={(event) => patch({ goodsType: event.target.value })}
-        data-testid="leader-create-goods-type"
-      >
-        <option value="" disabled>
-          {w.goodsTypePlaceholder}
-        </option>
-        {GOODS_TYPE_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
 
       <input
         className="bb-input w-full"

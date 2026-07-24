@@ -1,3 +1,6 @@
+import {
+  DEFAULT_GROUP_BUYING_GOODS_TYPE,
+} from "@lib/constants/group-buying-catalog"
 import { MOCK_LEADER_CREATE_DRAFT } from "@lib/data/mock-leader-create-draft"
 
 import { LEADER_CREATE_WIZARD_STORAGE_KEY } from "./constants"
@@ -44,6 +47,8 @@ export const loadLeaderCreateDraft = (): LeaderCreateDraft => {
       ...empty,
 
       ...parsed,
+
+      goodsType: parsed.goodsType?.trim() || DEFAULT_GROUP_BUYING_GOODS_TYPE,
 
       memberSeats:
         parsed.memberSeats?.length ? parsed.memberSeats : empty.memberSeats,

@@ -6,8 +6,8 @@ import {
 
 export const MOCK_LEADER_CREATE_DRAFT: LeaderCreateDraft = {
   idolGroup: "aespa",
-  goodsType: "시즌그reetings",
-  title: "aespa 시즌그reetings MD 공구",
+  goodsType: "포토카드",
+  title: "aespa 포토카드 MD 공구",
   primarySeller: "위버스샵",
   recruitmentDeadline: "2026-08-31",
   expectedShipDate: "2026-09-30",

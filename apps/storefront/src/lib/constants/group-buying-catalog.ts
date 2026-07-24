@@ -16,3 +16,6 @@ export const GOODS_TYPE_OPTIONS = [
 ] as const
 
 export type GoodsTypeOption = (typeof GOODS_TYPE_OPTIONS)[number]
+
+/** Site-wide default for leader-created group deals (photocard-only). */
+export const DEFAULT_GROUP_BUYING_GOODS_TYPE: GoodsTypeOption = "포토카드"

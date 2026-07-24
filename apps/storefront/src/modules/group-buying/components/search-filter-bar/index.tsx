@@ -2,10 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import {
-  GOODS_TYPE_OPTIONS,
-  IDOL_GROUP_SUGGESTIONS,
-} from "@lib/constants/group-buying-catalog"
+import { IDOL_GROUP_SUGGESTIONS } from "@lib/constants/group-buying-catalog"
 import type {
   GroupDealFilterFacets,
   GroupDealFilterState,
@@ -14,7 +11,7 @@ import { useDictionary } from "@i18n/provider"
 import { BbButton } from "@modules/design-system"
 import PriceRangeFilter from "@modules/group-buying/components/price-range-filter"
 
-type FilterKey = "idolGroup" | "goodsType" | "priceRange"
+type FilterKey = "idolGroup" | "priceRange"
 
 type SearchFilterBarProps = {
   filters: GroupDealFilterState
@@ -87,10 +84,6 @@ export const SearchFilterBar = ({
       return filters.idolGroup || t.filterIdolGroup
     }
 
-    if (key === "goodsType") {
-      return filters.goodsType || t.filterGoodsType
-    }
-
     if (filters.minPrice != null || filters.maxPrice != null) {
       const min = filters.minPrice ?? priceFloor
       const max = filters.maxPrice ?? priceCeiling
@@ -106,14 +99,10 @@ export const SearchFilterBar = ({
       return Boolean(filters.idolGroup)
     }
 
-    if (key === "goodsType") {
-      return Boolean(filters.goodsType)
-    }
-
     return filters.minPrice != null || filters.maxPrice != null
   }
 
-  const filterKeys: FilterKey[] = ["idolGroup", "goodsType", "priceRange"]
+  const filterKeys: FilterKey[] = ["idolGroup", "priceRange"]
 
   return (
     <div ref={containerRef} className="relative flex flex-wrap gap-2">
@@ -193,43 +182,6 @@ export const SearchFilterBar = ({
                       {t.filterApply}
                     </BbButton>
                   </div>
-                </div>
-              )}
-
-              {key === "goodsType" && (
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange({ goodsType: "" })
-                      setOpenFilter(null)
-                    }}
-                    className={`rounded-lg px-3 py-2 text-left text-sm ${
-                      !filters.goodsType
-                        ? "bg-[#F5F3FF] font-semibold text-[#6B46E5]"
-                        : "text-[#374151] hover:bg-[#F9FAFB]"
-                    }`}
-                  >
-                    {t.filterAll}
-                  </button>
-                  {GOODS_TYPE_OPTIONS.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        onChange({ goodsType: option })
-                        setOpenFilter(null)
-                      }}
-                      className={`rounded-lg px-3 py-2 text-left text-sm ${
-                        filters.goodsType === option
-                          ? "bg-[#F5F3FF] font-semibold text-[#6B46E5]"
-                          : "text-[#374151] hover:bg-[#F9FAFB]"
-                      }`}
-                      data-testid={`search-filter-goods-${option}`}
-                    >
-                      {option}
-                    </button>
-                  ))}
                 </div>
               )}
 

@@ -11,7 +11,7 @@ import {
   type GroupDealFilterFacets,
   type GroupDealFilterState,
 } from "@lib/util/group-deal-filters"
-import { GOODS_TYPE_OPTIONS, IDOL_GROUP_SUGGESTIONS } from "@lib/constants/group-buying-catalog"
+import { IDOL_GROUP_SUGGESTIONS } from "@lib/constants/group-buying-catalog"
 import { buildStoreSearchPath } from "@lib/util/product-search-navigation"
 import { useDictionary } from "@i18n/provider"
 import {
@@ -107,14 +107,6 @@ const GroupDealFilters = ({
           value={filters.member}
           options={facets.members}
           onChange={(value) => update({ member: value })}
-          allLabel={t.groupBuying.filterAll}
-        />
-
-        <FilterSelect
-          label={t.groupBuying.filterGoodsType}
-          value={filters.goodsType}
-          options={[...GOODS_TYPE_OPTIONS]}
-          onChange={(value) => update({ goodsType: value })}
           allLabel={t.groupBuying.filterAll}
         />
 

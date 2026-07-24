@@ -27,9 +27,6 @@ const SearchEmptyView = () => {
           {t.groupBuying.filterIdolGroup} ▾
         </span>
         <span className="inline-flex h-9 items-center rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs font-medium text-[#111827]">
-          {t.groupBuying.filterGoodsType} ▾
-        </span>
-        <span className="inline-flex h-9 items-center rounded-lg border border-[#E5E7EB] bg-white px-3 text-xs font-medium text-[#111827]">
           {t.groupBuying.filterPriceRange} ▾
         </span>
       </div>

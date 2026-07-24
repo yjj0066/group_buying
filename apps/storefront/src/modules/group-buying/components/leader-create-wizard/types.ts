@@ -1,3 +1,5 @@
+import { DEFAULT_GROUP_BUYING_GOODS_TYPE } from "@lib/constants/group-buying-catalog"
+
 export type LeaderCreateMemberSeat = {
   id: string
   label: string
@@ -70,7 +72,7 @@ export const createEmptyShippingMethod = (): LeaderCreateShippingMethod => {
 
 export const createEmptyDraft = (): LeaderCreateDraft => ({
   idolGroup: "",
-  goodsType: "",
+  goodsType: DEFAULT_GROUP_BUYING_GOODS_TYPE,
   title: "",
   primarySeller: "",
   productImageDataUrl: null,
