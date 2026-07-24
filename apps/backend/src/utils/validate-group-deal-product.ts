@@ -94,4 +94,11 @@ export const validateGroupDealSchedule = (input: {
       "End date must be after start date"
     )
   }
+
+  if (endsAt.getTime() <= Date.now()) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      "End date must be in the future"
+    )
+  }
 }

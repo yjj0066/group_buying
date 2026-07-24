@@ -111,6 +111,24 @@ const GroupDealFilters = ({
         />
 
         <FilterSelect
+          label={t.groupBuying.filterCatalogStatus}
+          value={filters.catalogTab}
+          options={["in_progress", "closed", "all"]}
+          optionLabels={{
+            in_progress: t.groupBuying.catalogStatusInProgress,
+            closed: t.groupBuying.catalogStatusClosed,
+            all: t.groupBuying.catalogStatusAll,
+          }}
+          onChange={(value) =>
+            update({
+              catalogTab: value as GroupDealFilterState["catalogTab"],
+            })
+          }
+          allLabel={t.groupBuying.catalogStatusInProgress}
+          hideAllOption
+        />
+
+        <FilterSelect
           label={t.groupBuying.filterSort}
           value={filters.sortBy}
           options={["deadline", "newest"]}

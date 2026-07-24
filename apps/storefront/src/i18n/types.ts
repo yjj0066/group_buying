@@ -218,6 +218,10 @@ export type Dictionary = {
     filterGoodsType: string
     filterPriceRange: string
     filterSort: string
+    filterCatalogStatus: string
+    catalogStatusInProgress: string
+    catalogStatusClosed: string
+    catalogStatusAll: string
     sortDeadline: string
     sortNewest: string
     filterAll: string

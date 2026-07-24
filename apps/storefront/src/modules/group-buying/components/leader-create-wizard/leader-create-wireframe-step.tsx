@@ -166,15 +166,19 @@ export const LeaderCreateWireframeStep = ({
         return false
       }
 
-      if (draft.recruitmentDeadline) {
-        const deadline = new Date(`${draft.recruitmentDeadline}T23:59:00`)
+      // Require an explicit deadline — empty used to silently default to +7 days,
+      // which expired test deals and flooded search with closed overlays.
+      if (!draft.recruitmentDeadline.trim()) {
+        return false
+      }
 
-        if (
-          Number.isNaN(deadline.getTime()) ||
-          deadline.getTime() <= Date.now()
-        ) {
-          return false
-        }
+      const deadline = new Date(`${draft.recruitmentDeadline}T23:59:00`)
+
+      if (
+        Number.isNaN(deadline.getTime()) ||
+        deadline.getTime() <= Date.now()
+      ) {
+        return false
       }
 
       return true

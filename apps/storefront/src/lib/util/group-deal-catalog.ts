@@ -29,13 +29,8 @@ export const isCatalogDealClosed = (deal: GroupDeal): boolean => {
   return isDealSoldOut(deal)
 }
 
-export const isCatalogDealInProgress = (deal: GroupDeal): boolean => {
-  if (isCatalogDealClosed(deal)) {
-    return false
-  }
-
-  return IN_PROGRESS_STATUSES.has(deal.status)
-}
+export const isCatalogDealInProgress = (deal: GroupDeal): boolean =>
+  !isCatalogDealClosed(deal)
 
 export const filterDealsByCatalogTab = (
   deals: GroupDeal[],

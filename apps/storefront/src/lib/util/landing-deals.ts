@@ -1,4 +1,5 @@
 import { listGroupDeals } from "@lib/data/group-deals"
+import { isCatalogDealClosed } from "@lib/util/group-deal-catalog"
 import { resolveMediaUrl } from "@lib/util/product-group-deal"
 import type { GroupDeal } from "types/group-deal"
 import type {
@@ -305,8 +306,12 @@ export const getLandingHomeData = async (options?: {
   favoriteIdolGroup?: string | null
 }): Promise<LandingHomeData> => {
   const { group_deals: deals } = await listGroupDeals()
-  const openDeals = deals.filter((deal) =>
-    ["open", "minimum_reached", "active"].includes(deal.status)
+  // Match search joinability: status alone can stay "open" until the hourly
+  // maintenance job flips it, while ends_at / sold-out already close the card.
+  const openDeals = deals.filter(
+    (deal) =>
+      ["open", "minimum_reached", "active"].includes(deal.status) &&
+      !isCatalogDealClosed(deal)
   )
 
   const cards =

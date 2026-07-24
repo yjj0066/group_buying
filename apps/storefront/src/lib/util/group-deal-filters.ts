@@ -4,6 +4,11 @@ import {
   getOptionRemainingQuantity,
   hasMemberVacancy,
 } from "types/group-deal"
+import {
+  filterDealsByCatalogTab,
+  isCatalogDealClosed,
+  type CatalogStatusTab,
+} from "@lib/util/group-deal-catalog"
 import { isStoreVisibleDeal } from "@lib/util/normalize-group-deal"
 import {
   matchesGoodsTypeFilter,
@@ -18,6 +23,8 @@ export type GroupDealFilterState = {
   member: string
   goodsType: string
   sortBy: "deadline" | "newest"
+  /** Default in_progress so expired demo deals don't bury joinable ones. */
+  catalogTab: CatalogStatusTab
   minPrice: number | null
   maxPrice: number | null
   favoriteMember: string
@@ -39,6 +46,7 @@ export const DEFAULT_GROUP_DEAL_FILTERS: GroupDealFilterState = {
   member: "",
   goodsType: "",
   sortBy: "deadline",
+  catalogTab: "in_progress",
   minPrice: null,
   maxPrice: null,
   favoriteMember: "",
@@ -114,7 +122,8 @@ export const filterGroupDeals = (
   deals: GroupDeal[],
   filters: GroupDealFilterState
 ): GroupDeal[] => {
-  let result = deals.filter((deal) => {
+  let result = filterDealsByCatalogTab(deals, filters.catalogTab).filter(
+    (deal) => {
     if (!matchesQuery(deal, filters.query)) {
       return false
     }
@@ -159,16 +168,34 @@ export const filterGroupDeals = (
     }
 
     return true
-  })
+  }
+  )
 
   if (filters.sortBy === "deadline") {
-    result = [...result].sort(
-      (a, b) => new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
-    )
+    // Open deals first — ascending ends_at alone floats expired/closed cards to the top.
+    result = [...result].sort((a, b) => {
+      const aClosed = isCatalogDealClosed(a) ? 1 : 0
+      const bClosed = isCatalogDealClosed(b) ? 1 : 0
+
+      if (aClosed !== bClosed) {
+        return aClosed - bClosed
+      }
+
+      return new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
+    })
   } else {
-    result = [...result].sort(
-      (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
-    )
+    result = [...result].sort((a, b) => {
+      const aClosed = isCatalogDealClosed(a) ? 1 : 0
+      const bClosed = isCatalogDealClosed(b) ? 1 : 0
+
+      if (aClosed !== bClosed) {
+        return aClosed - bClosed
+      }
+
+      return (
+        new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
+      )
+    })
   }
 
   return result
@@ -184,7 +211,8 @@ export const hasActiveFilters = (filters: GroupDealFilterState): boolean =>
   filters.favoriteMember !== "" ||
   filters.vacantOnly ||
   filters.urgentOnly ||
-  filters.sortBy !== "deadline"
+  filters.sortBy !== "deadline" ||
+  filters.catalogTab !== "in_progress"
 
 export const filterFavoriteVacancy = (
   deals: GroupDeal[],
@@ -225,11 +253,19 @@ export const filterDepositSecured = (deals: GroupDeal[]): GroupDeal[] =>
 export const filterStoreVisibleDeals = filterDepositSecured
 
 export const sortByDeadline = (deals: GroupDeal[]): GroupDeal[] =>
-  [...deals].sort(
-    (a, b) =>
+  [...deals].sort((a, b) => {
+    const aClosed = isCatalogDealClosed(a) ? 1 : 0
+    const bClosed = isCatalogDealClosed(b) ? 1 : 0
+
+    if (aClosed !== bClosed) {
+      return aClosed - bClosed
+    }
+
+    return (
       getDaysUntilDeadline(a) - getDaysUntilDeadline(b) ||
       new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime()
-  )
+    )
+  })
 
 type GroupBuyingPreferences = {
   favorite_idol_group?: string | null
