@@ -6,7 +6,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { formatMessage, useDictionary } from "@i18n/provider"
 import type { LandingDealCard } from "types/landing-deal"
 
-const HERO_VISUAL_IMAGE = "/images/landing/hero-concert-venue.jpg"
+const HERO_VISUAL_IMAGE = "/images/landing/hero-photocard-collective.svg"
 
 type LandingHeroProps = {
   featured: LandingDealCard
@@ -66,7 +66,7 @@ const LandingHero = ({ featured, liveCount }: LandingHeroProps) => {
               alt={t.landing.hero.visualAlt}
               fill
               priority
-              className="object-cover object-[center_35%] scale-105"
+              className="object-cover object-center"
               sizes="(max-width: 768px) 100vw, 50vw"
             />
             <div
