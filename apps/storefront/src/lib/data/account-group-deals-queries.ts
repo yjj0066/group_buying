@@ -233,7 +233,10 @@ export async function uploadHostedGroupDealCoverImage(
     },
   })
 
-  return response.group_deal
+  return {
+    group_deal: response.group_deal,
+    image_url: response.image_url,
+  }
 }
 
 export async function createHostedGroupDeal(input: CreateHostedGroupDealInput) {

@@ -89,12 +89,14 @@ export async function uploadHostedGroupDealCoverImage(
     image_base64: string
     image_filename?: string | null
   }
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; image_url: string } | { ok: false; error: string }
+> {
   try {
     const mod = await import("./account-group-deals-queries")
-    await mod.uploadHostedGroupDealCoverImage(dealId, input)
+    const result = await mod.uploadHostedGroupDealCoverImage(dealId, input)
 
-    return { ok: true }
+    return { ok: true, image_url: result.image_url }
   } catch (error) {
     const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
 

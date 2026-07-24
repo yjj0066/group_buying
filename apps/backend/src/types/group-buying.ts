@@ -381,6 +381,7 @@ export type GroupDealSearchIndexSnapshot = {
   ends_at: string
   updated_at: string
   idol_group: string | null
+  image_url: string | null
   member_options: GroupDealSearchIndexMemberOption[]
   vacant_member_list: string[]
   urgent_flag: boolean

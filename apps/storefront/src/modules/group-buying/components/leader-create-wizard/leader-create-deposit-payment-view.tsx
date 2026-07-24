@@ -19,6 +19,7 @@ import { DEFAULT_GROUP_BUYING_GOODS_TYPE } from "@lib/constants/group-buying-cat
 
 import {
   createHostedGroupDeal,
+  getHostedGroupDeal,
   probeLeaderCreateAccess,
   uploadHostedGroupDealCoverImage,
 } from "@lib/data/account-group-deals-actions"
@@ -190,7 +191,8 @@ const buildDealTitle = (draft: LeaderCreateDraft) =>
 
 const buildGroupDealFromDraft = (
   draft: LeaderCreateDraft,
-  accountDeal: import("types/account-group-deals").AccountGroupDeal
+  accountDeal: import("types/account-group-deals").AccountGroupDeal,
+  coverImageUrl?: string | null
 ) => {
   const mapped = mapAccountGroupDealToGroupDeal(accountDeal)
   const activeSeats = draft.memberSeats.filter((seat) => seat.quantity > 0)
@@ -226,6 +228,7 @@ const buildGroupDealFromDraft = (
       idol_group: draft.idolGroup,
       goods_type: draft.goodsType,
       hosted: true,
+      ...(coverImageUrl ? { image_url: coverImageUrl } : {}),
       member_seats: activeSeats.map((seat) => ({
         label: seat.label,
         price: seat.price,
@@ -487,7 +490,8 @@ export const LeaderCreateDepositPaymentView = () => {
         assertDataUrlUploadSize(draft.productImageDataUrl)
       }
 
-      let dealId = draft.createdDealId
+      let workingDraft = draft
+      let dealId = workingDraft.createdDealId
       let accountDeal: import("types/account-group-deals").AccountGroupDeal | null =
         null
 
@@ -537,16 +541,37 @@ export const LeaderCreateDepositPaymentView = () => {
 
         accountDeal = createResult.group_deal
         dealId = accountDeal.id
+        workingDraft = { ...workingDraft, createdDealId: dealId }
+        setDraft(workingDraft)
+        saveLeaderCreateDraft(workingDraft)
+      } else if (!accountDeal) {
+        accountDeal = await getHostedGroupDeal(dealId)
       }
 
-      if (draft.productImageDataUrl && dealId) {
-        void uploadHostedGroupDealCoverImage(dealId, {
-          image_base64: draft.productImageDataUrl,
-          image_filename: draft.productImageFileName ?? undefined,
+      let coverImageUrl: string | null = null
+
+      if (workingDraft.productImageDataUrl && dealId) {
+        const uploadResult = await uploadHostedGroupDealCoverImage(dealId, {
+          image_base64: workingDraft.productImageDataUrl,
+          image_filename: workingDraft.productImageFileName ?? undefined,
         })
+
+        if (uploadResult.ok) {
+          coverImageUrl = uploadResult.image_url
+        } else {
+          setConfirmError(formatGroupDealValidationError(uploadResult.error))
+          setIsConfirming(false)
+          return
+        }
       }
 
-      cacheHostedDeal(buildGroupDealFromDraft(draft, accountDeal))
+      if (!accountDeal) {
+        throw new Error("공구 정보를 불러오지 못했습니다. 다시 시도해 주세요.")
+      }
+
+      cacheHostedDeal(
+        buildGroupDealFromDraft(workingDraft, accountDeal, coverImageUrl)
+      )
       clearLeaderCreateDraft()
       await clearLeaderCreateWizardDraftFromAccount()
       router.push(gbAppRoutes.sellerDeal(countryCode, dealId))

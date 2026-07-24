@@ -95,6 +95,10 @@ export const serializeSearchIndexGroupDealSnapshot = (
     updated_at: toIsoString(deal.updated_at),
     idol_group:
       metadata.idol_group != null ? String(metadata.idol_group) : null,
+    image_url:
+      typeof metadata.image_url === "string" && metadata.image_url.trim()
+        ? metadata.image_url.trim()
+        : null,
     member_options: memberOptions,
     vacant_member_list: vacantMemberList,
     urgent_flag: metadata.urgent_fill === true,

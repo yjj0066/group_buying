@@ -19,6 +19,7 @@ describe("group-deal-search-index serializer", () => {
     metadata: {
       idol_group: "IVE",
       urgent_fill: true,
+      image_url: "https://cdn.example.com/group-buying/deal-images/cover.jpg",
     },
   }
 
@@ -67,6 +68,9 @@ describe("group-deal-search-index serializer", () => {
 
     expect(snapshot.id).toBe("deal_01")
     expect(snapshot.idol_group).toBe("IVE")
+    expect(snapshot.image_url).toBe(
+      "https://cdn.example.com/group-buying/deal-images/cover.jpg"
+    )
     expect(snapshot.urgent_flag).toBe(true)
     expect(snapshot.deposit_status).toBe("deposited")
     expect(snapshot.receipt_status).toBe("pending")
