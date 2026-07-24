@@ -26,6 +26,11 @@ export const parseFiltersFromSearchParams = (
   const sort = readParam(source, "sort")
   const minPrice = readParam(source, "minPrice")
   const maxPrice = readParam(source, "maxPrice")
+  const status = readParam(source, "status")
+  const catalogTab =
+    status === "closed" || status === "all" || status === "in_progress"
+      ? status
+      : DEFAULT_GROUP_DEAL_FILTERS.catalogTab
 
   return {
     ...DEFAULT_GROUP_DEAL_FILTERS,
@@ -35,6 +40,7 @@ export const parseFiltersFromSearchParams = (
     member: readParam(source, "member"),
     goodsType: readParam(source, "goods"),
     sortBy: sort === "newest" ? "newest" : "deadline",
+    catalogTab,
     minPrice: minPrice ? Number(minPrice) : null,
     maxPrice: maxPrice ? Number(maxPrice) : null,
     favoriteMember: readParam(source, "favorite"),
@@ -67,6 +73,10 @@ export const filtersToSearchParams = (
 
   if (filters.sortBy === "newest") {
     params.set("sort", "newest")
+  }
+
+  if (filters.catalogTab && filters.catalogTab !== "in_progress") {
+    params.set("status", filters.catalogTab)
   }
 
   if (filters.minPrice != null) {

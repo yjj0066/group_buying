@@ -56,6 +56,7 @@ const ParticipantHomeBrowse = ({
   const filteredDeals = useMemo(() => {
     const searched = filterGroupDeals(deals, {
       ...DEFAULT_GROUP_DEAL_FILTERS,
+      catalogTab: "all",
       query: debouncedQuery,
     })
 

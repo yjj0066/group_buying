@@ -122,8 +122,8 @@ export const filterGroupDeals = (
   deals: GroupDeal[],
   filters: GroupDealFilterState
 ): GroupDeal[] => {
-  let result = filterDealsByCatalogTab(deals, filters.catalogTab).filter(
-    (deal) => {
+  const catalogTab = filters.catalogTab ?? DEFAULT_GROUP_DEAL_FILTERS.catalogTab
+  let result = filterDealsByCatalogTab(deals, catalogTab).filter((deal) => {
     if (!matchesQuery(deal, filters.query)) {
       return false
     }

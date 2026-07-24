@@ -95,15 +95,20 @@ const GroupDealsCatalog = ({
     [visibleDeals]
   )
   const filteredDeals = useMemo(
-    () => filterGroupDeals(visibleDeals, appliedFilters),
-    [visibleDeals, appliedFilters]
+    () =>
+      filterGroupDeals(visibleDeals, {
+        ...draftFilters,
+        // Text search still waits for the Search button / Enter.
+        query: appliedFilters.query,
+      }),
+    [visibleDeals, draftFilters, appliedFilters.query]
   )
   const resultsLabel = t.groupBuying.resultsCount.replace(
     "{count}",
     String(filteredDeals.length)
   )
   const highlightMember =
-    appliedFilters.favoriteMember || appliedFilters.member || undefined
+    draftFilters.favoriteMember || draftFilters.member || undefined
 
   return (
     <BbPageShell>
