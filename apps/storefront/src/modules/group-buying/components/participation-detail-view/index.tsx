@@ -130,7 +130,15 @@ const ParticipationDetailView = ({
     setConfirmError(null)
 
     try {
-      const response = await confirmParticipantDelivery(participation.participant_id)
+      const response = await confirmParticipantDelivery(
+        participation.participant_id
+      )
+
+      if (!response.ok) {
+        setConfirmError(response.error || labels.confirmDeliveryError)
+        return
+      }
+
       setParticipation(response.participation)
     } catch {
       setConfirmError(labels.confirmDeliveryError)

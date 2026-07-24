@@ -182,9 +182,30 @@ export async function recordLeaderDeposit(
   }
 }
 
-export async function confirmParticipantDelivery(...args: any[]) {
-  const mod = await import("./account-group-deals-queries")
-  return (mod.confirmParticipantDelivery as (...a: any[]) => any)(...args)
+export async function confirmParticipantDelivery(
+  participantId: string
+): Promise<
+  | {
+      ok: true
+      participation: import("types/account-group-deals").AccountParticipation
+      all_delivery_confirmed: boolean
+    }
+  | { ok: false; error: string }
+> {
+  try {
+    const mod = await import("./account-group-deals-queries")
+    const result = await mod.confirmParticipantDelivery(participantId)
+
+    return toSerializable({
+      ok: true as const,
+      participation: result.participation,
+      all_delivery_confirmed: Boolean(result.all_delivery_confirmed),
+    })
+  } catch (error) {
+    const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
+
+    return { ok: false, error: resolveMedusaErrorMessage(error) }
+  }
 }
 
 export async function listMyParticipations(...args: any[]) {

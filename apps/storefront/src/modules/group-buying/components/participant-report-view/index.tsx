@@ -55,7 +55,14 @@ const ParticipantReportView = ({
     setConfirmError(null)
 
     try {
-      await confirmParticipantDelivery(participation.participant_id)
+      const result = await confirmParticipantDelivery(
+        participation.participant_id
+      )
+
+      if (!result.ok) {
+        setConfirmError(result.error || labels.confirmDeliveryError)
+        return
+      }
     } catch {
       setConfirmError(labels.confirmDeliveryError)
     } finally {

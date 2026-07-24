@@ -149,7 +149,13 @@ const ParticipationsList = ({
     setConfirmError(null)
 
     try {
-      await confirmParticipantDelivery(participantId)
+      const result = await confirmParticipantDelivery(participantId)
+
+      if (!result.ok) {
+        setConfirmError(result.error || labels.confirmDeliveryError)
+        return
+      }
+
       router.refresh()
     } catch {
       setConfirmError(labels.confirmDeliveryError)

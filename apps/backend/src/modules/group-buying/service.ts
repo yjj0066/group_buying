@@ -618,7 +618,7 @@ class GroupBuyingModuleService extends MedusaService({
   }
 
   async allParticipantsDeliveryConfirmed(groupDealId: string): Promise<boolean> {
-    const participants = await this.listConfirmedParticipants(groupDealId)
+    const participants = await this.listActiveEscrowParticipants(groupDealId)
 
     if (!participants.length) {
       return false
@@ -680,11 +680,32 @@ class GroupBuyingModuleService extends MedusaService({
     return updatedParticipant
   }
 
+  async listActiveEscrowParticipants(groupDealId: string) {
+    const participants = await this.listGroupDealParticipants({
+      group_deal_id: groupDealId,
+    })
+
+    return participants.filter((participant) => {
+      const status = String(participant.status ?? "")
+
+      return (
+        status === GroupDealParticipantStatus.CONFIRMED ||
+        status === GroupDealParticipantStatus.RESERVED
+      )
+    })
+  }
+
   async autoConfirmOverdueDeliveries(now: Date = new Date()) {
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-    const participants = await this.listGroupDealParticipants({
-      status: GroupDealParticipantStatus.CONFIRMED,
-    })
+    const [confirmedParticipants, reservedParticipants] = await Promise.all([
+      this.listGroupDealParticipants({
+        status: GroupDealParticipantStatus.CONFIRMED,
+      }),
+      this.listGroupDealParticipants({
+        status: GroupDealParticipantStatus.RESERVED,
+      }),
+    ])
+    const participants = [...confirmedParticipants, ...reservedParticipants]
     const confirmedIds: string[] = []
 
     for (const participant of participants) {
@@ -715,11 +736,22 @@ class GroupBuyingModuleService extends MedusaService({
 
   async confirmParticipantDelivery(participantId: string) {
     const participant = await this.retrieveGroupDealParticipant(participantId)
+    const status = String(participant.status ?? "")
+    const canConfirmDelivery =
+      status === GroupDealParticipantStatus.CONFIRMED ||
+      status === GroupDealParticipantStatus.RESERVED
 
-    if (participant.status !== GroupDealParticipantStatus.CONFIRMED) {
+    if (!canConfirmDelivery) {
       throw new MedusaError(
         MedusaError.Types.NOT_ALLOWED,
-        "Only confirmed participants can confirm delivery"
+        "Only paid (reserved/confirmed) participants can confirm delivery"
+      )
+    }
+
+    if (!participant.tracking_number) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Delivery can be confirmed only after a tracking number is registered"
       )
     }
 

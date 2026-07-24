@@ -37,7 +37,13 @@ const ConfirmDeliveryButton = ({
     setStatus("loading")
 
     try {
-      await confirmParticipantDelivery(participantId)
+      const result = await confirmParticipantDelivery(participantId)
+
+      if (!result.ok) {
+        setStatus("error")
+        return
+      }
+
       setStatus("done")
       router.refresh()
     } catch {

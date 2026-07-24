@@ -499,11 +499,19 @@ const confirmParticipantDeliveryStep = createStep(
         deal.status === GroupDealStatus.MINIMUM_REACHED ||
         deal.status === GroupDealStatus.CLOSED
       ) {
-        const { result } = await settleGroupDealWorkflow(container).run({
-          input: { group_deal_id: participant.group_deal_id },
-        })
+        try {
+          const { result } = await settleGroupDealWorkflow(container).run({
+            input: { group_deal_id: participant.group_deal_id },
+          })
 
-        settlement = result
+          settlement = result
+        } catch (error) {
+          // Delivery confirmation must succeed even if settlement capture/refund fails.
+          console.error(
+            "[confirm-participant-delivery] settlement failed after delivery confirm",
+            error
+          )
+        }
       }
     }
 
