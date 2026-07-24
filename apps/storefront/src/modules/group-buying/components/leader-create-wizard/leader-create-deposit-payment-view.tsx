@@ -9,11 +9,9 @@ import { useParams, useRouter } from "next/navigation"
 
 
 import {
-
+  calculateLeaderDepositAmount,
   GROUP_BUYING_LEADER_DEPOSIT_AMOUNT,
-
   LEADER_DEPOSIT_DEADLINE_MINUTES,
-
 } from "@lib/constants/group-buying-fees"
 
 import { GROUP_BUYING_DEMO_PRODUCT_ID } from "@lib/constants/group-buying-demo-product"
@@ -47,6 +45,7 @@ import {
 import { Text } from "@modules/common/components/ui"
 
 import { formatGroupDealValidationError, shouldSuggestLeaderCreateStepReview } from "@lib/util/format-group-deal-validation-error"
+import { resolveMedusaErrorMessage } from "@lib/util/medusa-error"
 import {
   assertDataUrlUploadSize,
   isUploadSizeRelatedError,
@@ -114,26 +113,34 @@ const formatHoldTime = (secondsLeft: number) => {
 
 
 
-const createLeaderDepositVirtualAccount = (seed: string) => {
-
+const createLeaderDepositVirtualAccount = (
+  seed: string,
+  amount: number
+) => {
   const suffix = seed.replace(/\D/g, "").slice(-6).padStart(6, "0")
 
-
-
   return {
-
     bank_name: "국민은행",
-
     account_number: `123-456-${suffix.slice(0, 3)}-${suffix.slice(3)}`,
-
     account_holder: "아이돌공구(주)",
-
-    amount: GROUP_BUYING_LEADER_DEPOSIT_AMOUNT,
-
+    amount,
     currency_code: "krw" as const,
+  }
+}
 
+const resolveLeaderDepositAmount = (draft: LeaderCreateDraft): number => {
+  const activeSeats = draft.memberSeats.filter((seat) => seat.quantity > 0)
+  const totalSeats = getTotalSeatCount(activeSeats)
+  const primaryPrice = activeSeats[0]?.price ?? 0
+
+  if (!totalSeats || primaryPrice <= 0) {
+    return GROUP_BUYING_LEADER_DEPOSIT_AMOUNT
   }
 
+  return calculateLeaderDepositAmount({
+    deal_price: primaryPrice,
+    target_quantity: totalSeats,
+  })
 }
 
 
@@ -376,8 +383,10 @@ export const LeaderCreateDepositPaymentView = () => {
 
 
 
-    return createLeaderDepositVirtualAccount(seed)
-
+    return createLeaderDepositVirtualAccount(
+      seed,
+      resolveLeaderDepositAmount(draft)
+    )
   }, [draft])
 
 
@@ -507,8 +516,12 @@ export const LeaderCreateDepositPaymentView = () => {
         dealId = accountDeal.id
       }
 
+      const depositAmount =
+        accountDeal?.deposit_amount ??
+        (draft ? resolveLeaderDepositAmount(draft) : GROUP_BUYING_LEADER_DEPOSIT_AMOUNT)
+
       const depositResult = await recordLeaderDeposit(dealId, {
-        deposit_amount: GROUP_BUYING_LEADER_DEPOSIT_AMOUNT,
+        deposit_amount: depositAmount,
         deposit_payment_key: `mock-leader-deposit-${Date.now()}`,
       })
 
@@ -520,7 +533,7 @@ export const LeaderCreateDepositPaymentView = () => {
       router.push(gbAppRoutes.sellerDeal(countryCode, dealId))
     } catch (error) {
       const formatted = formatGroupDealValidationError(
-        error instanceof Error ? error.message : w.depositConfirmError
+        resolveMedusaErrorMessage(error)
       )
 
       setConfirmError(formatted)

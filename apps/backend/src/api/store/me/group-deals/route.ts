@@ -138,11 +138,27 @@ export const POST = async (
   let imageUrl: string | null = null
 
   if (image_base64) {
-    imageUrl = await saveGroupDealCoverImage({
-      groupDealId: dealId,
-      imageBase64: image_base64,
-      filename: image_filename,
-    })
+    try {
+      imageUrl = await saveGroupDealCoverImage({
+        groupDealId: dealId,
+        imageBase64: image_base64,
+        filename: image_filename,
+      })
+    } catch (error) {
+      const isValidationError =
+        error instanceof MedusaError &&
+        error.type === MedusaError.Types.INVALID_DATA &&
+        /document image must be|image_base64 must be/i.test(error.message)
+
+      if (isValidationError) {
+        throw error
+      }
+
+      console.error(
+        "[store/me/group-deals POST] cover image upload failed; continuing without image",
+        error
+      )
+    }
   }
 
   await groupBuyingService.updateGroupDeals({

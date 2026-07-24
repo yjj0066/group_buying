@@ -16,7 +16,7 @@ describe("medusa-error", () => {
     expect(isFetchError(error)).toBe(true)
   })
 
-  it("maps generic 500 FetchError to document AI guidance", () => {
+  it("maps generic 500 FetchError to a neutral server message", () => {
     const error = new FetchError(
       "An unknown error occurred.",
       "Internal Server Error",
@@ -24,7 +24,7 @@ describe("medusa-error", () => {
     )
 
     expect(resolveMedusaErrorMessage(error)).toContain(
-      "서버에서 송장/영수증 분석에 실패했습니다"
+      "서버 요청 처리에 실패했습니다"
     )
   })
 

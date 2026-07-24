@@ -93,11 +93,39 @@ const translateValidationSegment = (segment: string): string | null => {
   }
 
   if (/Product with id .+ was not found/i.test(trimmed)) {
-    return "공구에 연결할 상품을 찾을 수 없습니다. 백엔드에서 pnpm seed:group-buy-demo-product를 실행한 뒤 다시 시도해 주세요."
+    return "공구에 연결할 상품을 찾을 수 없습니다. 관리자에게 demo-product-group-buy 시드 적용 여부를 확인해 주세요."
   }
 
   if (/Only published products can be used for group deals/i.test(trimmed)) {
     return "선택한 상품은 공구에 사용할 수 없습니다. 게시된 상품인지 확인해 주세요."
+  }
+
+  if (/Product must have at least one variant/i.test(trimmed)) {
+    return "공구에 연결할 상품에 옵션(변형)이 없습니다. 관리자에게 문의해 주세요."
+  }
+
+  if (/Selected variant does not belong to the product/i.test(trimmed)) {
+    return "선택한 상품 옵션이 올바르지 않습니다. 다시 시도해 주세요."
+  }
+
+  if (/Unauthorized/i.test(trimmed)) {
+    return "로그인이 필요합니다. 계정에 로그인한 뒤 다시 시도해 주세요."
+  }
+
+  if (/Group deal creation failed on the server/i.test(trimmed)) {
+    return "공구 생성 중 서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+  }
+
+  if (/Only the deal leader can record leader deposit/i.test(trimmed)) {
+    return "보증금 입금 확인 권한이 없습니다. 로그인 계정을 확인해 주세요."
+  }
+
+  if (/Leader deposit is already recorded/i.test(trimmed)) {
+    return "이미 보증금 입금이 확인된 공구입니다. 내 공구 목록에서 진행 상태를 확인해 주세요."
+  }
+
+  if (/Uploaded media is not publicly accessible|S3_|Object storage is configured/i.test(trimmed)) {
+    return "공구 사진 저장에 실패했습니다. Render/S3(R2) 설정을 확인하거나, 사진 없이 다시 시도해 주세요."
   }
 
   if (/Deal price cannot exceed original price/i.test(trimmed)) {
@@ -163,13 +191,6 @@ export const formatGroupDealValidationError = (raw: string): string => {
     return "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."
   }
 
-  if (
-    /로그인|세션|서버|백엔드|상품|Product with id|Deal price|모집|날짜|Document AI|Request failed|unknown error occurred/i.test(
-      normalized
-    )
-  ) {
-    return normalized
-  }
-
-  return "공구 개설에 실패했습니다. 잠시 후 다시 시도해 주세요."
+  // Unknown server/API messages should be shown as-is instead of hiding the cause.
+  return normalized
 }

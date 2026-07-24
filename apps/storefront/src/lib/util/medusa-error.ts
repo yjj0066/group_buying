@@ -76,29 +76,12 @@ const readFetchErrorBodyMessage = (error: FetchError): string | null => {
   return null
 }
 
-const resolveDocumentAiServerMessage = (status: number | undefined): string => {
-  if (status === 503) {
-    return (
-      "Document AI 서비스를 사용할 수 없습니다. BFF의 UPSTAGE_API_KEY와 " +
-      "services/document-ai-bff 실행 여부를 확인해 주세요."
-    )
-  }
-
-  return (
-    "서버에서 송장/영수증 분석에 실패했습니다. Medusa 백엔드 터미널 로그를 확인해 주세요. " +
-    "DOCUMENT_AI_ENABLED=true 이면 Document AI BFF가 HYBRID_API_URL(기본 http://127.0.0.1:5000)에서 " +
-    "실행 중인지, HYBRID_API_SHARED_SECRET 이 BFF와 같은지 확인해 주세요."
-  )
-}
-
 const resolveGenericServerMessage = (status: number | undefined): string => {
   if (status === 503) {
-    return resolveDocumentAiServerMessage(status)
+    return "서버를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요."
   }
 
-  return (
-    "서버 요청 처리에 실패했습니다. Medusa 백엔드 터미널 로그를 확인해 주세요."
-  )
+  return "서버 요청 처리에 실패했습니다. 잠시 후 다시 시도해 주세요."
 }
 
 const isPurchaseReceiptGuardMessage = (message: string): boolean =>
