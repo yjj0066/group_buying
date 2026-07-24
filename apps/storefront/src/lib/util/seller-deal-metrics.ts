@@ -42,6 +42,94 @@ export type SellerDashboardMetrics = {
   allDepositsPaid: boolean
 }
 
+export type SellerPackingCtaState = "hidden" | "enabled" | "disabled"
+
+const hasShippingCompletedMarker = (deal: GroupDeal): boolean => {
+  const shippingCompletedAt = deal.metadata?.shipping_completed_at
+
+  return typeof shippingCompletedAt === "string" && shippingCompletedAt.length > 0
+}
+
+export const areAllPaidParticipantsDeliveryConfirmed = (
+  participants: HostedDealParticipant[]
+): boolean => {
+  const paid = participants.filter(
+    (participant) => participant.deposit_status === "paid"
+  )
+
+  if (!paid.length) {
+    return false
+  }
+
+  return paid.every(
+    (participant) =>
+      Boolean(participant.delivery_confirmed_at) ||
+      participant.stage === "delivery_confirmed"
+  )
+}
+
+export const isSellerPackingPhaseComplete = (
+  deal: GroupDeal,
+  participants: HostedDealParticipant[] = []
+): boolean => {
+  const stage = resolveLeaderStageFromDeal(deal)
+
+  if (
+    stage === "shipping" ||
+    stage === "closing" ||
+    stage === "settled"
+  ) {
+    return true
+  }
+
+  if (
+    deal.status === "shipping" ||
+    deal.status === "settlement" ||
+    deal.status === "completed" ||
+    deal.status === "closed"
+  ) {
+    return true
+  }
+
+  if (hasShippingCompletedMarker(deal)) {
+    return true
+  }
+
+  if (areAllPaidParticipantsDeliveryConfirmed(participants)) {
+    return true
+  }
+
+  // Tracking already registered for every paid seat — packing start is no longer needed.
+  const paid = participants.filter(
+    (participant) => participant.deposit_status === "paid"
+  )
+
+  if (
+    paid.length > 0 &&
+    paid.every((participant) => Boolean(participant.tracking_number))
+  ) {
+    return true
+  }
+
+  return false
+}
+
+export const resolveSellerPackingCtaState = (
+  deal: GroupDeal,
+  metrics: SellerDashboardMetrics,
+  participants: HostedDealParticipant[] = []
+): SellerPackingCtaState => {
+  if (isSellerPackingPhaseComplete(deal, participants)) {
+    return "hidden"
+  }
+
+  if (metrics.allDepositsPaid) {
+    return "enabled"
+  }
+
+  return "disabled"
+}
+
 export const computeSellerDashboardMetrics = (
   deal: GroupDeal,
   participants: HostedDealParticipant[] = []

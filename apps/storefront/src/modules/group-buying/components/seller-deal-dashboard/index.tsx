@@ -13,6 +13,7 @@ import {
 import {
   computeSellerDashboardMetrics,
   resolveLeaderDealStatusBadgeKey,
+  resolveSellerPackingCtaState,
 } from "@lib/util/seller-deal-metrics"
 import { gbAppRoutes } from "@lib/wireframe/routes"
 import { convertToLocale } from "@lib/util/money"
@@ -68,6 +69,11 @@ const SellerDealDashboard = ({
 
   const statusBadgeKey = resolveLeaderDealStatusBadgeKey(dealWithRuntime)
   const statusBadgeLabel = dash.statusBadges[statusBadgeKey]
+  const packingCtaState = resolveSellerPackingCtaState(
+    dealWithRuntime,
+    metrics,
+    participants
+  )
 
   return (
     <LeaderWireframeShell screenId="DASH" title={dash.title}>
@@ -200,11 +206,11 @@ const SellerDealDashboard = ({
           </LocalizedClientLink>
         </div>
 
-        {metrics.allDepositsPaid ? (
+        {packingCtaState === "enabled" ? (
           <LocalizedClientLink href={gbAppRoutes.sellerPacking(countryCode, deal.id)}>
             <BbButton variant="cta">{dash.packingCta}</BbButton>
           </LocalizedClientLink>
-        ) : (
+        ) : packingCtaState === "disabled" ? (
           <BbButton
             variant="cta"
             className="disabled:bg-[#DFDCEA] disabled:text-[#9CA3AF]"
@@ -212,7 +218,7 @@ const SellerDealDashboard = ({
           >
             {dash.packingCtaDisabled}
           </BbButton>
-        )}
+        ) : null}
       </div>
     </LeaderWireframeShell>
   )

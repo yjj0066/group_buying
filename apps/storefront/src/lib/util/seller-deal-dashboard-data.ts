@@ -17,6 +17,9 @@ export type HostedDealParticipant = {
   deposit_status: "pending" | "paid" | "cancelled" | "expired"
   shipping_region: string | null
   created_at: string
+  delivery_confirmed_at?: string | null
+  stage?: string | null
+  tracking_number?: string | null
 }
 
 export type SellerDealOrderRow = [string, string, string, string, string]
@@ -117,6 +120,9 @@ export const mapParticipationToHostedDealParticipant = (
     deposit_status: resolveDepositStatus(participation.status),
     shipping_region: maskShippingRegion(participation.shipping_address),
     created_at: participation.created_at,
+    delivery_confirmed_at: participation.delivery_confirmed_at ?? null,
+    stage: participation.stage ?? null,
+    tracking_number: participation.tracking_number ?? null,
   }
 }
 
@@ -168,6 +174,9 @@ export const mapLeaderParticipationToHostedParticipant = (
     deposit_status: resolveDepositStatus(participation.status),
     shipping_region: maskShippingAddressLine(participation.address),
     created_at: new Date(0).toISOString(),
+    delivery_confirmed_at: null,
+    stage: participation.stage ?? null,
+    tracking_number: participation.tracking_number ?? null,
   }
 }
 
