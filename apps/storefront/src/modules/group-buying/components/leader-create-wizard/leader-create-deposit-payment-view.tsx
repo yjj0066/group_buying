@@ -17,6 +17,7 @@ import {
 } from "@lib/constants/group-buying-fees"
 
 import { GROUP_BUYING_DEMO_PRODUCT_ID } from "@lib/constants/group-buying-demo-product"
+import { DEFAULT_GROUP_BUYING_GOODS_TYPE } from "@lib/constants/group-buying-catalog"
 
 import {
   createHostedGroupDeal,
@@ -45,7 +46,7 @@ import {
 
 import { Text } from "@modules/common/components/ui"
 
-import { formatGroupDealValidationError } from "@lib/util/format-group-deal-validation-error"
+import { formatGroupDealValidationError, shouldSuggestLeaderCreateStepReview } from "@lib/util/format-group-deal-validation-error"
 import {
   assertDataUrlUploadSize,
   isUploadSizeRelatedError,
@@ -162,19 +163,13 @@ const ensureDepositExpiry = (draft: LeaderCreateDraft): LeaderCreateDraft => {
 
 
 const isDraftReady = (draft: LeaderCreateDraft) =>
-
   Boolean(
-
     draft.title.trim() &&
-
-      draft.idolGroup &&
-
-      draft.goodsType &&
-
+      draft.idolGroup.trim() &&
       draft.albumQuantity.trim() &&
-
-      draft.memberSeats.some((seat) => seat.quantity > 0)
-
+      draft.memberSeats.some(
+        (seat) => seat.quantity > 0 && seat.label.trim() && seat.price > 0
+      )
   )
 
 
@@ -500,7 +495,7 @@ export const LeaderCreateDepositPaymentView = () => {
             quantity: seat.quantity,
           })),
           idol_group: draft.idolGroup,
-          goods_type: draft.goodsType,
+          goods_type: draft.goodsType?.trim() || DEFAULT_GROUP_BUYING_GOODS_TYPE,
           ...(draft.productImageDataUrl
             ? {
                 image_base64: draft.productImageDataUrl,
@@ -524,11 +519,11 @@ export const LeaderCreateDepositPaymentView = () => {
       await clearLeaderCreateWizardDraftFromAccount()
       router.push(gbAppRoutes.sellerDeal(countryCode, dealId))
     } catch (error) {
-      setConfirmError(
-        error instanceof Error
-          ? formatGroupDealValidationError(error.message)
-          : w.depositConfirmError
+      const formatted = formatGroupDealValidationError(
+        error instanceof Error ? error.message : w.depositConfirmError
       )
+
+      setConfirmError(formatted)
       setIsConfirming(false)
     }
   }
@@ -749,7 +744,8 @@ export const LeaderCreateDepositPaymentView = () => {
         {confirmError ? (
           <BbAlert variant="error">
             <p className="whitespace-pre-line">{confirmError}</p>
-            {!isUploadSizeRelatedError(confirmError) ? (
+            {!isUploadSizeRelatedError(confirmError) &&
+            shouldSuggestLeaderCreateStepReview(confirmError) ? (
               <p className="mt-2 font-normal">{w.depositValidationBackHint}</p>
             ) : null}
           </BbAlert>

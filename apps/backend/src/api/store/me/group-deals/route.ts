@@ -14,6 +14,7 @@ import GroupBuyingModuleService from "../../../../modules/group-buying/service"
 import { saveGroupDealCoverImage } from "../../../../utils/group-deal-leader-ops"
 import { calculateLeaderDepositAmount } from "../../../../utils/group-deal-leader-deposit"
 import { generateLeaderDepositVirtualAccount } from "../../../../utils/virtual-account"
+import { respondWithRouteError } from "../../../../utils/route-error"
 import { serializeAccountGroupDeal } from "../../../../utils/group-deal-account"
 import {
   validateGroupDealProduct,
@@ -36,7 +37,8 @@ export const POST = async (
     return
   }
 
-  const body = PostStoreCreateGroupDeal.parse(req.body)
+  try {
+    const body = PostStoreCreateGroupDeal.parse(req.body)
 
   if (body.deal_price > body.original_price) {
     throw new MedusaError(
@@ -160,4 +162,10 @@ export const POST = async (
     ),
     leader_deposit_virtual_account: leaderDepositVirtualAccount,
   })
+  } catch (error) {
+    respondWithRouteError(res, error, {
+      logLabel: "store/me/group-deals POST",
+      fallbackMessage: "Group deal creation failed on the server",
+    })
+  }
 }

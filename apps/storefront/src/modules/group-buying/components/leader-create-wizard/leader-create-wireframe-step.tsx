@@ -161,7 +161,22 @@ export const LeaderCreateWireframeStep = ({
 
   const validateStep = () => {
     if (stepIndex === LEADER_CREATE_WIZARD_STEP_INDEX.basic) {
-      return Boolean(draft.idolGroup.trim() && draft.title.trim())
+      if (!draft.idolGroup.trim() || !draft.title.trim()) {
+        return false
+      }
+
+      if (draft.recruitmentDeadline) {
+        const deadline = new Date(`${draft.recruitmentDeadline}T23:59:00`)
+
+        if (
+          Number.isNaN(deadline.getTime()) ||
+          deadline.getTime() <= Date.now()
+        ) {
+          return false
+        }
+      }
+
+      return true
     }
 
     if (stepIndex === LEADER_CREATE_WIZARD_STEP_INDEX.product) {

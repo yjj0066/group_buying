@@ -116,8 +116,21 @@ const translateValidationSegment = (segment: string): string | null => {
     return "0보다 큰 숫자를 입력해야 하는 항목이 있습니다. 멤버 자리 가격과 수량을 확인해 주세요."
   }
 
+  if (/Invalid datetime|string must contain/i.test(trimmed)) {
+    return "날짜·시간 형식이 올바르지 않습니다. 모집 마감일과 예상 발송일을 확인해 주세요."
+  }
+
+  if (/Too small: expected string to have >=1 character/i.test(trimmed)) {
+    return "필수 입력 항목이 비어 있습니다."
+  }
+
   return null
 }
+
+export const shouldSuggestLeaderCreateStepReview = (message: string): boolean =>
+  /입력|모집 마감|자리 가격|앨범 수량|1차 판매|필수|too small|Required at|Expected number|Expected string|Invalid ISO datetime|Invalid datetime/i.test(
+    message
+  )
 
 export const formatGroupDealValidationError = (raw: string): string => {
   const normalized = raw.trim()
@@ -150,5 +163,13 @@ export const formatGroupDealValidationError = (raw: string): string => {
     return "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."
   }
 
-  return "공구 개설 정보를 확인해 주세요. 이전 단계에서 입력 내용을 수정한 뒤 다시 시도해 주세요."
+  if (
+    /로그인|세션|서버|백엔드|상품|Product with id|Deal price|모집|날짜|Document AI|Request failed|unknown error occurred/i.test(
+      normalized
+    )
+  ) {
+    return normalized
+  }
+
+  return "공구 개설에 실패했습니다. 잠시 후 다시 시도해 주세요."
 }

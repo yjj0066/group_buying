@@ -51,6 +51,26 @@ const readFetchErrorBodyMessage = (error: FetchError): string | null => {
     if (typeof message === "string" && message.trim()) {
       return message.trim()
     }
+
+    if (Array.isArray(message)) {
+      const joined = message
+        .map((item) =>
+          typeof item === "string"
+            ? item
+            : typeof item === "object" &&
+                item !== null &&
+                "message" in item &&
+                typeof (item as { message?: unknown }).message === "string"
+              ? String((item as { message: string }).message)
+              : null
+        )
+        .filter((item): item is string => Boolean(item))
+        .join("\n")
+
+      if (joined) {
+        return joined
+      }
+    }
   }
 
   return null
