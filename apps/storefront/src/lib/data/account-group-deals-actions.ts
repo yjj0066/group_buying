@@ -1,5 +1,12 @@
 "use server"
 
+const toSerializable = <T>(value: T): T =>
+  JSON.parse(
+    JSON.stringify(value, (_key, nested) =>
+      typeof nested === "number" && !Number.isFinite(nested) ? null : nested
+    )
+  ) as T
+
 export async function listHostedGroupDeals(...args: any[]) {
   const mod = await import("./account-group-deals-queries")
   return (mod.listHostedGroupDeals as (...a: any[]) => any)(...args)
@@ -11,8 +18,15 @@ export async function listHostedDealParticipations(...args: any[]) {
 }
 
 export async function getHostedGroupDeal(...args: any[]) {
-  const mod = await import("./account-group-deals-queries")
-  return (mod.getHostedGroupDeal as (...a: any[]) => any)(...args)
+  try {
+    const mod = await import("./account-group-deals-queries")
+    const deal = await (mod.getHostedGroupDeal as (...a: any[]) => any)(...args)
+
+    return deal ? toSerializable(deal) : null
+  } catch (error) {
+    const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
+    throw new Error(resolveMedusaErrorMessage(error))
+  }
 }
 
 export async function getParticipationForDeal(...args: any[]) {
@@ -67,15 +81,18 @@ export async function createHostedGroupDeal(
 ): Promise<CreateHostedGroupDealActionResult> {
   try {
     const mod = await import("./account-group-deals-queries")
-    const group_deal = await mod.createHostedGroupDeal(input)
+    // Never forward cover base64 through create — keeps the action under Vercel body limits.
+    const { image_base64: _image, image_filename: _filename, ...safeInput } =
+      input
+    const group_deal = await mod.createHostedGroupDeal(safeInput)
 
-    return {
-      ok: true,
+    return toSerializable({
+      ok: true as const,
       group_deal,
       deposit_recorded: Boolean(
-        input.confirm_leader_deposit && input.deposit_payment_key
+        safeInput.confirm_leader_deposit && safeInput.deposit_payment_key
       ),
-    }
+    })
   } catch (error) {
     const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
 
@@ -96,7 +113,10 @@ export async function uploadHostedGroupDealCoverImage(
     const mod = await import("./account-group-deals-queries")
     const result = await mod.uploadHostedGroupDealCoverImage(dealId, input)
 
-    return { ok: true, image_url: result.image_url }
+    return toSerializable({
+      ok: true as const,
+      image_url: result.image_url,
+    })
   } catch (error) {
     const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
 

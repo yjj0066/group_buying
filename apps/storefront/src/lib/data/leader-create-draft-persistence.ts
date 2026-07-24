@@ -95,34 +95,44 @@ export async function saveLeaderCreateWizardDraftToAccount(
 }
 
 export async function clearLeaderCreateWizardDraftFromAccount(): Promise<void> {
-  const headers = await getAuthHeaders()
+  try {
+    const headers = await getAuthHeaders()
 
-  if (!("authorization" in headers) || !headers.authorization) {
-    return
-  }
+    if (!("authorization" in headers) || !headers.authorization) {
+      return
+    }
 
-  const customer = await retrieveCustomer()
+    const customer = await retrieveCustomer()
 
-  if (!customer) {
-    return
-  }
+    if (!customer) {
+      return
+    }
 
-  const metadata = {
-    ...(((customer.metadata as Record<string, unknown> | null) ?? {}) as Record<
-      string,
-      unknown
-    >),
-  }
+    const metadata = {
+      ...(((customer.metadata as Record<string, unknown> | null) ??
+        {}) as Record<string, unknown>),
+    }
 
-  delete metadata[METADATA_KEY]
+    delete metadata[METADATA_KEY]
 
-  await sdk.store.customer
-    .update(
-      {
-        metadata,
-      },
-      {},
-      headers
+    await sdk.store.customer
+      .update(
+        {
+          metadata,
+        },
+        {},
+        headers
+      )
+      .catch((error) => {
+        console.warn(
+          "[leader-create] Failed to clear account draft after create",
+          error
+        )
+      })
+  } catch (error) {
+    console.warn(
+      "[leader-create] Failed to clear account draft after create",
+      error
     )
-    .catch(medusaError)
+  }
 }

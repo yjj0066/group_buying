@@ -163,6 +163,16 @@ export const resolveMedusaErrorMessage = (error: unknown): string => {
     )
   }
 
+  // Next.js production masks Server Action / RSC throws with this boilerplate.
+  if (
+    /An error occurred in the Server Components render/i.test(message) ||
+    (/digest/i.test(message) && /omitted in production/i.test(message))
+  ) {
+    return (
+      "요청 처리 중 오류가 났습니다. 사진이 크면 자동 압축 후에도 실패할 수 있으니, 사진을 제거하거나 더 작은 파일로 다시 시도해 주세요."
+    )
+  }
+
   return capitalizeMessage(message)
 }
 

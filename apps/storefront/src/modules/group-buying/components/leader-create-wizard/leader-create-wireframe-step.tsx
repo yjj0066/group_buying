@@ -11,6 +11,7 @@ import {
   assertDocumentUploadSize,
   readFileAsDataUrl,
 } from "@lib/util/file-to-data-url"
+import { compressImageDataUrlForCoverUpload } from "@lib/util/compress-image-data-url"
 import { formatGroupDealValidationError } from "@lib/util/format-group-deal-validation-error"
 import {
   loadLeaderCreateWizardDraftFromAccount,
@@ -261,10 +262,11 @@ export const LeaderCreateWireframeStep = ({
     try {
       assertDocumentUploadSize(file)
       const dataUrl = await readFileAsDataUrl(file)
+      const compressed = await compressImageDataUrlForCoverUpload(dataUrl)
 
       patch({
-        productImageDataUrl: dataUrl,
-        productImageFileName: file.name,
+        productImageDataUrl: compressed,
+        productImageFileName: file.name.replace(/\.\w+$/, ".jpg") || "cover.jpg",
       })
     } catch (uploadError) {
       setPhotoUploadError(

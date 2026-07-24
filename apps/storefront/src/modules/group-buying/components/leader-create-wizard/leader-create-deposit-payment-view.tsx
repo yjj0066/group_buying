@@ -48,6 +48,7 @@ import { Text } from "@modules/common/components/ui"
 
 import { formatGroupDealValidationError, shouldSuggestLeaderCreateStepReview } from "@lib/util/format-group-deal-validation-error"
 import { resolveMedusaErrorMessage } from "@lib/util/medusa-error"
+import { compressImageDataUrlForCoverUpload } from "@lib/util/compress-image-data-url"
 import {
   assertDataUrlUploadSize,
   isUploadSizeRelatedError,
@@ -486,14 +487,31 @@ export const LeaderCreateDepositPaymentView = () => {
     setConfirmError(null)
 
     try {
-      if (draft.productImageDataUrl) {
-        assertDataUrlUploadSize(draft.productImageDataUrl)
-      }
-
       let workingDraft = draft
       let dealId = workingDraft.createdDealId
       let accountDeal: import("types/account-group-deals").AccountGroupDeal | null =
         null
+
+      if (workingDraft.productImageDataUrl) {
+        try {
+          const compressed = await compressImageDataUrlForCoverUpload(
+            workingDraft.productImageDataUrl
+          )
+          workingDraft = {
+            ...workingDraft,
+            productImageDataUrl: compressed,
+            productImageFileName:
+              workingDraft.productImageFileName?.replace(/\.\w+$/, ".jpg") ??
+              "cover.jpg",
+          }
+          setDraft(workingDraft)
+          saveLeaderCreateDraft(workingDraft)
+        } catch {
+          // Keep original; size assert below may still reject oversized files.
+        }
+
+        assertDataUrlUploadSize(workingDraft.productImageDataUrl)
+      }
 
       if (!dealId) {
         const now = new Date()
@@ -545,7 +563,15 @@ export const LeaderCreateDepositPaymentView = () => {
         setDraft(workingDraft)
         saveLeaderCreateDraft(workingDraft)
       } else if (!accountDeal) {
-        accountDeal = await getHostedGroupDeal(dealId)
+        try {
+          accountDeal = await getHostedGroupDeal(dealId)
+        } catch (error) {
+          setConfirmError(
+            formatGroupDealValidationError(resolveMedusaErrorMessage(error))
+          )
+          setIsConfirming(false)
+          return
+        }
       }
 
       let coverImageUrl: string | null = null
@@ -565,15 +591,17 @@ export const LeaderCreateDepositPaymentView = () => {
         }
       }
 
-      if (!accountDeal) {
-        throw new Error("공구 정보를 불러오지 못했습니다. 다시 시도해 주세요.")
+      if (!accountDeal || !dealId) {
+        setConfirmError("공구 정보를 불러오지 못했습니다. 다시 시도해 주세요.")
+        setIsConfirming(false)
+        return
       }
 
       cacheHostedDeal(
         buildGroupDealFromDraft(workingDraft, accountDeal, coverImageUrl)
       )
       clearLeaderCreateDraft()
-      await clearLeaderCreateWizardDraftFromAccount()
+      await clearLeaderCreateWizardDraftFromAccount().catch(() => undefined)
       router.push(gbAppRoutes.sellerDeal(countryCode, dealId))
     } catch (error) {
       const formatted = formatGroupDealValidationError(
