@@ -76,6 +76,42 @@ export type RecordLeaderDepositActionResult =
       error: string
     }
 
+const toMinimalAccountDeal = (
+  deal: import("types/account-group-deals").AccountGroupDeal
+): import("types/account-group-deals").AccountGroupDeal =>
+  ({
+    id: String(deal.id),
+    title: String(deal.title ?? ""),
+    status: String(deal.status ?? ""),
+    leader_stage: deal.leader_stage ?? "recruiting",
+    shipping_completed_at: deal.shipping_completed_at ?? null,
+    settlement_submitted_at: deal.settlement_submitted_at ?? null,
+    settled_at: deal.settled_at ?? null,
+    deposit_status: String(deal.deposit_status ?? "pending"),
+    deposit_amount:
+      deal.deposit_amount != null && Number.isFinite(Number(deal.deposit_amount))
+        ? Number(deal.deposit_amount)
+        : null,
+    currency_code: String(deal.currency_code ?? "krw"),
+    current_participants: Number(deal.current_participants ?? 0) || 0,
+    target_quantity: Number(deal.target_quantity ?? 0) || 0,
+    ends_at: deal.ends_at ?? null,
+    purchase_receipt_status: String(deal.purchase_receipt_status ?? "pending"),
+    receipt_ai_status: String(deal.receipt_ai_status ?? "not_requested"),
+    receipt_ai_confidence: null,
+    tracking_ai_status: String(deal.tracking_ai_status ?? "not_requested"),
+    tracking_ai_confidence: null,
+    report_stage: String(deal.report_stage ?? "not_started"),
+    dispute_status: String(deal.dispute_status ?? "none"),
+    purchase_receipt_structured: null,
+    receipt_ai_validation: null,
+    tracking_ai_matched_count: 0,
+    tracking_ai_conflict_count: 0,
+    tracking_ai_invoice_rows: [],
+    created_at: deal.created_at ?? new Date(0).toISOString(),
+    metadata: deal.metadata ?? null,
+  }) as import("types/account-group-deals").AccountGroupDeal
+
 export async function createHostedGroupDeal(
   input: import("./account-group-deals-queries").CreateHostedGroupDealInput
 ): Promise<CreateHostedGroupDealActionResult> {
@@ -88,7 +124,7 @@ export async function createHostedGroupDeal(
 
     return toSerializable({
       ok: true as const,
-      group_deal,
+      group_deal: toMinimalAccountDeal(group_deal),
       deposit_recorded: Boolean(
         safeInput.confirm_leader_deposit && safeInput.deposit_payment_key
       ),
@@ -96,7 +132,10 @@ export async function createHostedGroupDeal(
   } catch (error) {
     const { resolveMedusaErrorMessage } = await import("@lib/util/medusa-error")
 
-    return { ok: false, error: resolveMedusaErrorMessage(error) }
+    return {
+      ok: false,
+      error: `[개설 실패] ${resolveMedusaErrorMessage(error)}`,
+    }
   }
 }
 

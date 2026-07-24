@@ -1,8 +1,10 @@
 import { estimateDataUrlBytes } from "@lib/util/upload-size-error"
 
 /** Keep cover uploads safely under Vercel's ~4.5MB request body limit (base64 expands ~33%). */
-export const GROUP_DEAL_COVER_UPLOAD_TARGET_BYTES = 900 * 1024
-export const GROUP_DEAL_COVER_MAX_DIMENSION = 1280
+export const GROUP_DEAL_COVER_UPLOAD_TARGET_BYTES = 400 * 1024
+export const GROUP_DEAL_COVER_MAX_DIMENSION = 1024
+/** Hard cap before calling any Next.js upload endpoint. */
+export const GROUP_DEAL_COVER_UPLOAD_SAFE_MAX_BYTES = 1200 * 1024
 
 const loadImage = (dataUrl: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {

@@ -21,7 +21,6 @@ import {
   createHostedGroupDeal,
   getHostedGroupDeal,
   probeLeaderCreateAccess,
-  uploadHostedGroupDealCoverImage,
 } from "@lib/data/account-group-deals-actions"
 
 import { useDictionary, formatMessage } from "@i18n/provider"
@@ -48,9 +47,12 @@ import { Text } from "@modules/common/components/ui"
 
 import { formatGroupDealValidationError, shouldSuggestLeaderCreateStepReview } from "@lib/util/format-group-deal-validation-error"
 import { resolveMedusaErrorMessage } from "@lib/util/medusa-error"
-import { compressImageDataUrlForCoverUpload } from "@lib/util/compress-image-data-url"
 import {
-  assertDataUrlUploadSize,
+  compressImageDataUrlForCoverUpload,
+  GROUP_DEAL_COVER_UPLOAD_SAFE_MAX_BYTES,
+} from "@lib/util/compress-image-data-url"
+import {
+  estimateDataUrlBytes,
   isUploadSizeRelatedError,
 } from "@lib/util/upload-size-error"
 import { convertToLocale } from "@lib/util/money"
@@ -491,6 +493,7 @@ export const LeaderCreateDepositPaymentView = () => {
       let dealId = workingDraft.createdDealId
       let accountDeal: import("types/account-group-deals").AccountGroupDeal | null =
         null
+      let coverUploadSkipped = false
 
       if (workingDraft.productImageDataUrl) {
         try {
@@ -504,13 +507,29 @@ export const LeaderCreateDepositPaymentView = () => {
               workingDraft.productImageFileName?.replace(/\.\w+$/, ".jpg") ??
               "cover.jpg",
           }
-          setDraft(workingDraft)
-          saveLeaderCreateDraft(workingDraft)
         } catch {
-          // Keep original; size assert below may still reject oversized files.
+          coverUploadSkipped = true
+          workingDraft = { ...workingDraft, productImageDataUrl: null }
         }
 
-        assertDataUrlUploadSize(workingDraft.productImageDataUrl)
+        if (
+          workingDraft.productImageDataUrl &&
+          estimateDataUrlBytes(workingDraft.productImageDataUrl) >
+            GROUP_DEAL_COVER_UPLOAD_SAFE_MAX_BYTES
+        ) {
+          coverUploadSkipped = true
+          workingDraft = { ...workingDraft, productImageDataUrl: null }
+        }
+      }
+
+      // Persist deal id only — never put large images back into localStorage.
+      const persistDraftMeta = (next: LeaderCreateDraft) => {
+        const withoutImage = {
+          ...next,
+          productImageDataUrl: null,
+        }
+        setDraft(next)
+        saveLeaderCreateDraft(withoutImage)
       }
 
       if (!dealId) {
@@ -522,6 +541,7 @@ export const LeaderCreateDepositPaymentView = () => {
         const totalSeatsCount = getTotalSeatCount(draft.memberSeats)
         const activeSeats = draft.memberSeats.filter((seat) => seat.quantity > 0)
         const primaryPrice = activeSeats[0]?.price ?? 0
+        const primarySeller = draft.primarySeller?.trim() || null
 
         const depositPaymentKey = `mock-leader-deposit-${Date.now()}`
 
@@ -538,7 +558,7 @@ export const LeaderCreateDepositPaymentView = () => {
           starts_at: now.toISOString(),
           ends_at: endsAt,
           declared_album_quantity: Number(draft.albumQuantity) || totalSeatsCount,
-          primary_seller: draft.primarySeller,
+          primary_seller: primarySeller,
           expected_ship_date: draft.expectedShipDate || undefined,
           member_seats: activeSeats.map((seat) => ({
             label: seat.label,
@@ -549,7 +569,10 @@ export const LeaderCreateDepositPaymentView = () => {
           goods_type: draft.goodsType?.trim() || DEFAULT_GROUP_BUYING_GOODS_TYPE,
           confirm_leader_deposit: true,
           deposit_payment_key: depositPaymentKey,
-        })
+        }).catch((error) => ({
+          ok: false as const,
+          error: `[개설 실패] ${resolveMedusaErrorMessage(error)}`,
+        }))
 
         if (!createResult.ok) {
           setConfirmError(formatGroupDealValidationError(createResult.error))
@@ -560,14 +583,15 @@ export const LeaderCreateDepositPaymentView = () => {
         accountDeal = createResult.group_deal
         dealId = accountDeal.id
         workingDraft = { ...workingDraft, createdDealId: dealId }
-        setDraft(workingDraft)
-        saveLeaderCreateDraft(workingDraft)
+        persistDraftMeta(workingDraft)
       } else if (!accountDeal) {
         try {
           accountDeal = await getHostedGroupDeal(dealId)
         } catch (error) {
           setConfirmError(
-            formatGroupDealValidationError(resolveMedusaErrorMessage(error))
+            formatGroupDealValidationError(
+              `[개설 실패] ${resolveMedusaErrorMessage(error)}`
+            )
           )
           setIsConfirming(false)
           return
@@ -577,17 +601,38 @@ export const LeaderCreateDepositPaymentView = () => {
       let coverImageUrl: string | null = null
 
       if (workingDraft.productImageDataUrl && dealId) {
-        const uploadResult = await uploadHostedGroupDealCoverImage(dealId, {
-          image_base64: workingDraft.productImageDataUrl,
-          image_filename: workingDraft.productImageFileName ?? undefined,
-        })
+        try {
+          const uploadResponse = await fetch(
+            `/api/me/group-deals/${dealId}/cover-image`,
+            {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                image_base64: workingDraft.productImageDataUrl,
+                image_filename: workingDraft.productImageFileName ?? undefined,
+              }),
+            }
+          )
+          const uploadPayload = (await uploadResponse.json().catch(() => ({}))) as {
+            image_url?: string
+            message?: string
+          }
 
-        if (uploadResult.ok) {
-          coverImageUrl = uploadResult.image_url
-        } else {
-          setConfirmError(formatGroupDealValidationError(uploadResult.error))
-          setIsConfirming(false)
-          return
+          if (uploadResponse.ok && uploadPayload.image_url) {
+            coverImageUrl = uploadPayload.image_url
+          } else {
+            coverUploadSkipped = true
+            console.warn(
+              "[leader-create] cover upload failed; continuing without image",
+              uploadPayload.message ?? uploadResponse.status
+            )
+          }
+        } catch (uploadError) {
+          coverUploadSkipped = true
+          console.warn(
+            "[leader-create] cover upload failed; continuing without image",
+            uploadError
+          )
         }
       }
 
@@ -602,10 +647,19 @@ export const LeaderCreateDepositPaymentView = () => {
       )
       clearLeaderCreateDraft()
       await clearLeaderCreateWizardDraftFromAccount().catch(() => undefined)
+
+      if (coverUploadSkipped && !coverImageUrl) {
+        // Prefer completing the deal over blocking on cover upload.
+        sessionStorage.setItem(
+          "leader_create_cover_upload_warning",
+          "공구는 개설됐지만 사진은 업로드되지 않았습니다. 나중에 다시 등록해 주세요."
+        )
+      }
+
       router.push(gbAppRoutes.sellerDeal(countryCode, dealId))
     } catch (error) {
       const formatted = formatGroupDealValidationError(
-        resolveMedusaErrorMessage(error)
+        `[개설 실패] ${resolveMedusaErrorMessage(error)}`
       )
 
       setConfirmError(formatted)
