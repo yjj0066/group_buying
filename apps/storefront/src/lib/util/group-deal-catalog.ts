@@ -9,14 +9,6 @@ const CLOSED_STATUSES = new Set<GroupDeal["status"]>([
   "cancelled",
 ])
 
-const IN_PROGRESS_STATUSES = new Set<GroupDeal["status"]>([
-  "open",
-  "recruiting",
-  "minimum_reached",
-  "active",
-  "deposit_pending",
-])
-
 export const isCatalogDealClosed = (deal: GroupDeal): boolean => {
   if (CLOSED_STATUSES.has(deal.status)) {
     return true
